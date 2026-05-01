@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Market Listesi">
+<title>Market Listesi</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro", sans-serif;
+    background: #f2f2f7;
+    color: #1c1c1e;
+    padding: 12px;
+    padding-bottom: 40px;
+    font-size: 15px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .status {
+    text-align: center;
+    font-size: 12px;
+    color: #8e8e93;
+    margin-bottom: 12px;
+  }
+  .status.connected { color: #34c759; }
+  .status.error { color: #ff3b30; }
+  label {
+    display: block;
+    font-size: 13px;
+    color: #8e8e93;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  input[type="text"], input[type="date"], select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d1d6;
+    border-radius: 8px;
+    font-size: 16px;
+    background: #fff;
+    margin-bottom: 8px;
+    -webkit-appearance: none;
+    appearance: none;
+    font-family: inherit;
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    background: #007aff;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:active { background: #0051d5; }
+  button.secondary {
+    background: #e5e5ea;
+    color: #1c1c1e;
+  }
+  .button-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .button-row button {
+    flex: 1;
+    padding: 10px;
+    font-size: 14px;
+  }
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .filter-row > div { flex: 1; }
+  .filter-row button {
+    width: auto;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+  .list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 0 4px;
+  }
+  .list-title { font-weight: 600; font-size: 15px; }
+  .count { font-size: 12px; color: #8e8e93; }
+
+  /* Yan yana satır görünümü */
+  .item-row {
+    display: grid;
+    grid-template-columns: 32px 56px 1fr 1fr 32px;
+    gap: 6px;
+    align-items: center;
+    padding: 6px 2px;
+    border-bottom: 1px solid #f2f2f7;
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-row.done .cell-text { text-decoration: line-through; color: #8e8e93; }
+  .item-row.done .cell-market { color: #c7c7cc; }
+
+  .cell-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+  }
+  .cell-check input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    accent-color: #34c759;
+  }
+  .cell-date {
+    font-size: 11px;
+    color: #8e8e93;
+    text-align: center;
+  }
+  /* Düzenlenebilir hücreler — daha rahat dokunma için */
+  .cell-text, .cell-market {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    cursor: pointer;
+    padding: 10px 8px;
+    border-radius: 6px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    transition: background 0.15s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .cell-text {
+    font-size: 15px;
+    background: #f9f9fb;
+    border: 1px dashed transparent;
+  }
+  .cell-market {
+    font-size: 13px;
+    color: #636366;
+    background: #f9f9fb;
+    border: 1px dashed transparent;
+  }
+  .cell-text:active, .cell-market:active {
+    background: #e5e5ea;
+    border-color: #007aff;
+  }
+  @media (hover: hover) {
+    .cell-text:hover, .cell-market:hover {
+      background: #eef0f3;
+      border-color: #c7c7cc;
+    }
+  }
+  .cell-delete {
+    background: none;
+    color: #ff3b30;
+    border: none;
+    font-size: 22px;
+    padding: 4px;
+    width: 32px;
+    height: 44px;
+    cursor: pointer;
+  }
+
+  .table-header {
+    display: grid;
+    grid-template-columns: 32px 56px 1fr 1fr 32px;
+    gap: 6px;
+    padding: 8px 2px;
+    border-bottom: 1px solid #d1d1d6;
+    font-size: 11px;
+    font-weight: 600;
+    color: #8e8e93;
+    text-transform: uppercase;
+  }
+  .table-header > div { text-align: center; }
+  .table-header > div:nth-child(3),
+  .table-header > div:nth-child(4) { text-align: left; }
+
+  .empty {
+    text-align: center;
+    color: #c7c7cc;
+    padding: 24px 0;
+    font-size: 14px;
+  }
+  .edit-input {
+    width: 100%;
+    padding: 8px 8px;
+    font-size: 16px;
+    border: 2px solid #007aff;
+    border-radius: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    font-family: inherit;
+    background: #fff;
+    box-sizing: border-box;
+  }
+  select.edit-input {
+    padding-right: 24px;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23007aff' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+  /* Düzenleme moduna giren hücre — padding sıfırlanır, input rahat oturur */
+  .cell-text.editing, .cell-market.editing {
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+  /* Düzenlenen satırı vurgula */
+  .item-row.editing {
+    background: #fffbe6;
+    border-radius: 8px;
+  }
+
+  /* Modal pencere - market seçimi için */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 1000;
+    padding: 0;
+  }
+  .modal-content {
+    background: #fff;
+    border-radius: 14px 14px 0 0;
+    width: 100%;
+    max-width: 500px;
+    padding: 16px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal-title {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-align: center;
+    color: #1c1c1e;
+  }
+  .modal-subtitle {
+    font-size: 13px;
+    color: #8e8e93;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .modal-option {
+    display: block;
+    width: 100%;
+    padding: 14px 16px;
+    background: #f2f2f7;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    text-align: left;
+    margin-bottom: 8px;
+    cursor: pointer;
+    color: #1c1c1e;
+    font-family: inherit;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 122, 255, 0.2);
+  }
+  .modal-option:active { background: #e5e5ea; }
+  .modal-option.selected {
+    background: #007aff;
+    color: #fff;
+    font-weight: 600;
+  }
+  .modal-option.other {
+    background: #fff3cd;
+    color: #856404;
+  }
+  .modal-cancel {
+    width: 100%;
+    padding: 14px;
+    background: #fff;
+    color: #ff3b30;
+    border: 1px solid #d1d1d6;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .modal-input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 16px;
+    border: 2px solid #007aff;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    -webkit-appearance: none;
+    appearance: none;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+  .modal-save {
+    width: 100%;
+    padding: 14px;
+    background: #007aff;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    margin-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Market Listesi</h1>
+<div class="status" id="status">Bağlanıyor...</div>
+
+<div class="card">
+  <label>Tarih filtresi</label>
+  <div class="filter-row">
+    <div>
+      <input type="date" id="filter-date">
+    </div>
+    <button class="secondary" id="today-btn">Bugün</button>
+  </div>
+  <div class="button-row">
+    <button class="secondary" id="show-hidden-btn">Gizlenenleri Göster</button>
+    <button id="refresh-btn">Güncelle</button>
+  </div>
+</div>
+
+<div class="card">
+  <label>Yeni talep</label>
+  <input type="text" id="item-input" placeholder="Ne alınacak? (örn: Süt)">
+  <select id="market-select">
+    <option value="">Hangi marketten?</option>
+    <option value="BİM">BİM</option>
+    <option value="Çamlıca">Çamlıca</option>
+    <option value="Gedikler">Gedikler</option>
+    <option value="Happy">Happy</option>
+    <option value="Kuruyemişçi">Kuruyemişçi</option>
+    <option value="Migros">Migros</option>
+    <option value="Tekel">Tekel</option>
+    <option value="__other__">Diğer (elle yaz)</option>
+  </select>
+  <input type="text" id="market-input" placeholder="Market adını yaz" style="display: none;">
+  <button id="add-btn">Listeye Ekle</button>
+</div>
+
+<div class="card">
+  <div class="list-header">
+    <span class="list-title" id="list-title">Bugünün listesi</span>
+    <span class="count" id="count">0 öğe</span>
+  </div>
+  <div class="table-header">
+    <div>✓</div>
+    <div>Tarih</div>
+    <div>Talep</div>
+    <div>Market</div>
+    <div></div>
+  </div>
+  <div id="items-container"></div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, deleteDoc, updateDoc,
+    doc, onSnapshot, query, orderBy, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ⚠️ BURAYI KENDİ FIREBASE BİLGİLERİNİZLE DEĞİŞTİRİN ⚠️
+  const firebaseConfig = {
+    apiKey: "BURAYA_API_KEY",
+    authDomain: "BURAYA_AUTH_DOMAIN",
+    projectId: "BURAYA_PROJECT_ID",
+    storageBucket: "BURAYA_STORAGE_BUCKET",
+    messagingSenderId: "BURAYA_SENDER_ID",
+    appId: "BURAYA_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const itemsCol = collection(db, "market-items");
+
+  // Önceden tanımlı market listesi (hem yeni ekleme hem düzenleme dropdown'unda kullanılır)
+  const PRESET_MARKETS = ["BİM", "Çamlıca", "Gedikler", "Happy", "Kuruyemişçi", "Migros", "Tekel"];
+
+  let allItems = [];
+  const statusEl = document.getElementById("status");
+  const itemsContainer = document.getElementById("items-container");
+  const filterDate = document.getElementById("filter-date");
+  const listTitle = document.getElementById("list-title");
+  const countEl = document.getElementById("count");
+
+  // Bugünün tarihini her seferinde tazeden hesapla (gece yarısı geçişi için)
+  function getToday() {
+    return new Date().toISOString().slice(0, 10);
+  }
+  let today = getToday();
+  filterDate.value = today;
+
+  // Her dakika kontrol et — gün değiştiyse otomatik bugüne geç
+  setInterval(() => {
+    const newToday = getToday();
+    if (newToday !== today) {
+      const wasShowingToday = (filterDate.value === today);
+      today = newToday;
+      // Sadece kullanıcı bugünü görüyorsa otomatik yeni güne geçir
+      // Geçmiş bir tarihe bakıyorsa onu rahatsız etme
+      if (wasShowingToday) {
+        filterDate.value = today;
+      }
+      render();
+    }
+  }, 60000);
+
+  // Gerçek zamanlı dinleme — 3 telefon da anında güncellenir
+  const q = query(itemsCol, orderBy("createdAt", "desc"));
+  onSnapshot(q, (snapshot) => {
+    allItems = [];
+    snapshot.forEach((docSnap) => {
+      allItems.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    statusEl.textContent = "● Senkronize (3 telefon bağlı)";
+    statusEl.className = "status connected";
+
+    // Eğer kullanıcı şu an bir alan düzenliyorsa, render'ı ertele
+    // (yoksa input/select kullanıcının elinden alınır)
+    if (document.querySelector(".item-row.editing")) {
+      return; // Düzenleme bitince zaten render tetiklenecek
+    }
+    render();
+  }, (err) => {
+    statusEl.textContent = "Bağlantı hatası: " + err.message;
+    statusEl.className = "status error";
+  });
+
+  // Görünüm modu: false = sadece işaretsizler, true = hepsi (gizliler dahil)
+  let showHidden = false;
+
+  function render() {
+    const selected = filterDate.value || today;
+    let filtered = allItems.filter(i => i.date === selected);
+
+    // Market adına göre alfabetik sırala — aynı marketler alt alta gelir
+    // Türkçe karakter desteği için localeCompare kullanılıyor
+    filtered.sort((a, b) => {
+      const ma = (a.market || "").toLocaleLowerCase("tr");
+      const mb = (b.market || "").toLocaleLowerCase("tr");
+      return ma.localeCompare(mb, "tr");
+    });
+
+    // Gizleme modundaysak işaretli olanları çıkar
+    const totalCount = filtered.length;
+    if (!showHidden) {
+      filtered = filtered.filter(i => !i.done);
+    }
+    const hiddenCount = totalCount - filtered.length;
+
+    listTitle.textContent = selected === today
+      ? "Bugünün listesi"
+      : selected + " listesi";
+
+    if (showHidden) {
+      countEl.textContent = totalCount + " öğe (tümü)";
+    } else if (hiddenCount > 0) {
+      countEl.textContent = filtered.length + " öğe · " + hiddenCount + " gizli";
+    } else {
+      countEl.textContent = filtered.length + " öğe";
+    }
+
+    if (filtered.length === 0) {
+      itemsContainer.innerHTML = '<div class="empty">Bu tarihte gösterilecek öğe yok</div>';
+      return;
+    }
+
+    itemsContainer.innerHTML = "";
+    filtered.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "item-row" + (item.done ? " done" : "");
+
+      // Onay kutusu
+      const checkCell = document.createElement("div");
+      checkCell.className = "cell-check";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!item.done;
+      cb.addEventListener("change", async () => {
+        // İşaretle/işaret kaldır — silmiyoruz, sadece "done" durumunu değiştiriyoruz
+        // "Güncelle" butonuna basılana kadar listede görünmeye devam eder
+        try {
+          await updateDoc(doc(db, "market-items", item.id), {
+            done: cb.checked
+          });
+        } catch (e) {
+          alert("Güncelleme hatası: " + e.message);
+          cb.checked = !cb.checked;
+        }
+      });
+      checkCell.appendChild(cb);
+
+      // Tarih
+      const dateCell = document.createElement("div");
+      dateCell.className = "cell-date";
+      const d = new Date(item.date);
+      dateCell.textContent = d.getDate() + "/" + (d.getMonth() + 1);
+
+      // Talep (düzenlenebilir)
+      const textCell = document.createElement("div");
+      textCell.className = "cell-text";
+      textCell.textContent = item.text;
+      textCell.addEventListener("click", (e) => {
+        e.stopPropagation();
+        makeEditable(textCell, item, "text");
+      });
+
+      // Market (düzenlenebilir)
+      const marketCell = document.createElement("div");
+      marketCell.className = "cell-market";
+      marketCell.textContent = item.market || "—";
+      marketCell.addEventListener("click", (e) => {
+        e.stopPropagation();
+        makeEditable(marketCell, item, "market");
+      });
+
+      // Sil butonu
+      const delCell = document.createElement("button");
+      delCell.className = "cell-delete";
+      delCell.innerHTML = "×";
+      delCell.title = "Sil";
+      delCell.addEventListener("click", async () => {
+        if (confirm("Bu öğeyi silmek istiyor musun?")) {
+          await deleteDoc(doc(db, "market-items", item.id));
+        }
+      });
+
+      row.appendChild(checkCell);
+      row.appendChild(dateCell);
+      row.appendChild(textCell);
+      row.appendChild(marketCell);
+      row.appendChild(delCell);
+      itemsContainer.appendChild(row);
+    });
+  }
+
+  // Hücreyi düzenlenebilir yap (her telefondan değişiklik mümkün)
+  function makeEditable(cell, item, field) {
+    const oldValue = item[field] || "";
+
+    // Market alanı için select aç
+    if (field === "market") {
+      makeMarketEditable(cell, item, oldValue);
+      return;
+    }
+
+    // Diğer alanlar (talep) için normal text input
+    const row = cell.closest(".item-row");
+    cell.classList.add("editing");
+    if (row) row.classList.add("editing");
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = oldValue;
+    input.className = "edit-input";
+    cell.innerHTML = "";
+    cell.appendChild(input);
+    input.focus();
+    input.select();
+
+    const cleanup = () => {
+      cell.classList.remove("editing");
+      if (row) row.classList.remove("editing");
+    };
+
+    const save = async () => {
+      const newValue = input.value.trim();
+      if (newValue && newValue !== oldValue) {
+        try {
+          await updateDoc(doc(db, "market-items", item.id), {
+            [field]: newValue
+          });
+          // render() Firestore snapshot ile gelir, class'ı manuel kaldır
+          cleanup();
+        } catch (e) {
+          alert("Güncelleme hatası: " + e.message);
+          cell.textContent = oldValue;
+          cleanup();
+        }
+      } else {
+        cell.textContent = oldValue || "—";
+        cleanup();
+      }
+    };
+
+    input.addEventListener("blur", save);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") input.blur();
+      if (e.key === "Escape") {
+        cell.textContent = oldValue || "—";
+        cleanup();
+      }
+    });
+  }
+
+  // Market hücresini düzenle — Modal popup ile (iPhone'da güvenli)
+  function makeMarketEditable(cell, item, oldValue) {
+    // Zaten bir modal açıksa, ikincisini açma
+    if (document.querySelector(".modal-overlay")) {
+      return;
+    }
+
+    const row = cell.closest(".item-row");
+    if (row) row.classList.add("editing");
+
+    const cleanup = () => {
+      if (row) row.classList.remove("editing");
+    };
+
+    // Modal arka planı
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+
+    const content = document.createElement("div");
+    content.className = "modal-content";
+    overlay.appendChild(content);
+
+    function closeModal() {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      cleanup();
+    }
+
+    // Preset market butonlarını oluştur
+    function renderMarketList() {
+      content.innerHTML = "";
+
+      const title = document.createElement("div");
+      title.className = "modal-title";
+      title.textContent = "Market seç";
+      content.appendChild(title);
+
+      const subtitle = document.createElement("div");
+      subtitle.className = "modal-subtitle";
+      subtitle.textContent = "Şu an: " + (oldValue || "—");
+      content.appendChild(subtitle);
+
+      PRESET_MARKETS.forEach(name => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "modal-option" + (name === oldValue ? " selected" : "");
+        btn.textContent = name;
+        btn.onclick = function() {
+          if (name !== oldValue) {
+            updateDoc(doc(db, "market-items", item.id), { market: name })
+              .catch(e => alert("Güncelleme hatası: " + e.message));
+          }
+          closeModal();
+        };
+        content.appendChild(btn);
+      });
+
+      // "Diğer" — elle yazma seçeneği
+      const otherBtn = document.createElement("button");
+      otherBtn.type = "button";
+      otherBtn.className = "modal-option other";
+      otherBtn.textContent = "Diğer (elle yaz)…";
+      otherBtn.onclick = function() {
+        renderTextInput();
+      };
+      content.appendChild(otherBtn);
+
+      // İptal butonu
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "modal-cancel";
+      cancelBtn.textContent = "İptal";
+      cancelBtn.onclick = closeModal;
+      content.appendChild(cancelBtn);
+    }
+
+    // Elle yazma ekranı
+    function renderTextInput() {
+      content.innerHTML = "";
+
+      const editTitle = document.createElement("div");
+      editTitle.className = "modal-title";
+      editTitle.textContent = "Market adı yaz";
+      content.appendChild(editTitle);
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "modal-input";
+      input.placeholder = "Market adı";
+      input.value = PRESET_MARKETS.includes(oldValue) ? "" : oldValue;
+      content.appendChild(input);
+
+      const saveBtn = document.createElement("button");
+      saveBtn.type = "button";
+      saveBtn.className = "modal-save";
+      saveBtn.textContent = "Kaydet";
+      saveBtn.onclick = function() {
+        const newValue = input.value.trim();
+        if (newValue && newValue !== oldValue) {
+          updateDoc(doc(db, "market-items", item.id), { market: newValue })
+            .catch(e => alert("Güncelleme hatası: " + e.message));
+        }
+        closeModal();
+      };
+      content.appendChild(saveBtn);
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "modal-cancel";
+      cancelBtn.textContent = "İptal";
+      cancelBtn.onclick = closeModal;
+      content.appendChild(cancelBtn);
+
+      setTimeout(() => input.focus(), 150);
+    }
+
+    // İlk ekranı çiz
+    renderMarketList();
+
+    // Arka plana dokunulursa kapat — butonlar dahil değil çünkü onclick'leri var
+    // Sadece overlay'in kendisine doğrudan tıklanırsa kapanır
+    overlay.onclick = function(e) {
+      if (e.target === overlay) {
+        closeModal();
+      }
+    };
+
+    document.body.appendChild(overlay);
+  }
+
+  // Market select'i değişince "Diğer" seçildiyse elle yazma kutusunu göster
+  const marketSelect = document.getElementById("market-select");
+  const marketInput = document.getElementById("market-input");
+  marketSelect.addEventListener("change", () => {
+    if (marketSelect.value === "__other__") {
+      marketInput.style.display = "block";
+      marketInput.focus();
+    } else {
+      marketInput.style.display = "none";
+      marketInput.value = "";
+    }
+  });
+
+  // Yeni öğe ekle
+  document.getElementById("add-btn").addEventListener("click", async () => {
+    const textInput = document.getElementById("item-input");
+    const text = textInput.value.trim();
+
+    // Market değerini doğru kaynaktan al
+    let market = "";
+    if (marketSelect.value === "__other__") {
+      market = marketInput.value.trim();
+    } else if (marketSelect.value) {
+      market = marketSelect.value;
+    }
+
+    if (!text) {
+      alert("Lütfen ne alınacağını yaz");
+      return;
+    }
+    if (!market) {
+      alert("Lütfen bir market seç");
+      return;
+    }
+
+    try {
+      const currentDay = getToday();
+      today = currentDay; // güncelle
+
+      // Önce formu temizle — kullanıcı anında boş alan görsün
+      textInput.value = "";
+      marketInput.value = "";
+      marketInput.style.display = "none";
+      marketSelect.value = "";
+      filterDate.value = currentDay;
+      textInput.focus();
+
+      // Sonra Firestore'a yaz
+      await addDoc(itemsCol, {
+        text: text,
+        market: market,
+        date: currentDay,
+        done: false,
+        createdAt: serverTimestamp()
+      });
+      render();
+    } catch (e) {
+      alert("Ekleme hatası: " + e.message);
+    }
+  });
+
+  // Enter tuşu ile ekleme (elle yazma kutusunda)
+  marketInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("add-btn").click();
+  });
+
+  document.getElementById("today-btn").addEventListener("click", () => {
+    filterDate.value = today;
+    showHidden = false;
+    updateShowHiddenBtnLabel();
+    render();
+  });
+
+  // "Gizlenenleri Göster" butonu — seçili tarihteki tüm öğeleri (gizliler dahil) listeler
+  const showHiddenBtn = document.getElementById("show-hidden-btn");
+  function updateShowHiddenBtnLabel() {
+    showHiddenBtn.textContent = showHidden ? "Sadece Aktifler" : "Gizlenenleri Göster";
+  }
+  showHiddenBtn.addEventListener("click", () => {
+    showHidden = !showHidden;
+    updateShowHiddenBtnLabel();
+    render();
+  });
+
+  // "Güncelle" butonu — seçili tarihteki işaretli olanları yeniden gizler
+  document.getElementById("refresh-btn").addEventListener("click", () => {
+    showHidden = false;
+    updateShowHiddenBtnLabel();
+    render();
+  });
+
+  filterDate.addEventListener("change", render);
+
+  // Sayfa tekrar açıldığında / telefondan dönüldüğünde gün kontrolü yap
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      const newToday = getToday();
+      if (newToday !== today) {
+        const wasShowingToday = (filterDate.value === today);
+        today = newToday;
+        if (wasShowingToday) {
+          filterDate.value = today;
+        }
+      }
+      render();
+    }
+  });
+</script>
+
+</body>
+</html>
