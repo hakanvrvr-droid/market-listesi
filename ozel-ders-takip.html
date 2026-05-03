@@ -212,6 +212,27 @@
     color: #b71c1c;
     font-weight: 600;
   }
+  /* Ödeme tarihi durum renkleri */
+  .field-value.pay-date-future {
+    background: #fff3cd;
+    color: #856404;
+    font-weight: 600;
+  }
+  .field-value.pay-date-today {
+    background: #cfe5ff;
+    color: #004a99;
+    font-weight: 700;
+  }
+  .field-value.pay-date-overdue {
+    background: #fdecea;
+    color: #b71c1c;
+    font-weight: 700;
+  }
+  .field-value.pay-date-paid {
+    background: #d4f4dd;
+    color: #1d7836;
+    font-weight: 600;
+  }
   .delete-btn {
     background: none;
     border: none;
@@ -654,13 +675,27 @@
         card.appendChild(fieldDiv);
       });
 
-      // Ödeme tarihi — düzenlenebilir
+      // Ödeme tarihi — düzenlenebilir, duruma göre renkli
       if (payInfo.isPayDay) {
+        // Renk mantığı:
+        // - Ödenmiş → yeşil
+        // - Bugün ödenecek → mavi
+        // - Geçmiş ama ödenmemiş → kırmızı (gecikmiş)
+        // - Gelecek → sarı (varsayılan)
+        let payDateClass = "pay-date-future";
+        if (lesson.paid) {
+          payDateClass = "pay-date-paid";
+        } else if (payInfo.date === today) {
+          payDateClass = "pay-date-today";
+        } else if (payInfo.date < today) {
+          payDateClass = "pay-date-overdue";
+        }
+
         const payDateField = document.createElement("div");
         payDateField.className = "field";
         payDateField.innerHTML = `
           <span class="field-label">Ödeme Tarihi</span>
-          <span class="field-value" data-action="edit-pay-date" style="background: #fff3cd;">${formatDate(payInfo.date)}</span>
+          <span class="field-value ${payDateClass}" data-action="edit-pay-date">${formatDate(payInfo.date)}</span>
         `;
         card.appendChild(payDateField);
       }
