@@ -102,6 +102,22 @@
     opacity: 0.5;
     border-left-color: #34c759;
   }
+  /* Bugün ders günü gelen — vurgulanır */
+  .lesson-card.today {
+    border-left-color: #007aff;
+    border-left-width: 5px;
+    background: #f0f7ff;
+  }
+  /* Tarihi geçmiş ama yapılmamış — kırmızı uyarı */
+  .lesson-card.overdue {
+    border-left-color: #ff3b30;
+    border-left-width: 5px;
+    background: #fff5f4;
+  }
+  .lesson-card.today .lesson-num,
+  .lesson-card.overdue .lesson-num {
+    background: #1c1c1e;
+  }
   .lesson-card .field {
     display: flex;
     justify-content: space-between;
@@ -579,9 +595,21 @@
     }
 
     container.innerHTML = "";
+    const today = todayISO();
     sorted.forEach(lesson => {
       const card = document.createElement("div");
-      card.className = "lesson-card" + (lesson.done ? " done" : "");
+
+      // Tarih durumu sınıfı
+      let stateClass = "";
+      if (lesson.done) {
+        stateClass = " done";
+      } else if (lesson.date === today) {
+        stateClass = " today";
+      } else if (lesson.date < today) {
+        stateClass = " overdue";
+      }
+
+      card.className = "lesson-card" + stateClass;
 
       const num = calculateLessonNumber(lesson);
       const payInfo = calculatePaymentInfo(lesson);
