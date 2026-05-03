@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Özel Ders Takip">
+<title>Özel Ders Takip</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro", sans-serif;
+    background: #f2f2f7;
+    color: #1c1c1e;
+    padding: 12px;
+    padding-bottom: 40px;
+    font-size: 15px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: #8e8e93;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  input[type="text"], input[type="date"], input[type="number"], select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d1d6;
+    border-radius: 8px;
+    font-size: 16px;
+    background: #fff;
+    margin-bottom: 8px;
+    -webkit-appearance: none;
+    appearance: none;
+    font-family: inherit;
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    background: #007aff;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:active { background: #0051d5; }
+  button.secondary {
+    background: #e5e5ea;
+    color: #1c1c1e;
+  }
+  .button-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .button-row button {
+    flex: 1;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .list-title { font-weight: 600; font-size: 16px; }
+  .count { font-size: 12px; color: #8e8e93; }
+
+  /* Tablo görünümü — kart şeklinde ders satırları */
+  .lesson-card {
+    background: #fff;
+    border-radius: 10px;
+    border-left: 4px solid #007aff;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+    font-size: 13px;
+  }
+  .lesson-card.done {
+    opacity: 0.5;
+    border-left-color: #34c759;
+  }
+  .lesson-card .field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    border-bottom: 1px dashed #f2f2f7;
+  }
+  .lesson-card .field:last-child { border-bottom: none; }
+  .lesson-card .field-label {
+    color: #8e8e93;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+  }
+  .lesson-card .field-value {
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f9f9fb;
+    min-height: 22px;
+    text-align: right;
+    font-weight: 500;
+  }
+  .lesson-card .field-value:active {
+    background: #e5e5ea;
+  }
+  .lesson-card .header-row {
+    grid-column: 1 / 3;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 6px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #f2f2f7;
+  }
+  .lesson-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1c1c1e;
+  }
+  .lesson-date-header {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1c1c1e;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #f9f9fb;
+  }
+  .lesson-date-header:active {
+    background: #e5e5ea;
+  }
+  .lesson-num {
+    background: #007aff;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .lesson-card.done .lesson-num {
+    background: #34c759;
+  }
+  .header-chip {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #f9f9fb;
+    cursor: pointer;
+    color: #1c1c1e;
+  }
+  .header-chip:active {
+    background: #e5e5ea;
+  }
+  .header-chip.pay-done {
+    background: #d4f4dd;
+    color: #1d7836;
+  }
+  .header-chip.pay-pending {
+    background: #fff3cd;
+    color: #856404;
+  }
+  .delete-btn {
+    background: none;
+    border: none;
+    color: #ff3b30;
+    font-size: 18px;
+    width: auto;
+    padding: 0 4px;
+    cursor: pointer;
+  }
+  .empty {
+    text-align: center;
+    color: #c7c7cc;
+    padding: 24px 0;
+    font-size: 14px;
+  }
+  .pay-pending { color: #ff9500; font-weight: 600; }
+  .pay-done { color: #34c759; font-weight: 600; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal-content {
+    background: #fff;
+    border-radius: 14px 14px 0 0;
+    width: 100%;
+    max-width: 500px;
+    padding: 16px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal-title {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .modal-subtitle {
+    font-size: 13px;
+    color: #8e8e93;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .modal-option {
+    display: block;
+    width: 100%;
+    padding: 14px 16px;
+    background: #f2f2f7;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    text-align: left;
+    margin-bottom: 8px;
+    cursor: pointer;
+    color: #1c1c1e;
+    font-family: inherit;
+    touch-action: manipulation;
+  }
+  .modal-option:active { background: #e5e5ea; }
+  .modal-option.selected {
+    background: #007aff;
+    color: #fff;
+    font-weight: 600;
+  }
+  .modal-option.other {
+    background: #fff3cd;
+    color: #856404;
+  }
+  .modal-cancel {
+    width: 100%;
+    padding: 14px;
+    background: #fff;
+    color: #ff3b30;
+    border: 1px solid #d1d1d6;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .modal-input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 16px;
+    border: 2px solid #007aff;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    -webkit-appearance: none;
+    appearance: none;
+    font-family: inherit;
+  }
+  .modal-save {
+    width: 100%;
+    padding: 14px;
+    background: #007aff;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    margin-bottom: 8px;
+  }
+  .delete-row-btn {
+    background: #ff3b30;
+    color: #fff;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+</style>
+</head>
+<body>
+
+<h1>Özel Ders Takip</h1>
+
+<div class="card" id="filter-card" style="display: none;">
+  <div style="font-weight: 600; margin-bottom: 8px;">Eski Dersler — Tarih Aralığı</div>
+  <div class="form-row">
+    <div>
+      <label>Başlangıç</label>
+      <input type="date" id="filter-start">
+    </div>
+    <div>
+      <label>Bitiş</label>
+      <input type="date" id="filter-end">
+    </div>
+  </div>
+  <div class="button-row">
+    <button class="secondary" id="filter-clear">Filtreyi Kapat</button>
+    <button id="filter-apply">Listele</button>
+  </div>
+</div>
+
+<div class="card" id="add-card">
+  <div style="font-weight: 600; margin-bottom: 8px;">Yeni Ders Ekle</div>
+  <label>Ders</label>
+  <select id="lesson-select">
+    <option value="">Ders seç</option>
+    <option value="Türkçe">Türkçe</option>
+    <option value="Matematik">Matematik</option>
+    <option value="İngilizce">İngilizce</option>
+    <option value="__other__">Yeni ders ekle…</option>
+  </select>
+  <input type="text" id="lesson-other" placeholder="Yeni ders adı" style="display: none;">
+
+  <div class="form-row">
+    <div>
+      <label>Tarih</label>
+      <input type="date" id="lesson-date">
+    </div>
+    <div>
+      <label>Tutar (₺)</label>
+      <input type="number" id="lesson-fee" placeholder="0" inputmode="decimal">
+    </div>
+  </div>
+
+  <button id="add-btn">Listeye Ekle</button>
+</div>
+
+<div class="card">
+  <div class="list-header">
+    <span class="list-title" id="list-title">Aktif Dersler</span>
+    <span class="count" id="count">0 ders</span>
+  </div>
+  <div style="margin-bottom: 8px;">
+    <label>Ders Filtresi</label>
+    <select id="lesson-name-filter">
+      <option value="__all__">Tümü</option>
+    </select>
+  </div>
+  <div class="button-row" style="margin-bottom: 8px;">
+    <button class="secondary" id="show-old-btn">Eski Dersleri Göster</button>
+  </div>
+  <div class="button-row" id="active-buttons" style="margin-bottom: 10px;">
+    <button class="secondary" id="show-hidden-btn">Tümünü Göster</button>
+    <button id="refresh-btn">Güncelle</button>
+  </div>
+  <div id="lessons-container"></div>
+</div>
+
+<script>
+(function() {
+  // ========== VERİ YÖNETİMİ ==========
+  // Veriler tarayıcının localStorage'ında saklanır — telefonu kapatsan da kalır
+  const STORAGE_KEY = "ozel-ders-takip-v1";
+  const CUSTOM_LESSONS_KEY = "ozel-ders-takip-custom-lessons-v1";
+
+  let lessons = [];
+  let customLessonNames = [];
+  let showHidden = false;
+  let filterMode = false;     // Tarih filtresi modu aktif mi
+  let filterStart = "";       // Filtre başlangıç tarihi
+  let filterEnd = "";         // Filtre bitiş tarihi
+  let lessonNameFilter = "__all__"; // Ders adı filtresi (__all__ = tümü)
+
+  // Sabit ders listesi + kullanıcının eklediği özel dersler
+  const DEFAULT_LESSONS = ["Türkçe", "Matematik", "İngilizce"];
+
+  function loadData() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      lessons = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      lessons = [];
+    }
+    try {
+      const raw = localStorage.getItem(CUSTOM_LESSONS_KEY);
+      customLessonNames = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      customLessonNames = [];
+    }
+  }
+
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(lessons));
+    localStorage.setItem(CUSTOM_LESSONS_KEY, JSON.stringify(customLessonNames));
+  }
+
+  function getAllLessonNames() {
+    // DEFAULT + custom (tekrarsız)
+    const set = new Set([...DEFAULT_LESSONS, ...customLessonNames]);
+    return Array.from(set);
+  }
+
+  // ========== YARDIMCILAR ==========
+  const DAY_NAMES = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+  const MONTH_NAMES = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+                       "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+
+  function formatDate(isoDate) {
+    if (!isoDate) return "";
+    const d = new Date(isoDate + "T00:00:00");
+    return d.getDate() + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + d.getFullYear();
+  }
+
+  function getDayName(isoDate) {
+    if (!isoDate) return "";
+    const d = new Date(isoDate + "T00:00:00");
+    return DAY_NAMES[d.getDay()];
+  }
+
+  function todayISO() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function genId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  // Ödeme tarihi hesapla:
+  // - Türkçe → o ders tarihinin BİR SONRAKİ ayının 1'i
+  //   (örn: Mayıs dersi → 1 Haziran ödenir; daha mantıklı)
+  //   ALTERNATİF: aynı ayın 1'i. Senin görseline bakınca: 5.05.2026 dersi için ödeme 5.05.2026 yazıyor.
+  //   Bu durumda "her ayın 1'i" kuralı sadece Türkçe için ve dersin yapıldığı ay 1'i...
+  //   Tekrar değerlendirme: senin görselinde Türkçe için ödeme tutarı sadece 1. derste yazıyor (5.05.2026 - 1.700 TL)
+  //   Yani: ayın ilk Türkçe dersinin tarihi = o ayın ödeme günü.
+  //   Ben "ayın ilk Türkçe dersi" mantığıyla gidiyorum.
+  // - Diğer dersler → o ders adının SON yapılan dersinin tarihi (paket bittiğinde ödeme)
+
+  function calculatePaymentInfo(lesson) {
+    // Eğer kullanıcı manuel olarak ödeme tarihini değiştirdiyse onu kullan
+    if (lesson.payDateOverride) {
+      return { date: lesson.payDateOverride, isPayDay: true };
+    }
+
+    // Aynı ders adına sahip TÜM dersleri (gizliler dahil) tarihe göre sırala
+    const sameNameLessons = lessons
+      .filter(l => l.name === lesson.name)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (lesson.name === "Türkçe") {
+      // Türkçe → her ayın ilk dersinde ödeme
+      const sameMonth = sameNameLessons.filter(l =>
+        l.date.slice(0, 7) === lesson.date.slice(0, 7)
+      );
+      if (sameMonth.length > 0) {
+        const firstOfMonth = sameMonth[0];
+        // Ödeme sadece o ayın ilk dersinde gösterilir
+        if (firstOfMonth.id === lesson.id) {
+          return { date: firstOfMonth.date, isPayDay: true };
+        } else {
+          return { date: "", isPayDay: false };
+        }
+      }
+      return { date: "", isPayDay: false };
+    } else {
+      // Diğer dersler → o ders adının son (en geç tarihli) dersi ödeme tarihidir
+      if (sameNameLessons.length > 0) {
+        const lastLesson = sameNameLessons[sameNameLessons.length - 1];
+        if (lastLesson.id === lesson.id) {
+          return { date: lastLesson.date, isPayDay: true };
+        } else {
+          return { date: "", isPayDay: false };
+        }
+      }
+      return { date: "", isPayDay: false };
+    }
+  }
+
+  // Ders numarası: aynı ders adının kaçıncısı (tarihe göre)
+  function calculateLessonNumber(lesson) {
+    const sameNameLessons = lessons
+      .filter(l => l.name === lesson.name)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+
+    const idx = sameNameLessons.findIndex(l => l.id === lesson.id);
+    // Manuel olarak ayarlanan başlangıç numarası varsa ekle
+    const baseLesson = sameNameLessons[0];
+    const baseNum = (baseLesson && baseLesson.startNum) ? baseLesson.startNum : 1;
+    return idx === -1 ? baseNum : (idx + baseNum);
+  }
+
+  // ========== RENDER ==========
+  function render() {
+    const container = document.getElementById("lessons-container");
+    const countEl = document.getElementById("count");
+    const titleEl = document.getElementById("list-title");
+    const activeButtons = document.getElementById("active-buttons");
+
+    // Sıralama: önce ders adı (alfabetik), sonra ders numarası
+    let sorted = [...lessons].sort((a, b) => {
+      const nameCompare = a.name.localeCompare(b.name, "tr");
+      if (nameCompare !== 0) return nameCompare;
+      // Aynı ders adıysa, ders numarasına göre (= tarihe göre)
+      return a.date.localeCompare(b.date) || a.id.localeCompare(b.id);
+    });
+
+    // Ders adı filtresi (Tümü değilse, sadece o derse ait olanlar)
+    if (lessonNameFilter !== "__all__") {
+      sorted = sorted.filter(l => l.name === lessonNameFilter);
+    }
+
+    if (filterMode) {
+      // Tarih filtresi modu: aralıktaki TÜM dersler (yapılan/yapılmayan)
+      sorted = sorted.filter(l => {
+        if (filterStart && l.date < filterStart) return false;
+        if (filterEnd && l.date > filterEnd) return false;
+        return true;
+      });
+      titleEl.textContent = "Eski Dersler";
+      activeButtons.style.display = "none";
+      countEl.textContent = sorted.length + " ders";
+    } else {
+      // Normal mod: yapılmayanlar (showHidden true ise hepsi)
+      activeButtons.style.display = "";
+      titleEl.textContent = "Aktif Dersler";
+
+      const totalCount = sorted.length;
+      if (!showHidden) {
+        sorted = sorted.filter(l => !l.done);
+      }
+      const hiddenCount = totalCount - sorted.length;
+
+      if (showHidden) {
+        countEl.textContent = totalCount + " ders (tümü)";
+      } else if (hiddenCount > 0) {
+        countEl.textContent = sorted.length + " ders · " + hiddenCount + " yapılmış";
+      } else {
+        countEl.textContent = sorted.length + " ders";
+      }
+    }
+
+    if (sorted.length === 0) {
+      container.innerHTML = '<div class="empty">Gösterilecek ders yok</div>';
+      return;
+    }
+
+    container.innerHTML = "";
+    sorted.forEach(lesson => {
+      const card = document.createElement("div");
+      card.className = "lesson-card" + (lesson.done ? " done" : "");
+
+      const num = calculateLessonNumber(lesson);
+      const payInfo = calculatePaymentInfo(lesson);
+
+      // Header satırı — sağda: tutar, ödeme durumu, tarih
+      const header = document.createElement("div");
+      header.className = "header-row";
+
+      // Header sağ tarafı: tutar + ödeme durumu + tarih
+      const feeText = lesson.fee ? lesson.fee + "₺" : "—";
+      const paidText = lesson.paid ? "Ödendi" : "Ödenmedi";
+      const paidClass = lesson.paid ? "pay-done" : "pay-pending";
+
+      header.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span class="lesson-name" data-action="edit-name">${escapeHTML(lesson.name)}</span>
+          <span class="lesson-num" data-action="edit-num">${num}. ders</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+          <span class="header-chip" data-action="edit-fee">${feeText}</span>
+          <span class="header-chip ${paidClass}" data-action="toggle-paid">${paidText}</span>
+          <span class="lesson-date-header" data-action="edit-date">${formatDate(lesson.date)}</span>
+          <button class="delete-btn" data-action="delete" title="Sil">×</button>
+        </div>
+      `;
+      card.appendChild(header);
+
+      // Alanlar — sadece Gün ve Yapıldı kaldı
+      const fields = [
+        { label: "Gün", value: getDayName(lesson.date), action: null },
+        { label: "Yapıldı", value: lesson.done ? "Evet" : "Hayır", action: "toggle-done" },
+      ];
+
+      fields.forEach(f => {
+        const fieldDiv = document.createElement("div");
+        fieldDiv.className = "field";
+        fieldDiv.innerHTML = `
+          <span class="field-label">${f.label}</span>
+          <span class="field-value" ${f.action ? `data-action="${f.action}"` : ""}>${escapeHTML(f.value || "—")}</span>
+        `;
+        card.appendChild(fieldDiv);
+      });
+
+      // Ödeme tarihi — düzenlenebilir
+      if (payInfo.isPayDay) {
+        const payDateField = document.createElement("div");
+        payDateField.className = "field";
+        payDateField.innerHTML = `
+          <span class="field-label">Ödeme Tarihi</span>
+          <span class="field-value" data-action="edit-pay-date" style="background: #fff3cd;">${formatDate(payInfo.date)}</span>
+        `;
+        card.appendChild(payDateField);
+      }
+
+      // Event delegation
+      card.addEventListener("click", (e) => {
+        const target = e.target.closest("[data-action]");
+        if (!target) return;
+        const action = target.dataset.action;
+        e.stopPropagation();
+
+        switch (action) {
+          case "edit-name": editLessonName(lesson); break;
+          case "edit-date": editLessonDate(lesson); break;
+          case "edit-fee": editLessonFee(lesson); break;
+          case "edit-num": editLessonNumber(lesson); break;
+          case "edit-pay-date": editPaymentDate(lesson); break;
+          case "toggle-done": toggleDone(lesson); break;
+          case "toggle-paid": togglePaid(lesson); break;
+          case "delete": deleteLesson(lesson); break;
+        }
+      });
+
+      container.appendChild(card);
+    });
+  }
+
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, m => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[m]));
+  }
+
+  // ========== AKSİYONLAR ==========
+  function toggleDone(lesson) {
+    lesson.done = !lesson.done;
+    saveData();
+    render();
+  }
+
+  function togglePaid(lesson) {
+    lesson.paid = !lesson.paid;
+    saveData();
+    render();
+  }
+
+  function deleteLesson(lesson) {
+    if (confirm("Bu dersi silmek istediğine emin misin?")) {
+      lessons = lessons.filter(l => l.id !== lesson.id);
+      saveData();
+      rebuildFilterDropdown();
+      render();
+    }
+  }
+
+  // Ders adını değiştir (modal)
+  function editLessonName(lesson) {
+    if (document.querySelector(".modal-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    const content = document.createElement("div");
+    content.className = "modal-content";
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+
+    function close() { overlay.remove(); }
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+
+    function renderList() {
+      content.innerHTML = "";
+      const t = document.createElement("div");
+      t.className = "modal-title";
+      t.textContent = "Ders adını değiştir";
+      content.appendChild(t);
+
+      const s = document.createElement("div");
+      s.className = "modal-subtitle";
+      s.textContent = "Şu an: " + lesson.name;
+      content.appendChild(s);
+
+      getAllLessonNames().forEach(name => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "modal-option" + (name === lesson.name ? " selected" : "");
+        btn.textContent = name;
+        btn.onclick = () => {
+          if (name !== lesson.name) {
+            lesson.name = name;
+            saveData();
+            rebuildFilterDropdown();
+            render();
+          }
+          close();
+        };
+        content.appendChild(btn);
+      });
+
+      const otherBtn = document.createElement("button");
+      otherBtn.type = "button";
+      otherBtn.className = "modal-option other";
+      otherBtn.textContent = "Yeni ders adı yaz…";
+      otherBtn.onclick = renderInput;
+      content.appendChild(otherBtn);
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "modal-cancel";
+      cancelBtn.textContent = "İptal";
+      cancelBtn.onclick = close;
+      content.appendChild(cancelBtn);
+    }
+
+    function renderInput() {
+      content.innerHTML = "";
+      const t = document.createElement("div");
+      t.className = "modal-title";
+      t.textContent = "Yeni ders adı";
+      content.appendChild(t);
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "modal-input";
+      input.placeholder = "Ders adı";
+      input.value = lesson.name;
+      content.appendChild(input);
+
+      const save = document.createElement("button");
+      save.type = "button";
+      save.className = "modal-save";
+      save.textContent = "Kaydet";
+      save.onclick = () => {
+        const v = input.value.trim();
+        if (v && v !== lesson.name) {
+          lesson.name = v;
+          if (!getAllLessonNames().includes(v)) {
+            customLessonNames.push(v);
+          }
+          saveData();
+          rebuildSelect();
+          rebuildFilterDropdown();
+          render();
+        }
+        close();
+      };
+      content.appendChild(save);
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "modal-cancel";
+      cancelBtn.textContent = "İptal";
+      cancelBtn.onclick = close;
+      content.appendChild(cancelBtn);
+
+      setTimeout(() => input.focus(), 150);
+    }
+
+    renderList();
+  }
+
+  // Tarih düzenle (modal — date input ile)
+  function editLessonDate(lesson) {
+    if (document.querySelector(".modal-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    const content = document.createElement("div");
+    content.className = "modal-content";
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+
+    function close() { overlay.remove(); }
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+
+    const t = document.createElement("div");
+    t.className = "modal-title";
+    t.textContent = "Tarihi değiştir";
+    content.appendChild(t);
+
+    const s = document.createElement("div");
+    s.className = "modal-subtitle";
+    s.textContent = "Şu an: " + formatDate(lesson.date) + " (" + getDayName(lesson.date) + ")";
+    content.appendChild(s);
+
+    const input = document.createElement("input");
+    input.type = "date";
+    input.className = "modal-input";
+    input.value = lesson.date;
+    content.appendChild(input);
+
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "modal-save";
+    save.textContent = "Kaydet";
+    save.onclick = () => {
+      if (input.value && input.value !== lesson.date) {
+        lesson.date = input.value;
+        saveData();
+        render();
+      }
+      close();
+    };
+    content.appendChild(save);
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "modal-cancel";
+    cancelBtn.textContent = "İptal";
+    cancelBtn.onclick = close;
+    content.appendChild(cancelBtn);
+  }
+
+  // Tutar düzenle (modal)
+  function editLessonFee(lesson) {
+    if (document.querySelector(".modal-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    const content = document.createElement("div");
+    content.className = "modal-content";
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+
+    function close() { overlay.remove(); }
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+
+    const t = document.createElement("div");
+    t.className = "modal-title";
+    t.textContent = "Tutarı değiştir";
+    content.appendChild(t);
+
+    const s = document.createElement("div");
+    s.className = "modal-subtitle";
+    s.textContent = lesson.name + " · " + formatDate(lesson.date);
+    content.appendChild(s);
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.className = "modal-input";
+    input.placeholder = "Tutar (₺)";
+    input.value = lesson.fee || "";
+    input.inputMode = "decimal";
+    content.appendChild(input);
+
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "modal-save";
+    save.textContent = "Kaydet";
+    save.onclick = () => {
+      lesson.fee = input.value ? parseFloat(input.value) : 0;
+      saveData();
+      render();
+      close();
+    };
+    content.appendChild(save);
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "modal-cancel";
+    cancelBtn.textContent = "İptal";
+    cancelBtn.onclick = close;
+    content.appendChild(cancelBtn);
+
+    setTimeout(() => input.focus(), 150);
+  }
+
+  // Ders numarasını düzenle (modal)
+  // Mantık: bu dersin numarası değişince, aynı isimden tüm dersler buna göre kayar.
+  // Örn: Türkçe için 1,2,3,4 varsa ve 2. dersi 5 yaparsan, sonrakiler 6,7 olur.
+  // Bunu base lesson'ın startNum değerini değiştirerek yaparız.
+  function editLessonNumber(lesson) {
+    if (document.querySelector(".modal-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    const content = document.createElement("div");
+    content.className = "modal-content";
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+
+    function close() { overlay.remove(); }
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+
+    const t = document.createElement("div");
+    t.className = "modal-title";
+    t.textContent = "Ders numarasını değiştir";
+    content.appendChild(t);
+
+    const currentNum = calculateLessonNumber(lesson);
+    const s = document.createElement("div");
+    s.className = "modal-subtitle";
+    s.innerHTML = lesson.name + " · Şu an: <strong>" + currentNum + ". ders</strong><br><small>Bu dersi değiştirirsen aynı dersin sonraki tüm ders numaraları da kayar.</small>";
+    content.appendChild(s);
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.className = "modal-input";
+    input.placeholder = "Ders numarası";
+    input.value = currentNum;
+    input.min = "1";
+    input.inputMode = "numeric";
+    content.appendChild(input);
+
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "modal-save";
+    save.textContent = "Kaydet";
+    save.onclick = () => {
+      const newNum = parseInt(input.value, 10);
+      if (isNaN(newNum) || newNum < 1) {
+        alert("Geçerli bir sayı gir");
+        return;
+      }
+
+      // Bu lesson'ın aynı isimdeki dersler arasındaki sırasını bul (0-indexed)
+      const sameNameSorted = lessons
+        .filter(l => l.name === lesson.name)
+        .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+      const idx = sameNameSorted.findIndex(l => l.id === lesson.id);
+
+      // Base lesson'ın startNum'ını ayarla:
+      // currentNum = idx + baseNum  →  baseNum = newNum - idx
+      const newBaseNum = newNum - idx;
+      if (newBaseNum < 1) {
+        alert("İlk ders numarası 1'den küçük olamaz. Lütfen daha büyük bir sayı seç.");
+        return;
+      }
+
+      const baseLesson = sameNameSorted[0];
+      if (baseLesson) {
+        baseLesson.startNum = newBaseNum;
+      }
+      saveData();
+      render();
+      close();
+    };
+    content.appendChild(save);
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "modal-cancel";
+    cancelBtn.textContent = "İptal";
+    cancelBtn.onclick = close;
+    content.appendChild(cancelBtn);
+
+    setTimeout(() => { input.focus(); input.select(); }, 150);
+  }
+
+  // Ödeme tarihini düzenle (modal)
+  // payDateOverride alanına yazılır — varsa o, yoksa otomatik hesaplanan kullanılır
+  function editPaymentDate(lesson) {
+    if (document.querySelector(".modal-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    const content = document.createElement("div");
+    content.className = "modal-content";
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+
+    function close() { overlay.remove(); }
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+
+    const t = document.createElement("div");
+    t.className = "modal-title";
+    t.textContent = "Ödeme tarihini değiştir";
+    content.appendChild(t);
+
+    const payInfo = calculatePaymentInfo(lesson);
+    const s = document.createElement("div");
+    s.className = "modal-subtitle";
+    s.textContent = lesson.name + " · " + (lesson.fee ? lesson.fee + " ₺" : "");
+    content.appendChild(s);
+
+    const input = document.createElement("input");
+    input.type = "date";
+    input.className = "modal-input";
+    input.value = payInfo.date || "";
+    content.appendChild(input);
+
+    const save = document.createElement("button");
+    save.type = "button";
+    save.className = "modal-save";
+    save.textContent = "Kaydet";
+    save.onclick = () => {
+      if (input.value) {
+        lesson.payDateOverride = input.value;
+        saveData();
+        render();
+      }
+      close();
+    };
+    content.appendChild(save);
+
+    const resetBtn = document.createElement("button");
+    resetBtn.type = "button";
+    resetBtn.className = "modal-cancel";
+    resetBtn.textContent = "Otomatik hesaplamaya geri dön";
+    resetBtn.style.color = "#007aff";
+    resetBtn.onclick = () => {
+      delete lesson.payDateOverride;
+      saveData();
+      render();
+      close();
+    };
+    content.appendChild(resetBtn);
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "modal-cancel";
+    cancelBtn.textContent = "İptal";
+    cancelBtn.onclick = close;
+    content.appendChild(cancelBtn);
+  }
+
+  // ========== FORM ==========
+  const lessonSelect = document.getElementById("lesson-select");
+  const lessonOther = document.getElementById("lesson-other");
+
+  // Select listesini doldur (özel dersler dahil)
+  function rebuildSelect() {
+    const current = lessonSelect.value;
+    lessonSelect.innerHTML = '<option value="">Ders seç</option>';
+    getAllLessonNames().forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      lessonSelect.appendChild(opt);
+    });
+    const other = document.createElement("option");
+    other.value = "__other__";
+    other.textContent = "Yeni ders ekle…";
+    lessonSelect.appendChild(other);
+    if (current && current !== "__other__") lessonSelect.value = current;
+  }
+
+  // Liste filtresi dropdown'unu doldur
+  function rebuildFilterDropdown() {
+    const filter = document.getElementById("lesson-name-filter");
+    const current = filter.value || "__all__";
+    filter.innerHTML = '<option value="__all__">Tümü</option>';
+
+    // Sadece veride mevcut olan ders adlarını göster (bağlamla alakalı tutmak için)
+    const usedNames = [...new Set(lessons.map(l => l.name))].sort((a, b) => a.localeCompare(b, "tr"));
+    usedNames.forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      filter.appendChild(opt);
+    });
+
+    // Mevcut seçim hâlâ geçerliyse koru, değilse Tümü'ne dön
+    if (current === "__all__" || usedNames.includes(current)) {
+      filter.value = current;
+    } else {
+      filter.value = "__all__";
+      lessonNameFilter = "__all__";
+    }
+  }
+
+  document.getElementById("lesson-name-filter").addEventListener("change", (e) => {
+    lessonNameFilter = e.target.value;
+    render();
+  });
+
+  lessonSelect.addEventListener("change", () => {
+    if (lessonSelect.value === "__other__") {
+      lessonOther.style.display = "block";
+      lessonOther.focus();
+    } else {
+      lessonOther.style.display = "none";
+      lessonOther.value = "";
+    }
+  });
+
+  // Tarih varsayılan: bugün
+  document.getElementById("lesson-date").value = todayISO();
+
+  document.getElementById("add-btn").addEventListener("click", () => {
+    let name = "";
+    if (lessonSelect.value === "__other__") {
+      name = lessonOther.value.trim();
+      if (name && !customLessonNames.includes(name) && !DEFAULT_LESSONS.includes(name)) {
+        customLessonNames.push(name);
+      }
+    } else {
+      name = lessonSelect.value;
+    }
+
+    const date = document.getElementById("lesson-date").value;
+    const feeRaw = document.getElementById("lesson-fee").value;
+    const fee = feeRaw ? parseFloat(feeRaw) : 0;
+
+    if (!name) {
+      alert("Lütfen ders seç");
+      return;
+    }
+    if (!date) {
+      alert("Lütfen tarih seç");
+      return;
+    }
+
+    // Aynı dersten ilk giriş mi? Eğer öyleyse başlangıç numarasını sor
+    const existingForName = lessons.filter(l => l.name === name);
+    let startNum = null;
+    if (existingForName.length === 0) {
+      const ans = prompt(name + " dersi için ilk ders numarası kaç olsun?\n(Varsayılan: 1)", "1");
+      if (ans === null) return; // iptal
+      const parsed = parseInt(ans, 10);
+      if (isNaN(parsed) || parsed < 1) {
+        alert("Geçerli bir sayı gir");
+        return;
+      }
+      startNum = parsed;
+    }
+
+    const newLesson = {
+      id: genId(),
+      name: name,
+      date: date,
+      fee: fee,
+      done: false,
+      paid: false
+    };
+    if (startNum !== null) {
+      newLesson.startNum = startNum;
+    }
+    lessons.push(newLesson);
+
+    // Formu temizle
+    lessonSelect.value = "";
+    lessonOther.value = "";
+    lessonOther.style.display = "none";
+    document.getElementById("lesson-date").value = todayISO();
+    document.getElementById("lesson-fee").value = "";
+
+    saveData();
+    rebuildSelect();
+    rebuildFilterDropdown();
+    render();
+  });
+
+  // ========== GÖRÜNÜM BUTONLARI ==========
+  const showHiddenBtn = document.getElementById("show-hidden-btn");
+  function updateShowHiddenBtnLabel() {
+    showHiddenBtn.textContent = showHidden ? "Sadece Aktifler" : "Tümünü Göster";
+  }
+  showHiddenBtn.addEventListener("click", () => {
+    showHidden = !showHidden;
+    updateShowHiddenBtnLabel();
+    render();
+  });
+
+  document.getElementById("refresh-btn").addEventListener("click", () => {
+    showHidden = false;
+    updateShowHiddenBtnLabel();
+    render();
+  });
+
+  // ========== ESKİ DERSLERİ GÖSTER (Tarih filtresi) ==========
+  const filterCard = document.getElementById("filter-card");
+  const filterStartInput = document.getElementById("filter-start");
+  const filterEndInput = document.getElementById("filter-end");
+  const showOldBtn = document.getElementById("show-old-btn");
+
+  showOldBtn.addEventListener("click", () => {
+    // Filtre kartını aç
+    filterCard.style.display = "block";
+
+    // Varsayılan tarih aralığı: son 30 gün — bugün
+    if (!filterStartInput.value) {
+      const today = new Date();
+      const monthAgo = new Date(today);
+      monthAgo.setDate(today.getDate() - 30);
+      filterStartInput.value = monthAgo.toISOString().slice(0, 10);
+      filterEndInput.value = today.toISOString().slice(0, 10);
+    }
+
+    // Sayfayı filtre kartına kaydır
+    filterCard.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  document.getElementById("filter-apply").addEventListener("click", () => {
+    const start = filterStartInput.value;
+    const end = filterEndInput.value;
+
+    if (!start && !end) {
+      alert("Lütfen en az bir tarih gir");
+      return;
+    }
+    if (start && end && start > end) {
+      alert("Başlangıç tarihi bitiş tarihinden sonra olamaz");
+      return;
+    }
+
+    filterMode = true;
+    filterStart = start;
+    filterEnd = end;
+    render();
+  });
+
+  document.getElementById("filter-clear").addEventListener("click", () => {
+    filterMode = false;
+    filterStart = "";
+    filterEnd = "";
+    filterCard.style.display = "none";
+    filterStartInput.value = "";
+    filterEndInput.value = "";
+    render();
+  });
+
+  // ========== BAŞLAT ==========
+  loadData();
+  rebuildSelect();
+  rebuildFilterDropdown();
+  render();
+})();
+</script>
+
+</body>
+</html>
