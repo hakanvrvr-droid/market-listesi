@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Özel Ders Takip">
 <title>Özel Ders Takip</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body {
@@ -382,7 +383,24 @@
 </div>
 
 <div class="card" id="add-card">
-  <div style="font-weight: 600; margin-bottom: 8px;">Yeni Ders Ekle</div>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+    <div style="font-weight: 600;">Yeni Ders Ekle</div>
+    <button id="wa-send-btn" type="button" style="
+      width: auto;
+      padding: 6px 12px;
+      background: #25d366;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    ">
+      <span style="font-size: 14px;">📱</span> WA ile Gönder
+    </button>
+  </div>
   <label>Ders</label>
   <select id="lesson-select">
     <option value="">Ders seç</option>
@@ -1315,6 +1333,175 @@
     filterEndInput.value = "";
     render();
   });
+
+  // ========== WHATSAPP İLE GÖNDER ==========
+  const WA_NUMBER_KEY = "ozel-ders-takip-wa-number-v1";
+
+  function getSavedWaNumber() {
+    try {
+      return localStorage.getItem(WA_NUMBER_KEY) || "";
+    } catch (e) { return ""; }
+  }
+
+  function saveWaNumber(num) {
+    try { localStorage.setItem(WA_NUMBER_KEY, num); } catch (e) {}
+  }
+
+  // Numarayı normalize et: sadece rakamlar (başında + olabilir)
+  // Türkiye için 0 ile başlıyorsa 90 ile değiştir
+  function normalizeNumber(raw) {
+    let n = raw.replace(/[^\d+]/g, "");
+    if (n.startsWith("+")) n = n.slice(1);
+    if (n.startsWith("00")) n = n.slice(2);
+    if (n.startsWith("0")) n = "90" + n.slice(1);
+    return n;
+  }
+
+  document.getElementById("wa-send-btn").addEventListener("click", () => {
+    openWaModal();
+  });
+
+  function openWaModal() {
+    if (document.querySelector(".modal-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    const content = document.createElement("div");
+    content.className = "modal-content";
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
+
+    function close() { overlay.remove(); }
+    overlay.onclick = (e) => { if (e.target === overlay) close(); };
+
+    const t = document.createElement("div");
+    t.className = "modal-title";
+    t.textContent = "WhatsApp ile Gönder";
+    content.appendChild(t);
+
+    const saved = getSavedWaNumber();
+    const s = document.createElement("div");
+    s.className = "modal-subtitle";
+    s.innerHTML = saved
+      ? "Kayıtlı numara: <strong>" + saved + "</strong><br><small>Değiştirmek için aşağıdaki kutuya yeni numara yaz.</small>"
+      : "İlk kez göndereceksin. Numarayı bir kez gir, sonra hatırlanır.<br><small>Türkiye için: 5XX XXX XX XX (başında 0 olsun veya olmasın)</small>";
+    content.appendChild(s);
+
+    const input = document.createElement("input");
+    input.type = "tel";
+    input.className = "modal-input";
+    input.placeholder = "Telefon numarası";
+    input.value = saved;
+    input.inputMode = "tel";
+    content.appendChild(input);
+
+    const statusDiv = document.createElement("div");
+    statusDiv.style.cssText = "text-align: center; font-size: 13px; color: #8e8e93; margin: 8px 0; min-height: 18px;";
+    content.appendChild(statusDiv);
+
+    const send = document.createElement("button");
+    send.type = "button";
+    send.className = "modal-save";
+    send.textContent = "📸 Ekran Görüntüsü Al ve Gönder";
+    send.onclick = async () => {
+      const raw = input.value.trim();
+      if (!raw) {
+        alert("Lütfen telefon numarası gir");
+        return;
+      }
+      const number = normalizeNumber(raw);
+      if (number.length < 10) {
+        alert("Geçerli bir telefon numarası gir");
+        return;
+      }
+
+      saveWaNumber(raw);
+      send.disabled = true;
+      send.style.opacity = "0.6";
+      statusDiv.textContent = "📸 Ekran görüntüsü hazırlanıyor...";
+
+      try {
+        // Modalı geçici olarak gizle ki ekran görüntüsünde olmasın
+        overlay.style.display = "none";
+
+        // Sayfayı en üste kaydır ve kısa süre bekle
+        window.scrollTo(0, 0);
+        await new Promise(r => setTimeout(r, 200));
+
+        // html2canvas ile ekran görüntüsü al
+        const canvas = await html2canvas(document.body, {
+          backgroundColor: "#f2f2f7",
+          scale: 2,
+          useCORS: true,
+          logging: false
+        });
+
+        // Modalı tekrar göster
+        overlay.style.display = "flex";
+
+        // Canvas'ı blob'a çevir
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+
+        // Panoya kopyalamayı dene
+        let copiedToClipboard = false;
+        try {
+          if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+            await navigator.clipboard.write([
+              new ClipboardItem({ "image/png": blob })
+            ]);
+            copiedToClipboard = true;
+          }
+        } catch (clipErr) {
+          // Sessizce indirmeye düş
+          console.log("Clipboard yazılamadı:", clipErr);
+        }
+
+        // Eğer panoya kopyalanmadıysa indir
+        if (!copiedToClipboard) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "ders-listesi-" + todayISO() + ".png";
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        statusDiv.textContent = copiedToClipboard
+          ? "✓ Görüntü panoya kopyalandı! WhatsApp açılıyor..."
+          : "✓ Görüntü indirildi! WhatsApp açılıyor...";
+
+        // 1 saniye bekleyip WhatsApp'ı aç
+        setTimeout(() => {
+          const waUrl = "https://wa.me/" + number;
+          window.open(waUrl, "_blank");
+
+          // Kullanıcıya bilgilendirme — neyi yapması gerek
+          if (copiedToClipboard) {
+            statusDiv.innerHTML = "✓ <strong>WhatsApp açıldı.</strong><br>Sohbette mesaj kutusuna basılı tut → <strong>Yapıştır</strong>";
+          } else {
+            statusDiv.innerHTML = "✓ <strong>WhatsApp açıldı.</strong><br>Mesaj kutusunda 📎 → Galeri → indirdiğin resmi seç";
+          }
+
+          // Modal kendisi 5 saniye sonra kapansın
+          setTimeout(() => close(), 5000);
+        }, 1000);
+
+      } catch (err) {
+        overlay.style.display = "flex";
+        statusDiv.textContent = "❌ Hata: " + err.message;
+        send.disabled = false;
+        send.style.opacity = "1";
+      }
+    };
+    content.appendChild(send);
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "modal-cancel";
+    cancelBtn.textContent = "İptal";
+    cancelBtn.onclick = close;
+    content.appendChild(cancelBtn);
+  }
 
   // ========== BAŞLAT ==========
   loadData();
