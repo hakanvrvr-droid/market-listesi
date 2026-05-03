@@ -677,19 +677,10 @@
 
       // Ödeme tarihi — düzenlenebilir, duruma göre renkli
       if (payInfo.isPayDay) {
-        // Renk mantığı:
+        // Renk mantığı (basitleştirildi):
         // - Ödenmiş → yeşil
-        // - Bugün ödenecek → mavi
-        // - Geçmiş ama ödenmemiş → kırmızı (gecikmiş)
-        // - Gelecek → sarı (varsayılan)
-        let payDateClass = "pay-date-future";
-        if (lesson.paid) {
-          payDateClass = "pay-date-paid";
-        } else if (payInfo.date === today) {
-          payDateClass = "pay-date-today";
-        } else if (payInfo.date < today) {
-          payDateClass = "pay-date-overdue";
-        }
+        // - Ödenmemiş → kırmızı (vadesi gelmiş veya gelmemiş fark etmez, dikkat çek)
+        const payDateClass = lesson.paid ? "pay-date-paid" : "pay-date-overdue";
 
         const payDateField = document.createElement("div");
         payDateField.className = "field";
