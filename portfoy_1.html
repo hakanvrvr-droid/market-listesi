@@ -1,0 +1,1824 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Portföy">
+<meta name="theme-color" content="#0f1115">
+<title>Portföy · Özlem & Hakan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1115;
+    --bg-elevated: #161a21;
+    --bg-card: #1a1f28;
+    --bg-input: #0b0d11;
+    --border: #262c37;
+    --border-strong: #3a4250;
+    --text: #e8ecf2;
+    --text-muted: #8a93a3;
+    --text-dim: #5a6373;
+    --accent: #d4a574;
+    --accent-soft: rgba(212,165,116,0.12);
+    --green: #7fc99a;
+    --red: #e07b7b;
+    --highlight: #2a2f3a;
+    --highlight-border: #3d4555;
+    --tab-bar-h: calc(56px + env(safe-area-inset-bottom));
+    --header-h: calc(54px + env(safe-area-inset-top));
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+    overscroll-behavior-y: contain;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background:
+      radial-gradient(ellipse 100% 40% at 50% 0%, rgba(212,165,116,0.06), transparent),
+      var(--bg);
+    padding-bottom: var(--tab-bar-h);
+    overflow-x: hidden;
+  }
+
+  button, input, select { font-family: inherit; }
+
+  /* ============ HEADER ============ */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(15,17,21,0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: env(safe-area-inset-top) 20px 0;
+  }
+
+  .header-inner {
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .brand-mark {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-style: italic;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+  .brand-mark span { color: var(--accent); }
+  .brand-sub {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+
+  .save-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  /* ============ MAIN ============ */
+  main {
+    padding: 16px 16px 24px;
+    max-width: 100%;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ============ HERO TOTAL ============ */
+  .hero {
+    background: linear-gradient(140deg, var(--bg-card), var(--bg-elevated));
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px 20px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: -40%; right: -20%;
+    width: 70%; height: 140%;
+    background: radial-gradient(circle, var(--accent-soft), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-weight: 600;
+    position: relative;
+  }
+  .hero-value {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 34px;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    position: relative;
+  }
+  .hero-value .currency {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+  .hero-delta {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    position: relative;
+  }
+  .hero-delta .pill {
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .pill.profit { background: rgba(127,201,154,0.15); color: var(--green); }
+  .pill.loss { background: rgba(224,123,123,0.15); color: var(--red); }
+
+  /* ============ SECTION TITLES ============ */
+  .section-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    margin: 24px 0 4px;
+  }
+  .section-sub {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-bottom: 14px;
+  }
+
+  /* ============ INSTRUMENT GRID ============ */
+  .instrument-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .instrument-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 14px;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.12s, border-color 0.12s;
+    color: var(--text);
+    position: relative;
+    overflow: hidden;
+    min-height: 76px;
+  }
+  .instrument-btn:active {
+    transform: scale(0.97);
+    border-color: var(--accent);
+  }
+  .instrument-btn .icon {
+    font-size: 22px;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .instrument-btn .label {
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .instrument-btn .plus {
+    position: absolute;
+    top: 12px; right: 14px;
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 300;
+    line-height: 1;
+  }
+
+  /* ============ ENTRIES ============ */
+  .group-section {
+    margin-top: 20px;
+  }
+
+  .owner-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 22px 0 10px;
+    padding: 0 4px;
+  }
+  .owner-header h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 17px;
+  }
+  .owner-header .count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--bg-card);
+    padding: 2px 7px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .owner-header .total {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .type-group {
+    margin-bottom: 14px;
+  }
+  .type-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 6px;
+    padding: 0 4px;
+  }
+
+  .entry-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+
+  .entry-card .row1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .entry-card .name {
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.3;
+    flex: 1;
+    min-width: 0;
+    word-wrap: break-word;
+  }
+  .entry-card .meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .entry-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .icon-action {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .icon-action:active { background: var(--bg-elevated); }
+  .icon-action.delete:active { color: var(--red); border-color: var(--red); }
+
+  .entry-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .entry-grid .field { display: flex; flex-direction: column; gap: 2px; }
+  .entry-grid .field-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    font-family: 'Manrope', sans-serif;
+    font-weight: 500;
+  }
+  .entry-grid .field-value {
+    color: var(--text);
+    font-weight: 500;
+  }
+  .entry-grid .field.full { grid-column: 1 / -1; }
+  .entry-grid .field.profit .field-value { color: var(--green); }
+  .entry-grid .field.loss .field-value { color: var(--red); }
+
+  .entry-grid .field.manual {
+    background: var(--highlight);
+    border: 1px solid var(--highlight-border);
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
+
+  /* ============ FULLSCREEN FORM (instead of modal) ============ */
+  .form-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    visibility: hidden;
+  }
+  .form-screen.active {
+    transform: translateY(0);
+    visibility: visible;
+  }
+
+  .form-header {
+    padding: env(safe-area-inset-top) 16px 0;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .form-header-inner {
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .form-back {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-size: 15px;
+    font-weight: 500;
+    padding: 8px 4px;
+    cursor: pointer;
+    min-width: 60px;
+    text-align: left;
+  }
+  .form-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 17px;
+    text-align: center;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .form-save {
+    background: var(--accent);
+    color: #1a1108;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    min-width: 60px;
+  }
+  .form-save:active { opacity: 0.7; }
+
+  .form-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px calc(40px + env(safe-area-inset-bottom));
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .form-field {
+    margin-bottom: 14px;
+  }
+  .form-field label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .form-field input,
+  .form-field select {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 14px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;  /* iOS zoom prevention */
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border-color 0.15s;
+  }
+  .form-field select {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M3 4.5L6 7.5L9 4.5' stroke='%238a93a3' stroke-width='1.5' fill='none'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    font-family: 'Manrope', sans-serif;
+  }
+  .form-field input:focus,
+  .form-field select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .form-field.manual input {
+    background: var(--highlight);
+    border-color: var(--highlight-border);
+  }
+  .form-field .hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 4px;
+  }
+  .form-field input[name*="__sel"] + input[type="text"],
+  .form-field input[type="text"].bank-other {
+    margin-top: 8px;
+  }
+
+  /* Live calculation preview */
+  .calc-preview {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .calc-preview .calc-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .calc-preview .calc-row:last-child { border-bottom: none; }
+  .calc-preview .calc-label {
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 500;
+  }
+  .calc-preview .calc-value { color: var(--text); font-weight: 500; }
+
+  /* ============ STATUS PANEL ============ */
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 12px;
+  }
+  .stat-card h4 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 16px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .stat-card h4 .total {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  .breakdown-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-row .name {
+    color: var(--text);
+    font-weight: 500;
+    min-width: 90px;
+    font-size: 12px;
+  }
+  .breakdown-row .bar-wrap {
+    flex: 1;
+    height: 5px;
+    background: var(--bg-input);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .breakdown-row .bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #c89766);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+  .breakdown-row .pct {
+    color: var(--text-muted);
+    min-width: 44px;
+    text-align: right;
+    font-size: 11px;
+  }
+
+  .pnl-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    align-items: center;
+  }
+  .pnl-row:last-child { border-bottom: none; }
+  .pnl-row .name { color: var(--text); font-weight: 500; }
+  .pnl-row .amount { color: var(--text-muted); font-size: 11px; }
+  .pnl-row .delta { font-weight: 600; }
+
+  /* ============ EMPTY STATES ============ */
+  .empty-state {
+    padding: 50px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    border: 1px dashed var(--border-strong);
+    border-radius: 14px;
+  }
+  .empty-state .ic {
+    font-size: 28px;
+    margin-bottom: 10px;
+    opacity: 0.4;
+  }
+  .empty-state .text {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ============ DATA ACTIONS (settings tab) ============ */
+  .action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .action-row {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    color: var(--text);
+    text-align: left;
+    width: 100%;
+  }
+  .action-row:active { background: var(--bg-elevated); }
+  .action-row .ic {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: var(--bg-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .action-row .text { flex: 1; min-width: 0; }
+  .action-row .text .title { font-weight: 500; font-size: 14px; }
+  .action-row .text .desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .action-row.danger { color: var(--red); }
+  .action-row.danger .ic { color: var(--red); }
+
+  .info-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-top: 16px;
+  }
+  .info-block strong { color: var(--text); }
+
+  /* ============ TAB BAR ============ */
+  .tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--tab-bar-h);
+    background: rgba(15,17,21,0.94);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 50;
+  }
+  .tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    padding: 8px 4px;
+    transition: color 0.15s;
+  }
+  .tab-btn .tab-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+  .tab-btn .tab-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .tab-btn.active { color: var(--accent); }
+
+  /* ============ TOAST ============ */
+  .toast {
+    position: fixed;
+    top: calc(var(--header-h) + 12px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    padding: 10px 18px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: all 0.25s ease;
+    z-index: 2000;
+    pointer-events: none;
+    white-space: nowrap;
+    max-width: 90vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ============ CONFIRM DIALOG ============ */
+  .confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 3000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .confirm-overlay.active { display: flex; }
+  .confirm-box {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    padding: 22px 20px 16px;
+    max-width: 320px;
+    width: 100%;
+  }
+  .confirm-title {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    margin-bottom: 6px;
+  }
+  .confirm-msg {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+  .confirm-actions {
+    display: flex;
+    gap: 10px;
+  }
+  .confirm-actions button {
+    flex: 1;
+    padding: 11px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .confirm-actions .danger {
+    background: var(--red);
+    color: #1a0808;
+    border-color: var(--red);
+  }
+
+  /* Scrollbar (mostly hidden on mobile) */
+  ::-webkit-scrollbar { width: 0; height: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark">Portföy<span>.</span></div>
+      <div class="brand-sub">Ö & H</div>
+    </div>
+    <div class="save-status">
+      <span class="live-dot"></span>
+      <span id="lastSaved">kayıtlı</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ TAB 1: VERİ GİRİŞİ ============ -->
+  <section class="panel active" id="panel-entry">
+    <h2 class="section-title">Yeni yatırım ekle</h2>
+    <p class="section-sub">Eklemek istediğiniz enstrümanı seçin.</p>
+    <div class="instrument-grid" id="instrumentGrid"></div>
+
+    <h2 class="section-title" style="margin-top:28px">Mevcut girişler</h2>
+    <p class="section-sub">Sahibe ve türe göre gruplanmıştır. Sarı vurgulu alanlar manuel girilebilir.</p>
+    <div id="entriesSection"></div>
+  </section>
+
+  <!-- ============ TAB 2: PORTFÖY DURUMU ============ -->
+  <section class="panel" id="panel-status">
+    <div class="hero">
+      <div class="hero-label">Toplam Portföy Değeri</div>
+      <div class="hero-value"><span id="heroTotal">0,00</span><span class="currency">TL</span></div>
+      <div class="hero-delta" id="heroDelta"></div>
+    </div>
+
+    <div class="stat-card">
+      <h4>Sahibe göre <span class="total" id="ownerTotal"></span></h4>
+      <div id="ownerBreakdown"></div>
+    </div>
+
+    <div class="stat-card">
+      <h4>Enstrümana göre <span class="total" id="typeTotal"></span></h4>
+      <div id="typeBreakdown"></div>
+    </div>
+
+    <div class="stat-card">
+      <h4>Kâr / Zarar <span class="total" id="pnlTotal"></span></h4>
+      <div id="pnlBreakdown"></div>
+    </div>
+  </section>
+
+  <!-- ============ TAB 3: YEDEK / AYARLAR ============ -->
+  <section class="panel" id="panel-settings">
+    <h2 class="section-title">Yedek & Ayarlar</h2>
+    <p class="section-sub">Tüm verilerinizi JSON dosyası olarak dışa aktarın ve diğer telefonlara yedekleyin.</p>
+
+    <div class="action-list">
+      <button class="action-row" onclick="exportData()">
+        <div class="ic">↓</div>
+        <div class="text">
+          <div class="title">Verileri Dışa Aktar</div>
+          <div class="desc">JSON dosyası olarak kaydet (Files / iCloud)</div>
+        </div>
+      </button>
+
+      <button class="action-row" onclick="document.getElementById('importFile').click()">
+        <div class="ic">↑</div>
+        <div class="text">
+          <div class="title">Yedekten İçe Aktar</div>
+          <div class="desc">Mevcut veriler değiştirilir</div>
+        </div>
+      </button>
+      <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importData(event)">
+
+      <button class="action-row danger" onclick="confirmReset()">
+        <div class="ic">×</div>
+        <div class="text">
+          <div class="title">Tüm verileri sil</div>
+          <div class="desc">Geri alınamaz</div>
+        </div>
+      </button>
+    </div>
+
+    <div class="info-block">
+      <strong>Yedekleme önerisi:</strong> Bu uygulama verilerinizi yalnızca bu telefonun tarayıcısında saklar. 3 telefon arasında otomatik senkron yoktur. Yedek almak için <strong>Dışa Aktar</strong>'a basın → JSON dosyasını <strong>Files</strong> uygulamasına / iCloud Drive'a kaydedin. Diğer telefonlardan istediğiniz zaman <strong>İçe Aktar</strong> ile geri yükleyebilirsiniz.
+      <br><br>
+      <strong>Tarayıcı uyarısı:</strong> Safari'de "Web Sitesi Verilerini Sil" yaparsanız veriler silinir. Düzenli olarak (haftada bir) yedek almanız tavsiye edilir.
+      <br><br>
+      <strong>Ana ekrana ekle:</strong> Safari'de bu sayfayı açıp Paylaş → "Ana Ekrana Ekle" diyerek uygulama gibi kullanabilirsiniz.
+    </div>
+
+    <div class="info-block" id="storageInfo"></div>
+  </section>
+</main>
+
+<!-- ============ TAB BAR ============ -->
+<nav class="tab-bar">
+  <button class="tab-btn active" data-tab="entry">
+    <span class="tab-icon">＋</span>
+    <span class="tab-label">Giriş</span>
+  </button>
+  <button class="tab-btn" data-tab="status">
+    <span class="tab-icon">◆</span>
+    <span class="tab-label">Durum</span>
+  </button>
+  <button class="tab-btn" data-tab="settings">
+    <span class="tab-icon">⚙</span>
+    <span class="tab-label">Yedek</span>
+  </button>
+</nav>
+
+<!-- ============ FULLSCREEN FORM ============ -->
+<div class="form-screen" id="formScreen">
+  <div class="form-header">
+    <div class="form-header-inner">
+      <button class="form-back" onclick="closeForm()">İptal</button>
+      <div class="form-title" id="formTitle">Yeni</div>
+      <button class="form-save" onclick="saveEntry()">Kaydet</button>
+    </div>
+  </div>
+  <div class="form-body" id="formBody"></div>
+</div>
+
+<!-- ============ TOAST ============ -->
+<div class="toast" id="toast"></div>
+
+<!-- ============ CONFIRM DIALOG ============ -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirmTitle">Emin misiniz?</div>
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <div class="confirm-actions">
+      <button onclick="closeConfirm()">İptal</button>
+      <button class="danger" id="confirmOk">Sil</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==================================================================
+   STATE & CONSTANTS
+================================================================== */
+const STORAGE_KEY = 'portfoy_data_v1';
+
+const OWNERS = ['Özlem', 'Hakan'];
+
+const BANKS = [
+  'Yapı Kredi', 'Garanti BBVA', 'İş Bankası', 'Akbank', 'Ziraat Bankası',
+  'Halkbank', 'VakıfBank', 'QNB Finansbank', 'DenizBank', 'TEB',
+  'ING Bank', 'HSBC', 'Albaraka Türk', 'Kuveyt Türk', 'Enpara',
+  'Diğer (elle gir)'
+];
+
+const INSTRUMENTS = {
+  vadeli:    { label: 'Vadeli Mevduat', icon: '◆', color: '#7ba8d4' },
+  fon:       { label: 'Yatırım Fonu',   icon: '▲', color: '#9b87d4' },
+  altin:     { label: 'Altın',          icon: '●', color: '#d4a574' },
+  gumus:     { label: 'Gümüş',          icon: '○', color: '#b8b8b8' },
+  altinFon:  { label: 'Altın Fonu',     icon: '◉', color: '#d4a574' },
+  gumusFon:  { label: 'Gümüş Fonu',     icon: '◎', color: '#b8b8b8' },
+  euro:      { label: 'Euro',           icon: '€', color: '#7fc99a' },
+  usd:       { label: 'USD',            icon: '$', color: '#7fc99a' }
+};
+
+const TYPE_ORDER = ['vadeli','fon','altin','gumus','altinFon','gumusFon','euro','usd'];
+
+const SCHEMAS = {
+  vadeli: [
+    { key: 'owner',       label: 'Sahip',                  type: 'select', options: OWNERS, required: true },
+    { key: 'bank',        label: 'Banka',                  type: 'bank',   required: true },
+    { key: 'principal',   label: 'Ana Para (TL)',          type: 'number' },
+    { key: 'rate',        label: 'Vade Oranı (%)',         type: 'number' },
+    { key: 'startDate',   label: 'Başlangıç Tarihi',       type: 'date' },
+    { key: 'endDate',     label: 'Vade Sonu Tarihi',       type: 'date' },
+    { key: 'maturityAmt', label: 'Vade Sonu Tutarı (TL)',  type: 'number', manual: true },
+    { key: 'tax',         label: 'Vergi (TL)',             type: 'number', manual: true }
+  ],
+  fon: [
+    { key: 'owner',       label: 'Sahip',                  type: 'select', options: OWNERS, required: true },
+    { key: 'bank',        label: 'Fon Bankası',            type: 'bank',   required: true },
+    { key: 'fundName',    label: 'Fon Adı',                type: 'text' },
+    { key: 'qty',         label: 'Alım Adedi',             type: 'number' },
+    { key: 'unitCost',    label: 'Birim Maliyet (TL)',     type: 'number' },
+    { key: 'currentTotal',label: 'Güncel Toplam Fon Değeri (TL)', type: 'number', manual: true },
+    { key: 'buyDate',     label: 'Alım Tarihi',            type: 'date' }
+  ],
+  altin: [
+    { key: 'owner',       label: 'Sahip',                  type: 'select', options: OWNERS, required: true },
+    { key: 'buyDate',     label: 'Alım Tarihi',            type: 'date' },
+    { key: 'qty',         label: 'Miktar (gr)',            type: 'number' },
+    { key: 'unitCost',    label: 'Alış Fiyatı (TL/gr)',    type: 'number' },
+    { key: 'currentPrice',label: 'Piyasa Fiyatı (TL/gr)',  type: 'number', manual: true }
+  ],
+  gumus: [
+    { key: 'owner',       label: 'Sahip',                  type: 'select', options: OWNERS, required: true },
+    { key: 'buyDate',     label: 'Alım Tarihi',            type: 'date' },
+    { key: 'qty',         label: 'Miktar (gr)',            type: 'number' },
+    { key: 'unitCost',    label: 'Alış Fiyatı (TL/gr)',    type: 'number' },
+    { key: 'currentPrice',label: 'Piyasa Fiyatı (TL/gr)',  type: 'number', manual: true }
+  ],
+  altinFon: [
+    { key: 'owner',          label: 'Sahip',                       type: 'select', options: OWNERS, required: true },
+    { key: 'bank',           label: 'Fon Bankası',                 type: 'bank',   required: true },
+    { key: 'fundName',       label: 'Fon Adı',                     type: 'text' },
+    { key: 'qty',            label: 'Alım Adedi',                  type: 'number' },
+    { key: 'unitCost',       label: 'Birim Maliyet (TL)',          type: 'number' },
+    { key: 'buyGoldPrice',   label: 'Alım Günü Altın Fiyatı (TL/gr)', type: 'number' },
+    { key: 'currentGoldPrice', label: 'Güncel Altın Fiyatı (TL/gr)', type: 'number', manual: true },
+    { key: 'currentTotal',   label: 'Güncel Toplam Fon Değeri (TL) — opsiyonel', type: 'number', manual: true },
+    { key: 'buyDate',        label: 'Alım Tarihi',                 type: 'date' }
+  ],
+  gumusFon: [
+    { key: 'owner',            label: 'Sahip',                       type: 'select', options: OWNERS, required: true },
+    { key: 'bank',             label: 'Fon Bankası',                 type: 'bank',   required: true },
+    { key: 'fundName',         label: 'Fon Adı',                     type: 'text' },
+    { key: 'qty',              label: 'Alım Adedi',                  type: 'number' },
+    { key: 'unitCost',         label: 'Birim Maliyet (TL)',          type: 'number' },
+    { key: 'buySilverPrice',   label: 'Alım Günü Gümüş Fiyatı (TL/gr)', type: 'number' },
+    { key: 'currentSilverPrice', label: 'Güncel Gümüş Fiyatı (TL/gr)', type: 'number', manual: true },
+    { key: 'currentTotal',     label: 'Güncel Toplam Fon Değeri (TL) — opsiyonel', type: 'number', manual: true },
+    { key: 'buyDate',          label: 'Alım Tarihi',                 type: 'date' }
+  ],
+  euro: [
+    { key: 'owner',       label: 'Sahip',                  type: 'select', options: OWNERS, required: true },
+    { key: 'buyDate',     label: 'Alım Tarihi',            type: 'date' },
+    { key: 'qty',         label: 'Miktar (€)',             type: 'number' },
+    { key: 'unitCost',    label: 'Alış Kuru (TL/€)',       type: 'number' },
+    { key: 'currentPrice',label: 'Güncel Kur (TL/€)',      type: 'number', manual: true }
+  ],
+  usd: [
+    { key: 'owner',       label: 'Sahip',                  type: 'select', options: OWNERS, required: true },
+    { key: 'buyDate',     label: 'Alım Tarihi',            type: 'date' },
+    { key: 'qty',         label: 'Miktar ($)',             type: 'number' },
+    { key: 'unitCost',    label: 'Alış Kuru (TL/$)',       type: 'number' },
+    { key: 'currentPrice',label: 'Güncel Kur (TL/$)',      type: 'number', manual: true }
+  ]
+};
+
+let state = { entries: [] };
+let formContext = { type: null, editId: null };
+
+/* ==================================================================
+   STORAGE
+================================================================== */
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = JSON.parse(raw);
+  } catch(e) { console.warn('Yükleme hatası:', e); }
+}
+
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    flashSaved();
+  } catch(e) {
+    toast('Kayıt başarısız: ' + e.message);
+  }
+}
+
+function flashSaved() {
+  const el = document.getElementById('lastSaved');
+  el.textContent = 'kaydedildi · ' + new Date().toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
+}
+
+/* ==================================================================
+   CALCULATIONS
+================================================================== */
+const num = v => {
+  if (v === null || v === undefined || v === '') return 0;
+  let s = String(v).trim();
+  if (!s) return 0;
+  // Türkçe format desteği: "1.234,56" → "1234.56"
+  // Heuristik: hem . hem , varsa son görüleni ondalık ayırıcı kabul et
+  const lastDot = s.lastIndexOf('.');
+  const lastComma = s.lastIndexOf(',');
+  if (lastComma > lastDot) {
+    // virgül ondalık → noktaları kaldır, virgülü noktaya çevir
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else if (lastDot > lastComma) {
+    // nokta ondalık → virgülleri kaldır
+    s = s.replace(/,/g, '');
+  } else {
+    // sadece bir tip var
+    if (s.includes(',')) s = s.replace(',', '.');
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+};
+
+/* Sayıyı tr-TR formatlı stringe çevir (input görünümü için) */
+function formatNumberInput(value, decimals = null) {
+  const n = num(value);
+  if (n === 0 && (value === '' || value === null || value === undefined)) return '';
+  // ondalık sayısını orijinaldeki kadar koru, yoksa otomatik
+  const opts = decimals !== null
+    ? { minimumFractionDigits: decimals, maximumFractionDigits: decimals }
+    : { minimumFractionDigits: 0, maximumFractionDigits: 8 };
+  return new Intl.NumberFormat('tr-TR', opts).format(n);
+}
+
+/* Input olayında: kullanıcı yazarken binlik ayraç ekle, ondalık yazımına izin ver */
+function attachNumberFormatting(input) {
+  const reformat = () => {
+    const raw = input.value;
+    if (raw === '') return;
+
+    // Cursor pozisyonu
+    const selStart = input.selectionStart;
+    const beforeCursor = raw.slice(0, selStart);
+
+    // Sadece rakam, nokta, virgül kalsın
+    let cleaned = raw.replace(/[^\d.,]/g, '');
+
+    // Çift virgül/nokta önle: ilk ondalık ayırıcıyı koru, kalanları kaldır
+    // Türkçe için ondalık ayırıcı = virgül
+    const firstComma = cleaned.indexOf(',');
+    if (firstComma !== -1) {
+      // Virgülden sonraki ekstra virgül ve noktaları sil
+      cleaned = cleaned.slice(0, firstComma + 1) + cleaned.slice(firstComma + 1).replace(/[.,]/g, '');
+    }
+    // Virgülden önceki noktaları (binlik) sil — sonra yeniden ekleyeceğiz
+    const commaIdx = cleaned.indexOf(',');
+    let intPart = commaIdx === -1 ? cleaned : cleaned.slice(0, commaIdx);
+    const decPart = commaIdx === -1 ? '' : cleaned.slice(commaIdx); // virgülle birlikte
+
+    intPart = intPart.replace(/\./g, ''); // tüm noktaları (binlik) kaldır
+    if (intPart === '') intPart = '';
+    else {
+      // baştaki sıfırları temizle (ama tek "0" kalsın)
+      intPart = intPart.replace(/^0+(?=\d)/, '');
+      // binlik ayraç ekle
+      intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+    const newVal = intPart + decPart;
+
+    // Kursörün yeni pozisyonu — eski kursörden önceki rakam sayısına göre
+    const digitsBefore = beforeCursor.replace(/[^\d,]/g, '').length;
+    let newCursor = 0, count = 0;
+    for (let i = 0; i < newVal.length; i++) {
+      if (/[\d,]/.test(newVal[i])) count++;
+      if (count >= digitsBefore) { newCursor = i + 1; break; }
+    }
+    if (count < digitsBefore) newCursor = newVal.length;
+
+    if (newVal !== raw) {
+      input.value = newVal;
+      try { input.setSelectionRange(newCursor, newCursor); } catch(e) {}
+    }
+  };
+  input.addEventListener('input', reformat);
+  // İlk yüklemede mevcut değer varsa formatla
+  if (input.value) {
+    input.value = formatNumberInput(input.value);
+  }
+}
+
+function calc(entry) {
+  const e = entry;
+  const r = { cost: 0, current: 0, profit: 0, profitPct: 0, qty: num(e.qty), estTotal: 0 };
+
+  switch (e.type) {
+    case 'vadeli': {
+      r.cost = num(e.principal);
+      const matur = num(e.maturityAmt);
+      const tax = num(e.tax);
+      r.current = matur > 0 ? matur - tax : r.cost;
+      r.profit = r.current - r.cost;
+      break;
+    }
+    case 'fon': {
+      const qty = num(e.qty);
+      r.cost = qty * num(e.unitCost);
+      // Kullanıcı toplam fon değerini doğrudan girer
+      r.current = num(e.currentTotal);
+      if (r.current === 0) r.current = r.cost;
+      r.profit = r.current - r.cost;
+      break;
+    }
+    case 'altin':
+    case 'gumus':
+    case 'euro':
+    case 'usd': {
+      const qty = num(e.qty);
+      r.cost = qty * num(e.unitCost);
+      r.current = qty * num(e.currentPrice);
+      if (r.current === 0) r.current = r.cost;
+      r.profit = r.current - r.cost;
+      break;
+    }
+    case 'altinFon':
+    case 'gumusFon': {
+      const qty = num(e.qty);
+      r.cost = qty * num(e.unitCost);
+      // Tahmini değer: toplam maliyet, emtia oranı kadar büyütülür
+      // Örn: alım altın 6600, güncel 6732 → %2 artış → maliyet × 1,02
+      const buyComm = e.type === 'altinFon' ? num(e.buyGoldPrice) : num(e.buySilverPrice);
+      const curComm = e.type === 'altinFon' ? num(e.currentGoldPrice) : num(e.currentSilverPrice);
+      let estTotal = 0;
+      if (buyComm > 0 && curComm > 0) {
+        estTotal = r.cost * (curComm / buyComm);
+      }
+      // Eğer kullanıcı toplam fon değerini girmişse onu kullan; yoksa tahminî
+      const currentTotal = num(e.currentTotal);
+      r.current = currentTotal > 0 ? currentTotal : estTotal;
+      if (r.current === 0) r.current = r.cost;
+      r.estTotal = estTotal;
+      r.profit = r.current - r.cost;
+      break;
+    }
+  }
+  r.profitPct = r.cost > 0 ? (r.profit / r.cost) * 100 : 0;
+  return r;
+}
+
+/* ==================================================================
+   FORMATTING
+================================================================== */
+const fmt = n => new Intl.NumberFormat('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}).format(n || 0);
+const fmtTL = n => fmt(n) + ' ₺';
+const fmtPct = n => (n >= 0 ? '+' : '') + fmt(n) + '%';
+
+/* ==================================================================
+   RENDER: INSTRUMENT GRID
+================================================================== */
+function renderInstrumentGrid() {
+  const grid = document.getElementById('instrumentGrid');
+  grid.innerHTML = Object.entries(INSTRUMENTS).map(([key, inst]) => `
+    <button class="instrument-btn" onclick="openForm('${key}')">
+      <span class="plus">+</span>
+      <span class="icon" style="color:${inst.color}">${inst.icon}</span>
+      <span class="label">${inst.label}</span>
+    </button>
+  `).join('');
+}
+
+/* ==================================================================
+   FORM SCREEN
+================================================================== */
+function openForm(type, editId = null) {
+  formContext = { type, editId };
+  const schema = SCHEMAS[type];
+  const inst = INSTRUMENTS[type];
+  const existing = editId ? state.entries.find(e => e.id === editId) : null;
+
+  document.getElementById('formTitle').textContent =
+    (editId ? 'Düzenle · ' : 'Yeni · ') + inst.label;
+
+  const body = document.getElementById('formBody');
+  body.innerHTML = '';
+
+  schema.forEach(field => {
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = 'form-field' + (field.manual ? ' manual' : '');
+    const value = existing ? (existing[field.key] ?? '') : '';
+
+    let input = '';
+    if (field.type === 'select') {
+      input = `<select name="${field.key}" ${field.required?'required':''}>
+        <option value="">— seçin —</option>
+        ${field.options.map(o => `<option value="${o}" ${o===value?'selected':''}>${o}</option>`).join('')}
+      </select>`;
+    } else if (field.type === 'bank') {
+      const isOther = value && !BANKS.includes(value);
+      input = `
+        <select name="${field.key}__sel" onchange="onBankChange(this)">
+          <option value="">— seçin —</option>
+          ${BANKS.map(b => `<option value="${b}" ${(!isOther && b===value)||(isOther && b==='Diğer (elle gir)')?'selected':''}>${b}</option>`).join('')}
+        </select>
+        <input type="text" name="${field.key}" class="bank-other" placeholder="Banka adını yazın" value="${isOther?value:''}" style="display:${isOther?'block':'none'}">
+      `;
+    } else if (field.type === 'date') {
+      input = `<input type="date" name="${field.key}" value="${value}">`;
+    } else if (field.type === 'number') {
+      const formatted = value === '' ? '' : formatNumberInput(value);
+      input = `<input type="text" inputmode="decimal" data-numeric name="${field.key}" value="${formatted}" placeholder="0,00">`;
+    } else {
+      input = `<input type="text" name="${field.key}" value="${value}" autocomplete="off">`;
+    }
+
+    fieldDiv.innerHTML = `
+      <label>${field.label}${field.required?' *':''}</label>
+      ${input}
+      ${field.manual?'<div class="hint">manuel — siz girersiniz</div>':''}
+    `;
+    body.appendChild(fieldDiv);
+  });
+
+  // Live preview block
+  const preview = document.createElement('div');
+  preview.className = 'calc-preview';
+  preview.id = 'calcPreview';
+  body.appendChild(preview);
+
+  // Sayısal alanlara binlik ayraç formatlamasını bağla
+  body.querySelectorAll('input[data-numeric]').forEach(attachNumberFormatting);
+
+  // Attach live calculation listeners
+  body.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', updatePreview);
+    el.addEventListener('change', updatePreview);
+  });
+  updatePreview();
+
+  document.getElementById('formScreen').classList.add('active');
+  // Scroll form to top
+  document.getElementById('formBody').scrollTop = 0;
+}
+
+function updatePreview() {
+  const { type } = formContext;
+  if (!type) return;
+  const data = collectFormData();
+  data.type = type;
+  const r = calc(data);
+  const isAltinSilverFon = type === 'altinFon' || type === 'gumusFon';
+
+  const preview = document.getElementById('calcPreview');
+  let html = `
+    <div class="calc-row"><span class="calc-label">Maliyet</span><span class="calc-value">${fmtTL(r.cost)}</span></div>
+    <div class="calc-row"><span class="calc-label">Güncel Değer</span><span class="calc-value">${fmtTL(r.current)}</span></div>
+  `;
+  if (isAltinSilverFon && r.estTotal > 0) {
+    html += `<div class="calc-row"><span class="calc-label">Tahmini Piyasa Değeri</span><span class="calc-value">${fmtTL(r.estTotal)}</span></div>`;
+  }
+  const cls = r.profit >= 0 ? 'profit' : 'loss';
+  const sign = r.profit >= 0 ? '+' : '';
+  html += `<div class="calc-row"><span class="calc-label">Kâr / Zarar</span><span class="calc-value ${cls}">${sign}${fmtTL(r.profit)} <span style="opacity:0.7">(${fmtPct(r.profitPct)})</span></span></div>`;
+  preview.innerHTML = html;
+}
+
+function collectFormData() {
+  const body = document.getElementById('formBody');
+  const data = {};
+  const schema = SCHEMAS[formContext.type];
+  schema.forEach(field => {
+    if (field.type === 'bank') {
+      const sel = body.querySelector(`select[name="${field.key}__sel"]`);
+      const txt = body.querySelector(`input[name="${field.key}"]`);
+      if (sel && sel.value === 'Diğer (elle gir)') {
+        data[field.key] = txt ? txt.value.trim() : '';
+      } else {
+        data[field.key] = sel ? sel.value : '';
+      }
+    } else if (field.type === 'number') {
+      // Türkçe formatlı stringi parse edip standart sayı olarak sakla
+      const el = body.querySelector(`[name="${field.key}"]`);
+      const raw = el ? el.value.trim() : '';
+      data[field.key] = raw === '' ? '' : num(raw);
+    } else {
+      const el = body.querySelector(`[name="${field.key}"]`);
+      if (el) data[field.key] = el.value;
+    }
+  });
+  return data;
+}
+
+function onBankChange(sel) {
+  const textInput = sel.parentElement.querySelector('input.bank-other');
+  if (sel.value === 'Diğer (elle gir)') {
+    textInput.style.display = 'block';
+    setTimeout(() => textInput.focus(), 50);
+  } else {
+    textInput.style.display = 'none';
+    textInput.value = '';
+  }
+  updatePreview();
+}
+
+function closeForm() {
+  document.getElementById('formScreen').classList.remove('active');
+  formContext = { type: null, editId: null };
+}
+
+function saveEntry() {
+  const { type, editId } = formContext;
+  const schema = SCHEMAS[type];
+  const data = collectFormData();
+  data.type = type;
+
+  // Validation
+  for (const field of schema) {
+    if (field.required && !data[field.key]) {
+      toast(field.label + ' zorunlu');
+      return;
+    }
+  }
+
+  if (editId) {
+    const idx = state.entries.findIndex(e => e.id === editId);
+    state.entries[idx] = { ...state.entries[idx], ...data };
+  } else {
+    data.id = 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    data.createdAt = new Date().toISOString();
+    state.entries.push(data);
+  }
+
+  save();
+  closeForm();
+  renderEntries();
+  renderStatus();
+  toast(editId ? 'Güncellendi' : 'Eklendi');
+}
+
+/* ==================================================================
+   RENDER: ENTRIES
+================================================================== */
+function renderEntries() {
+  const section = document.getElementById('entriesSection');
+
+  if (state.entries.length === 0) {
+    section.innerHTML = `
+      <div class="empty-state">
+        <div class="ic">◇</div>
+        <div class="text">Henüz kayıt yok.<br>Yukarıdan bir enstrüman seçerek başlayın.</div>
+      </div>`;
+    return;
+  }
+
+  // Group: owner > type
+  const grouped = {};
+  state.entries.forEach(e => {
+    const owner = e.owner || '—';
+    if (!grouped[owner]) grouped[owner] = {};
+    if (!grouped[owner][e.type]) grouped[owner][e.type] = [];
+    grouped[owner][e.type].push(e);
+  });
+
+  let html = '<div class="group-section">';
+  // Order owners as listed
+  const orderedOwners = [...OWNERS, ...Object.keys(grouped).filter(o => !OWNERS.includes(o))];
+  orderedOwners.forEach(owner => {
+    if (!grouped[owner]) return;
+    const ownerEntries = grouped[owner];
+    let ownerTotal = 0;
+    let ownerCount = 0;
+    Object.values(ownerEntries).forEach(arr => {
+      arr.forEach(e => { ownerTotal += calc(e).current; ownerCount++; });
+    });
+
+    html += `
+      <div class="owner-header">
+        <h3>${owner}</h3>
+        <span class="count">${ownerCount}</span>
+        <span class="total">${fmtTL(ownerTotal)}</span>
+      </div>
+    `;
+
+    // Order types
+    TYPE_ORDER.forEach(type => {
+      const items = ownerEntries[type];
+      if (!items) return;
+      html += `<div class="type-group"><div class="type-label">${INSTRUMENTS[type].label}</div>`;
+      items.forEach(e => { html += renderEntryCard(e); });
+      html += `</div>`;
+    });
+  });
+  html += '</div>';
+
+  section.innerHTML = html;
+}
+
+function renderEntryCard(e) {
+  const r = calc(e);
+  const inst = INSTRUMENTS[e.type];
+  const profitClass = r.profit >= 0 ? 'profit' : 'loss';
+  const sign = r.profit >= 0 ? '+' : '';
+
+  // Build display name
+  let name = '';
+  if (e.type === 'vadeli') name = e.bank || 'Vadeli Mevduat';
+  else if (e.type === 'fon' || e.type === 'altinFon' || e.type === 'gumusFon') name = e.fundName || (e.bank || 'Fon');
+  else name = inst.label;
+
+  // Build meta line
+  let meta = [];
+  if (e.bank && e.type !== 'vadeli') meta.push(e.bank);
+  if (e.buyDate) meta.push(formatDate(e.buyDate));
+  else if (e.startDate) meta.push(formatDate(e.startDate));
+
+  // Build details based on type
+  let details = '';
+  if (e.type === 'vadeli') {
+    details = `
+      <div class="field"><div class="field-label">Ana Para</div><div class="field-value">${fmtTL(num(e.principal))}</div></div>
+      <div class="field"><div class="field-label">Vade Oranı</div><div class="field-value">${fmt(num(e.rate))}%</div></div>
+      <div class="field"><div class="field-label">Başlangıç</div><div class="field-value">${formatDate(e.startDate) || '—'}</div></div>
+      <div class="field"><div class="field-label">Vade Sonu</div><div class="field-value">${formatDate(e.endDate) || '—'}</div></div>
+      <div class="field manual"><div class="field-label">Vade Sonu Tutarı</div><div class="field-value">${fmtTL(num(e.maturityAmt))}</div></div>
+      <div class="field manual"><div class="field-label">Vergi</div><div class="field-value">${fmtTL(num(e.tax))}</div></div>
+    `;
+  } else if (e.type === 'fon') {
+    details = `
+      <div class="field"><div class="field-label">Adet</div><div class="field-value">${fmt(num(e.qty))}</div></div>
+      <div class="field"><div class="field-label">Birim Maliyet</div><div class="field-value">${fmtTL(num(e.unitCost))}</div></div>
+      <div class="field"><div class="field-label">Toplam Maliyet</div><div class="field-value">${fmtTL(r.cost)}</div></div>
+      <div class="field manual"><div class="field-label">Güncel Toplam</div><div class="field-value">${num(e.currentTotal) > 0 ? fmtTL(num(e.currentTotal)) : '—'}</div></div>
+    `;
+  } else if (e.type === 'altin' || e.type === 'gumus') {
+    const unit = 'gr';
+    details = `
+      <div class="field"><div class="field-label">Miktar</div><div class="field-value">${fmt(num(e.qty))} ${unit}</div></div>
+      <div class="field"><div class="field-label">Alış Fiyatı</div><div class="field-value">${fmtTL(num(e.unitCost))}/gr</div></div>
+      <div class="field manual"><div class="field-label">Piyasa Fiyatı</div><div class="field-value">${fmtTL(num(e.currentPrice))}/gr</div></div>
+      <div class="field"><div class="field-label">Toplam Maliyet</div><div class="field-value">${fmtTL(r.cost)}</div></div>
+    `;
+  } else if (e.type === 'euro' || e.type === 'usd') {
+    const sym = e.type === 'euro' ? '€' : '$';
+    details = `
+      <div class="field"><div class="field-label">Miktar</div><div class="field-value">${fmt(num(e.qty))} ${sym}</div></div>
+      <div class="field"><div class="field-label">Alış Kuru</div><div class="field-value">${fmtTL(num(e.unitCost))}</div></div>
+      <div class="field manual"><div class="field-label">Güncel Kur</div><div class="field-value">${fmtTL(num(e.currentPrice))}</div></div>
+      <div class="field"><div class="field-label">Toplam Maliyet</div><div class="field-value">${fmtTL(r.cost)}</div></div>
+    `;
+  } else if (e.type === 'altinFon' || e.type === 'gumusFon') {
+    const isGold = e.type === 'altinFon';
+    const buyComm = isGold ? e.buyGoldPrice : e.buySilverPrice;
+    const curComm = isGold ? e.currentGoldPrice : e.currentSilverPrice;
+    const commLabel = isGold ? 'Altın' : 'Gümüş';
+    const commPct = num(buyComm) > 0 ? ((num(curComm) - num(buyComm)) / num(buyComm)) * 100 : 0;
+    const commPctStr = (commPct >= 0 ? '+' : '') + fmt(commPct) + '%';
+    details = `
+      <div class="field"><div class="field-label">Adet</div><div class="field-value">${fmt(num(e.qty))}</div></div>
+      <div class="field"><div class="field-label">Birim Maliyet</div><div class="field-value">${fmtTL(num(e.unitCost))}</div></div>
+      <div class="field"><div class="field-label">Toplam Maliyet</div><div class="field-value">${fmtTL(r.cost)}</div></div>
+      <div class="field"><div class="field-label">Alım Günü ${commLabel}</div><div class="field-value">${fmtTL(num(buyComm))}/gr</div></div>
+      <div class="field manual"><div class="field-label">Güncel ${commLabel}</div><div class="field-value">${fmtTL(num(curComm))}/gr</div></div>
+      <div class="field"><div class="field-label">${commLabel} Değişim</div><div class="field-value ${commPct>=0?'profit':'loss'}" style="color:${commPct>=0?'var(--green)':'var(--red)'}">${commPctStr}</div></div>
+      <div class="field full"><div class="field-label">Tahmini Piyasa Değeri (emtia oranı)</div><div class="field-value">${r.estTotal > 0 ? fmtTL(r.estTotal) : '—'}</div></div>
+      <div class="field manual full"><div class="field-label">Güncel Toplam Fon Değeri (öncelikli — varsa bu kullanılır)</div><div class="field-value">${num(e.currentTotal) > 0 ? fmtTL(num(e.currentTotal)) : '—'}</div></div>
+    `;
+  }
+
+  return `
+    <div class="entry-card">
+      <div class="row1">
+        <div>
+          <div class="name">${escapeHtml(name)}</div>
+          ${meta.length ? `<div class="meta">${meta.join(' · ')}</div>` : ''}
+        </div>
+        <div class="entry-actions">
+          <button class="icon-action" onclick="openForm('${e.type}','${e.id}')" aria-label="Düzenle">✎</button>
+          <button class="icon-action delete" onclick="confirmDelete('${e.id}')" aria-label="Sil">🗑</button>
+        </div>
+      </div>
+      <div class="entry-grid">
+        ${details}
+        <div class="field full ${profitClass}" style="border-top:1px solid var(--border); padding-top:8px; margin-top:4px">
+          <div class="field-label">Güncel Değer / Kâr</div>
+          <div class="field-value" style="font-size:14px">
+            ${fmtTL(r.current)} <span style="color:var(--text-muted);font-weight:400">·</span>
+            <span class="${profitClass}">${sign}${fmtTL(r.profit)} (${fmtPct(r.profitPct)})</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
+}
+
+function formatDate(s) {
+  if (!s) return '';
+  const parts = s.split('-');
+  if (parts.length !== 3) return s;
+  return `${parts[2]}.${parts[1]}.${parts[0]}`;
+}
+
+/* ==================================================================
+   DELETE
+================================================================== */
+let pendingDeleteId = null;
+function confirmDelete(id) {
+  pendingDeleteId = id;
+  const e = state.entries.find(x => x.id === id);
+  document.getElementById('confirmTitle').textContent = 'Bu girişi sil?';
+  document.getElementById('confirmMsg').textContent =
+    (e?.owner || '') + ' · ' + (INSTRUMENTS[e?.type]?.label || '');
+  document.getElementById('confirmOk').onclick = doDelete;
+  document.getElementById('confirmOverlay').classList.add('active');
+}
+
+function doDelete() {
+  if (!pendingDeleteId) return;
+  state.entries = state.entries.filter(e => e.id !== pendingDeleteId);
+  pendingDeleteId = null;
+  save();
+  renderEntries();
+  renderStatus();
+  closeConfirm();
+  toast('Silindi');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('active');
+  pendingDeleteId = null;
+}
+
+function confirmReset() {
+  pendingDeleteId = '__ALL__';
+  document.getElementById('confirmTitle').textContent = 'TÜM verileri sil?';
+  document.getElementById('confirmMsg').textContent = 'Tüm girişler kalıcı olarak silinecek. Önce yedek almak ister misiniz?';
+  document.getElementById('confirmOk').textContent = 'Tümünü Sil';
+  document.getElementById('confirmOk').onclick = doResetAll;
+  document.getElementById('confirmOverlay').classList.add('active');
+}
+
+function doResetAll() {
+  state.entries = [];
+  save();
+  renderEntries();
+  renderStatus();
+  closeConfirm();
+  document.getElementById('confirmOk').textContent = 'Sil';
+  toast('Tüm veriler silindi');
+}
+
+/* ==================================================================
+   STATUS / REPORTS
+================================================================== */
+function renderStatus() {
+  let total = 0, totalCost = 0;
+  state.entries.forEach(e => {
+    const r = calc(e);
+    total += r.current;
+    totalCost += r.cost;
+  });
+  const totalProfit = total - totalCost;
+  const totalPct = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+
+  document.getElementById('heroTotal').textContent = fmt(total);
+  const delta = document.getElementById('heroDelta');
+  if (state.entries.length === 0) {
+    delta.innerHTML = '<span style="color:var(--text-dim)">Henüz veri yok</span>';
+  } else {
+    const cls = totalProfit >= 0 ? 'profit' : 'loss';
+    const sign = totalProfit >= 0 ? '+' : '';
+    delta.innerHTML = `
+      <span class="pill ${cls}">${sign}${fmtTL(totalProfit)}</span>
+      <span style="color:var(--text-muted)">${fmtPct(totalPct)} · maliyet ${fmtTL(totalCost)}</span>
+    `;
+  }
+
+  // Owner breakdown — değer + maliyet + kâr
+  const byOwner = {};
+  state.entries.forEach(e => {
+    const o = e.owner || '—';
+    if (!byOwner[o]) byOwner[o] = { cost: 0, current: 0 };
+    const r = calc(e);
+    byOwner[o].cost += r.cost;
+    byOwner[o].current += r.current;
+  });
+  document.getElementById('ownerTotal').textContent = fmtTL(total);
+  document.getElementById('ownerBreakdown').innerHTML = renderBreakdown(byOwner, total);
+
+  // Type breakdown — değer + maliyet + kâr
+  const byType = {};
+  state.entries.forEach(e => {
+    const t = INSTRUMENTS[e.type]?.label || e.type;
+    if (!byType[t]) byType[t] = { cost: 0, current: 0 };
+    const r = calc(e);
+    byType[t].cost += r.cost;
+    byType[t].current += r.current;
+  });
+  document.getElementById('typeTotal').textContent = fmtTL(total);
+  document.getElementById('typeBreakdown').innerHTML = renderBreakdown(byType, total);
+
+  // PnL breakdown by instrument
+  const pnlByType = {};
+  state.entries.forEach(e => {
+    const t = INSTRUMENTS[e.type]?.label || e.type;
+    if (!pnlByType[t]) pnlByType[t] = { cost: 0, current: 0 };
+    const r = calc(e);
+    pnlByType[t].cost += r.cost;
+    pnlByType[t].current += r.current;
+  });
+  document.getElementById('pnlTotal').innerHTML = `<span class="${totalProfit>=0?'profit':'loss'}" style="color:${totalProfit>=0?'var(--green)':'var(--red)'}">${totalProfit>=0?'+':''}${fmtTL(totalProfit)}</span>`;
+  let pnlHtml = '';
+  Object.entries(pnlByType).forEach(([name, v]) => {
+    const profit = v.current - v.cost;
+    const pct = v.cost > 0 ? (profit / v.cost) * 100 : 0;
+    const cls = profit >= 0 ? 'profit' : 'loss';
+    const sign = profit >= 0 ? '+' : '';
+    pnlHtml += `
+      <div class="pnl-row">
+        <span class="name">${name}</span>
+        <span class="amount">${fmtTL(v.current)}</span>
+        <span class="delta" style="color:${profit>=0?'var(--green)':'var(--red)'}">${sign}${fmtTL(profit)}<br><span style="font-size:10px;font-weight:400">${fmtPct(pct)}</span></span>
+      </div>
+    `;
+  });
+  if (!pnlHtml) pnlHtml = '<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:20px">Henüz veri yok</div>';
+  document.getElementById('pnlBreakdown').innerHTML = pnlHtml;
+
+  // Storage info
+  const storageInfo = document.getElementById('storageInfo');
+  if (storageInfo) {
+    const bytes = new Blob([JSON.stringify(state)]).size;
+    const kb = (bytes / 1024).toFixed(1);
+    storageInfo.innerHTML = `
+      <strong>Mevcut durum:</strong> ${state.entries.length} kayıt · ${kb} KB
+    `;
+  }
+}
+
+function renderBreakdown(map, total) {
+  // map: { name: { cost, current } }
+  const entries = Object.entries(map).sort((a,b) => b[1].current - a[1].current);
+  if (entries.length === 0) {
+    return '<div style="color:var(--text-dim);font-size:12px;text-align:center;padding:20px">Henüz veri yok</div>';
+  }
+  return entries.map(([name, v]) => {
+    const pct = total > 0 ? (v.current / total) * 100 : 0;
+    const profit = v.current - v.cost;
+    const profitPct = v.cost > 0 ? (profit / v.cost) * 100 : 0;
+    const profitColor = profit >= 0 ? 'var(--green)' : 'var(--red)';
+    const sign = profit >= 0 ? '+' : '';
+    return `
+      <div class="breakdown-row">
+        <span class="name">${escapeHtml(name)}</span>
+        <span class="bar-wrap"><span class="bar" style="width:${pct.toFixed(1)}%"></span></span>
+        <span class="pct">${pct.toFixed(1)}%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px;margin:-4px 0 8px;padding:0 2px">
+        <span style="color:var(--text-muted)">${fmtTL(v.current)} <span style="color:var(--text-dim)">· maliyet ${fmtTL(v.cost)}</span></span>
+        <span style="color:${profitColor};font-weight:600">${sign}${fmtTL(profit)} <span style="font-weight:400;opacity:0.85">(${fmtPct(profitPct)})</span></span>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ==================================================================
+   IMPORT / EXPORT
+================================================================== */
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const ts = new Date().toISOString().slice(0,16).replace(/[:T]/g, '-');
+  const filename = `portfoy-yedek-${ts}.json`;
+
+  // iOS: try Web Share API first (better UX on iPhone)
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, {type:'application/json'})] })) {
+    const file = new File([blob], filename, {type: 'application/json'});
+    navigator.share({ files: [file], title: 'Portföy Yedek' })
+      .then(() => toast('Yedek paylaşıldı'))
+      .catch(() => {
+        // Fallback to download
+        downloadFile(url, filename);
+      });
+  } else {
+    downloadFile(url, filename);
+  }
+}
+
+function downloadFile(url, filename) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Yedek indirildi: ' + filename);
+  }, 100);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.entries || !Array.isArray(data.entries)) {
+        toast('Geçersiz dosya formatı');
+        return;
+      }
+      state = data;
+      save();
+      renderEntries();
+      renderStatus();
+      toast('İçe aktarıldı: ' + state.entries.length + ' kayıt');
+    } catch (err) {
+      toast('Dosya okunamadı: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+/* ==================================================================
+   TOAST
+================================================================== */
+let toastTimeout;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ==================================================================
+   TABS
+================================================================== */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
+    if (tab === 'status') renderStatus();
+    window.scrollTo(0, 0);
+  });
+});
+
+/* ==================================================================
+   INIT
+================================================================== */
+load();
+renderInstrumentGrid();
+renderEntries();
+renderStatus();
+
+// Prevent iOS double-tap zoom
+let lastTap = 0;
+document.addEventListener('touchend', (e) => {
+  const now = Date.now();
+  if (now - lastTap < 300) e.preventDefault();
+  lastTap = now;
+}, { passive: false });
+</script>
+</body>
+</html>
