@@ -238,14 +238,16 @@
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 14px;
-    padding: 16px 14px;
+    padding: 14px 14px 12px;
     text-align: left;
     cursor: pointer;
     transition: transform 0.12s, border-color 0.12s;
     color: var(--text);
     position: relative;
     overflow: hidden;
-    min-height: 76px;
+    min-height: 92px;
+    display: flex;
+    flex-direction: column;
   }
   .instrument-btn:active {
     transform: scale(0.97);
@@ -253,12 +255,60 @@
   }
   .instrument-btn .icon {
     font-size: 22px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     display: block;
   }
   .instrument-btn .label {
     font-size: 13px;
     font-weight: 500;
+  }
+  .instrument-btn .total {
+    margin-top: auto;
+    padding-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent);
+    line-height: 1.3;
+  }
+  .instrument-btn .total.empty {
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+  .instrument-btn .total .lbl {
+    display: block;
+    font-family: 'Manrope', sans-serif;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  /* Son satır (Euro/USD) için portföy toplamı vurgusu */
+  .instrument-btn.has-portfolio-total {
+    background: linear-gradient(140deg, var(--bg-card), var(--bg-elevated));
+    border-color: var(--border-strong);
+  }
+  .instrument-btn .portfolio-total {
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .instrument-btn .portfolio-total .lbl {
+    display: block;
+    font-family: 'Manrope', sans-serif;
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 2px;
   }
   .instrument-btn .plus {
     position: absolute;
@@ -1255,13 +1305,52 @@ const fmtPct = n => (n >= 0 ? '+' : '') + fmt(n) + '%';
 ================================================================== */
 function renderInstrumentGrid() {
   const grid = document.getElementById('instrumentGrid');
-  grid.innerHTML = Object.entries(INSTRUMENTS).map(([key, inst]) => `
-    <button class="instrument-btn" onclick="openForm('${key}')">
-      <span class="plus">+</span>
-      <span class="icon" style="color:${inst.color}">${inst.icon}</span>
-      <span class="label">${inst.label}</span>
-    </button>
-  `).join('');
+
+  // Her enstrüman için toplam güncel değer hesapla
+  const totalsByType = {};
+  let portfolioTotal = 0;
+  state.entries.forEach(e => {
+    const r = calc(e);
+    totalsByType[e.type] = (totalsByType[e.type] || 0) + r.current;
+    portfolioTotal += r.current;
+  });
+
+  // INSTRUMENTS sırasına göre kartlar
+  const keys = Object.keys(INSTRUMENTS);
+  grid.innerHTML = keys.map((key, idx) => {
+    const inst = INSTRUMENTS[key];
+    const total = totalsByType[key] || 0;
+    const isEmpty = total === 0;
+
+    // Son iki kart (Euro ve USD) altında portföy toplamı göster
+    const showPortfolio = (key === 'euro' || key === 'usd');
+    const cardClass = 'instrument-btn' + (showPortfolio ? ' has-portfolio-total' : '');
+
+    return `
+      <button class="${cardClass}" onclick="openForm('${key}')">
+        <span class="plus">+</span>
+        <span class="icon" style="color:${inst.color}">${inst.icon}</span>
+        <span class="label">${inst.label}</span>
+        <div class="total ${isEmpty ? 'empty' : ''}">
+          <span class="lbl">Toplam</span>
+          ${isEmpty ? '—' : fmtTL(total)}
+        </div>
+        ${showPortfolio ? `
+          <div class="portfolio-total">
+            <span class="lbl">Portföy Toplamı</span>
+            ${portfolioTotal === 0 ? '—' : fmtTL(portfolioTotal)}
+          </div>
+        ` : ''}
+      </button>
+    `;
+  }).join('');
+}
+
+/* Tüm UI'yi yeniler — kayıt eklendi/düzenlendi/silindi durumları için */
+function refreshAll() {
+  renderInstrumentGrid();
+  renderEntries();
+  renderStatus();
 }
 
 /* ==================================================================
@@ -1447,8 +1536,7 @@ function saveEntry() {
 
   save();
   closeForm();
-  renderEntries();
-  renderStatus();
+  refreshAll();
   toast(editId ? 'Güncellendi' : 'Eklendi');
 }
 
@@ -1636,8 +1724,7 @@ function doDelete() {
   state.entries = state.entries.filter(e => e.id !== pendingDeleteId);
   pendingDeleteId = null;
   save();
-  renderEntries();
-  renderStatus();
+  refreshAll();
   closeConfirm();
   toast('Silindi');
 }
@@ -1659,8 +1746,7 @@ function confirmReset() {
 function doResetAll() {
   state.entries = [];
   save();
-  renderEntries();
-  renderStatus();
+  refreshAll();
   closeConfirm();
   document.getElementById('confirmOk').textContent = 'Sil';
   toast('Tüm veriler silindi');
@@ -1832,8 +1918,7 @@ function importData(event) {
       }
       state = data;
       save();
-      renderEntries();
-      renderStatus();
+      refreshAll();
       toast('İçe aktarıldı: ' + state.entries.length + ' kayıt');
     } catch (err) {
       toast('Dosya okunamadı: ' + err.message);
