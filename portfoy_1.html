@@ -909,6 +909,76 @@
     border-color: var(--red);
   }
 
+  /* ============ PİYASA FİYATLARI ============ */
+  .market-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .market-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: border-color 0.15s;
+  }
+  .market-card:focus-within {
+    border-color: var(--accent);
+  }
+  .market-icon {
+    font-size: 24px;
+    width: 36px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .market-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .market-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .market-unit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .market-input {
+    width: 130px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+    text-align: right;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border-color 0.15s;
+  }
+  .market-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .market-save-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 12px;
+  }
+
   /* ============ PIN LOCK SCREEN ============ */
   .pin-lock {
     position: fixed;
@@ -1134,7 +1204,55 @@
     </div>
   </section>
 
-  <!-- ============ TAB 3: YEDEK / AYARLAR ============ -->
+  <!-- ============ TAB 3: PİYASA FİYATLARI ============ -->
+  <section class="panel" id="panel-market">
+    <h2 class="section-title">Piyasa fiyatları</h2>
+    <p class="section-sub">Buradaki fiyatlar tüm altın, gümüş, USD, EUR ve metal fonu kayıtlarına otomatik uygulanır. Vadeli mevduat ve yatırım fonu kayıtları kendi içlerinde manuel kalır.</p>
+
+    <div class="market-grid">
+      <div class="market-card">
+        <div class="market-icon" style="color:#d4a574">●</div>
+        <div class="market-info">
+          <div class="market-label">Altın</div>
+          <div class="market-unit">TL / gram</div>
+        </div>
+        <input type="text" inputmode="decimal" data-numeric class="market-input" id="marketGold" placeholder="0,00">
+      </div>
+
+      <div class="market-card">
+        <div class="market-icon" style="color:#b8b8b8">○</div>
+        <div class="market-info">
+          <div class="market-label">Gümüş</div>
+          <div class="market-unit">TL / gram</div>
+        </div>
+        <input type="text" inputmode="decimal" data-numeric class="market-input" id="marketSilver" placeholder="0,00">
+      </div>
+
+      <div class="market-card">
+        <div class="market-icon" style="color:#7fc99a">$</div>
+        <div class="market-info">
+          <div class="market-label">USD</div>
+          <div class="market-unit">TL / dolar</div>
+        </div>
+        <input type="text" inputmode="decimal" data-numeric class="market-input" id="marketUsd" placeholder="0,00">
+      </div>
+
+      <div class="market-card">
+        <div class="market-icon" style="color:#7fc99a">€</div>
+        <div class="market-info">
+          <div class="market-label">Euro</div>
+          <div class="market-unit">TL / euro</div>
+        </div>
+        <input type="text" inputmode="decimal" data-numeric class="market-input" id="marketEur" placeholder="0,00">
+      </div>
+    </div>
+
+    <button class="btn btn-primary market-save-btn" onclick="saveMarketPrices()">Fiyatları Kaydet ve Uygula</button>
+
+    <div class="info-block" id="marketLastUpdate"></div>
+  </section>
+
+  <!-- ============ TAB 4: YEDEK / AYARLAR ============ -->
   <section class="panel" id="panel-settings">
     <h2 class="section-title">Yedek & Ayarlar</h2>
     <p class="section-sub">Tüm verilerinizi JSON dosyası olarak dışa aktarın ve diğer telefonlara yedekleyin.</p>
@@ -1197,6 +1315,10 @@
   <button class="tab-btn" data-tab="status">
     <span class="tab-icon">◆</span>
     <span class="tab-label">Durum</span>
+  </button>
+  <button class="tab-btn" data-tab="market">
+    <span class="tab-icon">₺</span>
+    <span class="tab-label">Piyasa</span>
   </button>
   <button class="tab-btn" data-tab="settings">
     <span class="tab-icon">⚙</span>
@@ -1285,15 +1407,13 @@ const SCHEMAS = {
     { key: 'owner',       label: 'Sahip',                  type: 'select', options: OWNERS, required: true },
     { key: 'buyDate',     label: 'Alım Tarihi',            type: 'date' },
     { key: 'qty',         label: 'Miktar (gr)',            type: 'number' },
-    { key: 'unitCost',    label: 'Alış Fiyatı (TL/gr)',    type: 'number' },
-    { key: 'currentPrice',label: 'Piyasa Fiyatı (TL/gr)',  type: 'number', manual: true }
+    { key: 'unitCost',    label: 'Alış Fiyatı (TL/gr)',    type: 'number' }
   ],
   gumus: [
     { key: 'owner',       label: 'Sahip',                  type: 'select', options: OWNERS, required: true },
     { key: 'buyDate',     label: 'Alım Tarihi',            type: 'date' },
     { key: 'qty',         label: 'Miktar (gr)',            type: 'number' },
-    { key: 'unitCost',    label: 'Alış Fiyatı (TL/gr)',    type: 'number' },
-    { key: 'currentPrice',label: 'Piyasa Fiyatı (TL/gr)',  type: 'number', manual: true }
+    { key: 'unitCost',    label: 'Alış Fiyatı (TL/gr)',    type: 'number' }
   ],
   altinFon: [
     { key: 'owner',          label: 'Sahip',                       type: 'select', options: OWNERS, required: true },
@@ -1302,7 +1422,6 @@ const SCHEMAS = {
     { key: 'qty',            label: 'Alım Adedi',                  type: 'number' },
     { key: 'unitCost',       label: 'Birim Maliyet (TL)',          type: 'number' },
     { key: 'buyGoldPrice',   label: 'Alım Günü Altın Fiyatı (TL/gr)', type: 'number' },
-    { key: 'currentGoldPrice', label: 'Güncel Altın Fiyatı (TL/gr)', type: 'number', manual: true },
     { key: 'buyDate',        label: 'Alım Tarihi',                 type: 'date' }
   ],
   gumusFon: [
@@ -1312,26 +1431,26 @@ const SCHEMAS = {
     { key: 'qty',              label: 'Alım Adedi',                  type: 'number' },
     { key: 'unitCost',         label: 'Birim Maliyet (TL)',          type: 'number' },
     { key: 'buySilverPrice',   label: 'Alım Günü Gümüş Fiyatı (TL/gr)', type: 'number' },
-    { key: 'currentSilverPrice', label: 'Güncel Gümüş Fiyatı (TL/gr)', type: 'number', manual: true },
     { key: 'buyDate',          label: 'Alım Tarihi',                 type: 'date' }
   ],
   euro: [
     { key: 'owner',       label: 'Sahip',                  type: 'select', options: OWNERS, required: true },
     { key: 'buyDate',     label: 'Alım Tarihi',            type: 'date' },
     { key: 'qty',         label: 'Miktar (€)',             type: 'number' },
-    { key: 'unitCost',    label: 'Alış Kuru (TL/€)',       type: 'number' },
-    { key: 'currentPrice',label: 'Güncel Kur (TL/€)',      type: 'number', manual: true }
+    { key: 'unitCost',    label: 'Alış Kuru (TL/€)',       type: 'number' }
   ],
   usd: [
     { key: 'owner',       label: 'Sahip',                  type: 'select', options: OWNERS, required: true },
     { key: 'buyDate',     label: 'Alım Tarihi',            type: 'date' },
     { key: 'qty',         label: 'Miktar ($)',             type: 'number' },
-    { key: 'unitCost',    label: 'Alış Kuru (TL/$)',       type: 'number' },
-    { key: 'currentPrice',label: 'Güncel Kur (TL/$)',      type: 'number', manual: true }
+    { key: 'unitCost',    label: 'Alış Kuru (TL/$)',       type: 'number' }
   ]
 };
 
-let state = { entries: [] };
+let state = {
+  entries: [],
+  marketPrices: { gold: 0, silver: 0, usd: 0, eur: 0, updatedAt: null }
+};
 let formContext = { type: null, editId: null };
 
 /* ==================================================================
@@ -1340,7 +1459,13 @@ let formContext = { type: null, editId: null };
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) state = JSON.parse(raw);
+    if (raw) {
+      const loaded = JSON.parse(raw);
+      state = {
+        entries: loaded.entries || [],
+        marketPrices: loaded.marketPrices || { gold: 0, silver: 0, usd: 0, eur: 0, updatedAt: null }
+      };
+    }
   } catch(e) { console.warn('Yükleme hatası:', e); }
 }
 
@@ -1470,6 +1595,13 @@ function calc(entry) {
   const e = entry;
   const r = { cost: 0, current: 0, profit: 0, profitPct: 0, qty: num(e.qty), estTotal: 0 };
 
+  // Piyasa fiyatları (varsa) — yoksa kayıttaki manuel değer kullanılır
+  const mp = state.marketPrices || {};
+  const mpGold = num(mp.gold);
+  const mpSilver = num(mp.silver);
+  const mpUsd = num(mp.usd);
+  const mpEur = num(mp.eur);
+
   switch (e.type) {
     case 'vadeli': {
       r.cost = num(e.principal);
@@ -1494,7 +1626,15 @@ function calc(entry) {
     case 'usd': {
       const qty = num(e.qty);
       r.cost = qty * num(e.unitCost);
-      r.current = qty * num(e.currentPrice);
+      // Piyasa fiyatı tanımlıysa onu kullan, yoksa kayıttaki manuel değere geri dön
+      let priceNow;
+      if (e.type === 'altin' && mpGold > 0) priceNow = mpGold;
+      else if (e.type === 'gumus' && mpSilver > 0) priceNow = mpSilver;
+      else if (e.type === 'usd' && mpUsd > 0) priceNow = mpUsd;
+      else if (e.type === 'euro' && mpEur > 0) priceNow = mpEur;
+      else priceNow = num(e.currentPrice);
+
+      r.current = qty * priceNow;
       if (r.current === 0) r.current = r.cost;
       r.profit = r.current - r.cost;
       break;
@@ -1503,10 +1643,13 @@ function calc(entry) {
     case 'gumusFon': {
       const qty = num(e.qty);
       r.cost = qty * num(e.unitCost);
-      // Formül: A × B × D / C  =  Adet × Birim Maliyet × (Güncel Emtia / Alım Emtia)
-      // = Toplam Maliyet × (Güncel Emtia / Alım Emtia)
+      // Formül: A × B × D / C  =  Toplam Maliyet × (Güncel Emtia / Alım Emtia)
       const buyComm = e.type === 'altinFon' ? num(e.buyGoldPrice) : num(e.buySilverPrice);
-      const curComm = e.type === 'altinFon' ? num(e.currentGoldPrice) : num(e.currentSilverPrice);
+      // Güncel emtia: piyasa fiyatı varsa onu kullan, yoksa kayıttaki manuel değer
+      let curComm;
+      if (e.type === 'altinFon') curComm = mpGold > 0 ? mpGold : num(e.currentGoldPrice);
+      else curComm = mpSilver > 0 ? mpSilver : num(e.currentSilverPrice);
+
       if (buyComm > 0 && curComm > 0) {
         r.current = r.cost * (curComm / buyComm);
       } else {
@@ -1573,6 +1716,65 @@ function refreshAll() {
   renderInstrumentGrid();
   renderEntries();
   renderStatus();
+  renderMarketPanel();
+}
+
+/* ==================================================================
+   PİYASA FİYATLARI
+================================================================== */
+let marketInputsAttached = false;
+function renderMarketPanel() {
+  const mp = state.marketPrices || {};
+  const goldEl = document.getElementById('marketGold');
+  const silverEl = document.getElementById('marketSilver');
+  const usdEl = document.getElementById('marketUsd');
+  const eurEl = document.getElementById('marketEur');
+  if (!goldEl) return;
+
+  // Binlik ayraç formatlamasını input'lara bir kez bağla
+  if (!marketInputsAttached) {
+    [goldEl, silverEl, usdEl, eurEl].forEach(inp => attachNumberFormatting(inp));
+    marketInputsAttached = true;
+  }
+
+  // Mevcut değerleri input'lara yaz (fokuslu input'a dokunma — kullanıcı yazıyor olabilir)
+  if (document.activeElement !== goldEl) goldEl.value = num(mp.gold) > 0 ? formatNumberInput(mp.gold) : '';
+  if (document.activeElement !== silverEl) silverEl.value = num(mp.silver) > 0 ? formatNumberInput(mp.silver) : '';
+  if (document.activeElement !== usdEl) usdEl.value = num(mp.usd) > 0 ? formatNumberInput(mp.usd) : '';
+  if (document.activeElement !== eurEl) eurEl.value = num(mp.eur) > 0 ? formatNumberInput(mp.eur) : '';
+
+  // Son güncelleme bilgisi
+  const updEl = document.getElementById('marketLastUpdate');
+  if (updEl) {
+    if (mp.updatedAt) {
+      const d = new Date(mp.updatedAt);
+      const dateStr = d.toLocaleString('tr-TR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+      updEl.innerHTML = `<strong>Son güncelleme:</strong> ${dateStr}<br><br><strong>Not:</strong> Buradaki değerler tüm altın, gümüş, USD, EUR ve metal fonu kayıtlarındaki "güncel fiyat" alanlarına otomatik uygulanır.`;
+    } else {
+      updEl.innerHTML = '<strong>Henüz fiyat girmediniz.</strong> Yukarıdaki alanlara güncel piyasa değerlerini yazın ve <strong>Kaydet</strong>\'e basın. Bu değerler tüm ilgili kayıtlara otomatik uygulanır.';
+    }
+  }
+}
+
+function saveMarketPrices() {
+  const goldEl = document.getElementById('marketGold');
+  const silverEl = document.getElementById('marketSilver');
+  const usdEl = document.getElementById('marketUsd');
+  const eurEl = document.getElementById('marketEur');
+
+  state.marketPrices = {
+    gold: num(goldEl.value),
+    silver: num(silverEl.value),
+    usd: num(usdEl.value),
+    eur: num(eurEl.value),
+    updatedAt: new Date().toISOString()
+  };
+  save();
+  refreshAll();
+  toast('Fiyatlar uygulandı');
 }
 
 /* ==================================================================
@@ -1858,33 +2060,44 @@ function renderEntryCard(e) {
     `;
   } else if (e.type === 'altin' || e.type === 'gumus') {
     const unit = 'gr';
+    const mp = state.marketPrices || {};
+    const livePrice = e.type === 'altin' ? num(mp.gold) : num(mp.silver);
+    const priceShown = livePrice > 0 ? livePrice : num(e.currentPrice);
+    const priceLabel = livePrice > 0 ? 'Piyasa Fiyatı (canlı)' : 'Piyasa Fiyatı';
     details = `
       <div class="field"><div class="field-label">Miktar</div><div class="field-value">${fmt(num(e.qty))} ${unit}</div></div>
       <div class="field"><div class="field-label">Alış Fiyatı</div><div class="field-value">${fmtTL(num(e.unitCost))}/gr</div></div>
-      <div class="field manual"><div class="field-label">Piyasa Fiyatı</div><div class="field-value">${fmtTL(num(e.currentPrice))}/gr</div></div>
+      <div class="field"><div class="field-label">${priceLabel}</div><div class="field-value">${priceShown > 0 ? fmtTL(priceShown) + '/gr' : '—'}</div></div>
       <div class="field"><div class="field-label">Toplam Maliyet</div><div class="field-value">${fmtTL(r.cost)}</div></div>
     `;
   } else if (e.type === 'euro' || e.type === 'usd') {
     const sym = e.type === 'euro' ? '€' : '$';
+    const mp = state.marketPrices || {};
+    const livePrice = e.type === 'euro' ? num(mp.eur) : num(mp.usd);
+    const priceShown = livePrice > 0 ? livePrice : num(e.currentPrice);
+    const priceLabel = livePrice > 0 ? 'Güncel Kur (canlı)' : 'Güncel Kur';
     details = `
       <div class="field"><div class="field-label">Miktar</div><div class="field-value">${fmt(num(e.qty))} ${sym}</div></div>
       <div class="field"><div class="field-label">Alış Kuru</div><div class="field-value">${fmtTL(num(e.unitCost))}</div></div>
-      <div class="field manual"><div class="field-label">Güncel Kur</div><div class="field-value">${fmtTL(num(e.currentPrice))}</div></div>
+      <div class="field"><div class="field-label">${priceLabel}</div><div class="field-value">${priceShown > 0 ? fmtTL(priceShown) : '—'}</div></div>
       <div class="field"><div class="field-label">Toplam Maliyet</div><div class="field-value">${fmtTL(r.cost)}</div></div>
     `;
   } else if (e.type === 'altinFon' || e.type === 'gumusFon') {
     const isGold = e.type === 'altinFon';
     const buyComm = isGold ? e.buyGoldPrice : e.buySilverPrice;
-    const curComm = isGold ? e.currentGoldPrice : e.currentSilverPrice;
+    const mp = state.marketPrices || {};
+    const livePrice = isGold ? num(mp.gold) : num(mp.silver);
+    const curComm = livePrice > 0 ? livePrice : (isGold ? num(e.currentGoldPrice) : num(e.currentSilverPrice));
     const commLabel = isGold ? 'Altın' : 'Gümüş';
-    const commPct = num(buyComm) > 0 ? ((num(curComm) - num(buyComm)) / num(buyComm)) * 100 : 0;
+    const liveLabel = livePrice > 0 ? ' (canlı)' : '';
+    const commPct = num(buyComm) > 0 && curComm > 0 ? ((curComm - num(buyComm)) / num(buyComm)) * 100 : 0;
     const commPctStr = (commPct >= 0 ? '+' : '') + fmt(commPct) + '%';
     details = `
       <div class="field"><div class="field-label">Adet</div><div class="field-value">${fmt(num(e.qty))}</div></div>
       <div class="field"><div class="field-label">Birim Maliyet</div><div class="field-value">${fmtTL(num(e.unitCost))}</div></div>
       <div class="field"><div class="field-label">Toplam Maliyet</div><div class="field-value">${fmtTL(r.cost)}</div></div>
       <div class="field"><div class="field-label">Alım Günü ${commLabel}</div><div class="field-value">${fmtTL(num(buyComm))}/gr</div></div>
-      <div class="field manual"><div class="field-label">Güncel ${commLabel}</div><div class="field-value">${fmtTL(num(curComm))}/gr</div></div>
+      <div class="field"><div class="field-label">Güncel ${commLabel}${liveLabel}</div><div class="field-value">${curComm > 0 ? fmtTL(curComm) + '/gr' : '—'}</div></div>
       <div class="field"><div class="field-label">${commLabel} Değişim</div><div class="field-value" style="color:${commPct>=0?'var(--green)':'var(--red)'}">${commPctStr}</div></div>
     `;
   }
