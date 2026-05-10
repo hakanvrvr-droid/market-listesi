@@ -909,11 +909,177 @@
     border-color: var(--red);
   }
 
+  /* ============ PIN LOCK SCREEN ============ */
+  .pin-lock {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
+    transition: opacity 0.3s ease;
+  }
+  .pin-lock.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .pin-lock::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 50% at 50% 30%, rgba(212,165,116,0.08), transparent);
+    pointer-events: none;
+  }
+
+  .pin-inner {
+    width: 100%;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+
+  .pin-brand {
+    margin-bottom: 36px;
+    text-align: center;
+  }
+  .pin-brand .brand-mark {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-style: italic;
+    font-size: 28px;
+    color: var(--text);
+  }
+  .pin-brand .brand-mark span { color: var(--accent); }
+
+  .pin-title {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .pin-sub {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-bottom: 30px;
+    text-align: center;
+  }
+
+  .pin-dots {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 16px;
+  }
+  .pin-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    background: transparent;
+    transition: all 0.15s ease;
+  }
+  .pin-dot.filled {
+    background: var(--accent);
+    border-color: var(--accent);
+    transform: scale(1.1);
+  }
+  .pin-dots.shake {
+    animation: pin-shake 0.4s ease;
+  }
+  @keyframes pin-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+
+  .pin-error {
+    min-height: 20px;
+    color: var(--red);
+    font-size: 12px;
+    margin-bottom: 16px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .pin-keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    width: 100%;
+  }
+  .pin-key {
+    aspect-ratio: 1.5;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    color: var(--text);
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pin-key:active {
+    background: var(--bg-elevated);
+    transform: scale(0.96);
+    border-color: var(--accent);
+  }
+  .pin-key-empty {
+    background: transparent;
+    border: none;
+    cursor: default;
+    pointer-events: none;
+  }
+  .pin-key-back {
+    font-family: 'Manrope', sans-serif;
+    font-size: 22px;
+    color: var(--text-muted);
+  }
+
   /* Scrollbar (mostly hidden on mobile) */
   ::-webkit-scrollbar { width: 0; height: 0; }
 </style>
 </head>
 <body>
+
+<!-- ============ PIN LOCK SCREEN ============ -->
+<div class="pin-lock" id="pinLock">
+  <div class="pin-inner">
+    <div class="pin-brand">
+      <div class="brand-mark">Portföy<span>.</span></div>
+    </div>
+    <div class="pin-title" id="pinTitle">PIN Girin</div>
+    <div class="pin-sub" id="pinSub">4 haneli güvenlik kodu</div>
+
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+    </div>
+
+    <div class="pin-error" id="pinError"></div>
+
+    <div class="pin-keypad" id="pinKeypad">
+      <button class="pin-key" data-key="1">1</button>
+      <button class="pin-key" data-key="2">2</button>
+      <button class="pin-key" data-key="3">3</button>
+      <button class="pin-key" data-key="4">4</button>
+      <button class="pin-key" data-key="5">5</button>
+      <button class="pin-key" data-key="6">6</button>
+      <button class="pin-key" data-key="7">7</button>
+      <button class="pin-key" data-key="8">8</button>
+      <button class="pin-key" data-key="9">9</button>
+      <button class="pin-key pin-key-empty"></button>
+      <button class="pin-key" data-key="0">0</button>
+      <button class="pin-key pin-key-back" data-key="back">⌫</button>
+    </div>
+  </div>
+</div>
 
 <header>
   <div class="header-inner">
@@ -991,6 +1157,14 @@
       </button>
       <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importData(event)">
 
+      <button class="action-row" onclick="PinLock.startChangeFlow()">
+        <div class="ic">🔒</div>
+        <div class="text">
+          <div class="title">PIN'i Değiştir</div>
+          <div class="desc">4 haneli güvenlik kodunu güncelle</div>
+        </div>
+      </button>
+
       <button class="action-row danger" onclick="confirmReset()">
         <div class="ic">×</div>
         <div class="text">
@@ -1006,6 +1180,8 @@
       <strong>Tarayıcı uyarısı:</strong> Safari'de "Web Sitesi Verilerini Sil" yaparsanız veriler silinir. Düzenli olarak (haftada bir) yedek almanız tavsiye edilir.
       <br><br>
       <strong>Ana ekrana ekle:</strong> Safari'de bu sayfayı açıp Paylaş → "Ana Ekrana Ekle" diyerek uygulama gibi kullanabilirsiniz.
+      <br><br>
+      <strong>PIN unuttuysanız:</strong> Maalesef sıfırlama yolu yok. Bu durumda Safari ayarlarından site verilerini silmeniz gerekir — ama bu tüm portföy verinizi de siler. Bu yüzden <strong>düzenli yedek almak çok önemli</strong>.
     </div>
 
     <div class="info-block" id="storageInfo"></div>
@@ -1060,6 +1236,8 @@
    STATE & CONSTANTS
 ================================================================== */
 const STORAGE_KEY = 'portfoy_data_v1';
+const PIN_KEY = 'portfoy_pin_v1';
+const PIN_FAIL_KEY = 'portfoy_pin_fails_v1';
 
 const OWNERS = ['Özlem', 'Hakan'];
 
@@ -1998,20 +2176,268 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 /* ==================================================================
+   PIN LOCK — 4 haneli güvenlik kodu
+================================================================== */
+const PinLock = (() => {
+  let mode = 'verify';     // 'verify' | 'create' | 'confirm' | 'change-old' | 'change-new' | 'change-confirm'
+  let buffer = '';
+  let firstPin = '';        // create akışında ilk girilen PIN
+  let onUnlock = null;      // başarılı doğrulamada çağrılacak callback
+
+  // Basit hash — SHA-256 mevcut değilse fallback
+  async function hashPin(pin) {
+    if (window.crypto && window.crypto.subtle) {
+      try {
+        const buf = new TextEncoder().encode('portfoy_salt_v1::' + pin);
+        const hashBuf = await window.crypto.subtle.digest('SHA-256', buf);
+        return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('');
+      } catch(e) { /* fallback */ }
+    }
+    // Fallback: basit djb2 (kriptografik değil ama bir şey yok)
+    let h = 5381;
+    const s = 'portfoy_salt_v1::' + pin;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) + h) + s.charCodeAt(i);
+    return 'fb_' + (h >>> 0).toString(16);
+  }
+
+  function hasPin() {
+    try { return !!localStorage.getItem(PIN_KEY); } catch(e) { return false; }
+  }
+
+  function getFails() {
+    try {
+      const raw = localStorage.getItem(PIN_FAIL_KEY);
+      return raw ? JSON.parse(raw) : { count: 0, until: 0 };
+    } catch(e) { return { count: 0, until: 0 }; }
+  }
+
+  function setFails(obj) {
+    try { localStorage.setItem(PIN_FAIL_KEY, JSON.stringify(obj)); } catch(e) {}
+  }
+
+  function setTitle(t, sub) {
+    document.getElementById('pinTitle').textContent = t;
+    document.getElementById('pinSub').textContent = sub || '';
+  }
+
+  function setError(msg) {
+    document.getElementById('pinError').textContent = msg || '';
+  }
+
+  function updateDots() {
+    const dots = document.querySelectorAll('#pinDots .pin-dot');
+    dots.forEach((d, i) => d.classList.toggle('filled', i < buffer.length));
+  }
+
+  function shake() {
+    const dotsEl = document.getElementById('pinDots');
+    dotsEl.classList.remove('shake');
+    void dotsEl.offsetWidth; // reflow
+    dotsEl.classList.add('shake');
+  }
+
+  function clearBuffer() {
+    buffer = '';
+    updateDots();
+  }
+
+  function showLock() {
+    document.getElementById('pinLock').classList.remove('hidden');
+  }
+
+  function hideLock() {
+    document.getElementById('pinLock').classList.add('hidden');
+  }
+
+  function checkLockout() {
+    const f = getFails();
+    if (f.until && Date.now() < f.until) {
+      const remaining = Math.ceil((f.until - Date.now()) / 1000);
+      setError(`${remaining} saniye bekleyin (çok yanlış deneme)`);
+      setTimeout(checkLockout, 1000);
+      return true;
+    }
+    setError('');
+    return false;
+  }
+
+  async function handleSubmit() {
+    if (mode === 'create') {
+      // İlk PIN giriş, onaya geç
+      firstPin = buffer;
+      mode = 'confirm';
+      setTitle('PIN\'i Doğrulayın', 'Aynı kodu tekrar girin');
+      clearBuffer();
+
+    } else if (mode === 'confirm') {
+      if (buffer === firstPin) {
+        // Eşleşti, kaydet
+        const hash = await hashPin(buffer);
+        try {
+          localStorage.setItem(PIN_KEY, hash);
+          setFails({ count: 0, until: 0 });
+          hideLock();
+          if (onUnlock) onUnlock();
+        } catch(e) {
+          setError('PIN kaydedilemedi');
+        }
+      } else {
+        setError('Kodlar eşleşmedi, tekrar deneyin');
+        shake();
+        firstPin = '';
+        clearBuffer();
+        mode = 'create';
+        setTitle('Yeni PIN Oluşturun', '4 haneli bir güvenlik kodu seçin');
+      }
+
+    } else if (mode === 'verify') {
+      const hash = await hashPin(buffer);
+      const stored = localStorage.getItem(PIN_KEY);
+      if (hash === stored) {
+        setFails({ count: 0, until: 0 });
+        hideLock();
+        if (onUnlock) onUnlock();
+      } else {
+        const f = getFails();
+        f.count = (f.count || 0) + 1;
+        if (f.count >= 3) {
+          f.until = Date.now() + 30000; // 30 sn bekleme
+          f.count = 0;
+        }
+        setFails(f);
+        setError(f.until ? '3 yanlış deneme — 30 saniye bekleyin' : `Yanlış PIN (${f.count}/3)`);
+        shake();
+        clearBuffer();
+        if (f.until) checkLockout();
+      }
+
+    } else if (mode === 'change-old') {
+      const hash = await hashPin(buffer);
+      const stored = localStorage.getItem(PIN_KEY);
+      if (hash === stored) {
+        mode = 'change-new';
+        setTitle('Yeni PIN Belirleyin', '4 haneli yeni güvenlik kodu');
+        setError('');
+        clearBuffer();
+      } else {
+        setError('Mevcut PIN yanlış');
+        shake();
+        clearBuffer();
+      }
+
+    } else if (mode === 'change-new') {
+      firstPin = buffer;
+      mode = 'change-confirm';
+      setTitle('Yeni PIN\'i Doğrulayın', 'Aynı kodu tekrar girin');
+      clearBuffer();
+
+    } else if (mode === 'change-confirm') {
+      if (buffer === firstPin) {
+        const hash = await hashPin(buffer);
+        try {
+          localStorage.setItem(PIN_KEY, hash);
+          setFails({ count: 0, until: 0 });
+          hideLock();
+          toast('PIN değiştirildi');
+          if (onUnlock) onUnlock();
+        } catch(e) { setError('Kaydedilemedi'); }
+      } else {
+        setError('Kodlar eşleşmedi');
+        shake();
+        firstPin = '';
+        clearBuffer();
+        mode = 'change-new';
+        setTitle('Yeni PIN Belirleyin', '4 haneli yeni güvenlik kodu');
+      }
+    }
+  }
+
+  function press(key) {
+    if (checkLockout()) return;
+    if (key === 'back') {
+      buffer = buffer.slice(0, -1);
+      updateDots();
+      setError('');
+      return;
+    }
+    if (buffer.length >= 4) return;
+    buffer += key;
+    setError('');
+    updateDots();
+    if (buffer.length === 4) {
+      setTimeout(handleSubmit, 120);
+    }
+  }
+
+  let keypadAttached = false;
+  function attachKeypad() {
+    if (keypadAttached) return;
+    document.querySelectorAll('#pinKeypad .pin-key').forEach(btn => {
+      const k = btn.dataset.key;
+      if (!k) return;
+      btn.addEventListener('click', () => press(k));
+    });
+    keypadAttached = true;
+  }
+
+  function start(unlockCallback) {
+    onUnlock = unlockCallback;
+    attachKeypad();
+    buffer = '';
+    firstPin = '';
+    updateDots();
+
+    if (hasPin()) {
+      mode = 'verify';
+      setTitle('PIN Girin', '4 haneli güvenlik kodu');
+      checkLockout();
+    } else {
+      mode = 'create';
+      setTitle('Yeni PIN Oluşturun', 'Uygulamayı korumak için 4 haneli bir kod seçin');
+    }
+    showLock();
+  }
+
+  function startChangeFlow() {
+    onUnlock = null;
+    buffer = '';
+    firstPin = '';
+    updateDots();
+    setError('');
+    mode = 'change-old';
+    setTitle('Mevcut PIN\'i Girin', 'Önce şu anki PIN');
+    showLock();
+  }
+
+  function reset() {
+    // PIN'i sıfırla — kullanıcı PIN'i unutursa veriler kaybedilmeden silmek istemiyoruz
+    // Ama bu fonksiyon "PIN'i kaldır" amaçlı (Yedek sekmesinden çağrılır)
+    try {
+      localStorage.removeItem(PIN_KEY);
+      localStorage.removeItem(PIN_FAIL_KEY);
+    } catch(e) {}
+  }
+
+  return { start, startChangeFlow, reset, hasPin };
+})();
+window.PinLock = PinLock;
+
+/* ==================================================================
    INIT
 ================================================================== */
-/* Init — DOM hazır olduğunda çalıştır, hata olursa kullanıcıya göster */
-function init() {
+function loadAppData() {
   try {
     load();
-    renderInstrumentGrid();
-    renderEntries();
-    renderStatus();
+    refreshAll();
   } catch (e) {
-    // Hata durumunda ekrana yazdır
-    document.body.innerHTML = '<div style="padding:30px;color:#fff;font-family:sans-serif;background:#0f1115;min-height:100vh"><h2 style="color:#e07b7b">Yükleme Hatası</h2><p>Uygulama başlatılırken hata oluştu:</p><pre style="background:#1a1f28;padding:14px;border-radius:8px;font-size:11px;overflow:auto;color:#e07b7b">' + (e.stack || e.message) + '</pre><p style="margin-top:14px;color:#8a93a3;font-size:13px">Bu mesajı gönderirseniz sorunu çözebilirim.</p></div>';
+    document.body.innerHTML = '<div style="padding:30px;color:#fff;font-family:sans-serif;background:#0f1115;min-height:100vh"><h2 style="color:#e07b7b">Yükleme Hatası</h2><p>Uygulama başlatılırken hata oluştu:</p><pre style="background:#1a1f28;padding:14px;border-radius:8px;font-size:11px;overflow:auto;color:#e07b7b">' + (e.stack || e.message) + '</pre></div>';
     console.error('Init hatası:', e);
   }
+}
+
+function init() {
+  // Önce PIN ekranını göster, doğrulanınca uygulamayı yükle
+  PinLock.start(loadAppData);
 }
 
 if (document.readyState === 'loading') {
