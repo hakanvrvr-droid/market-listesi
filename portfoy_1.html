@@ -213,6 +213,50 @@
   .hero-stat .val.profit { color: var(--green); }
   .hero-stat .val.loss { color: var(--red); }
 
+  /* ============ ENTRY HERO (Tab 1 üstündeki büyük toplam) ============ */
+  .entry-hero {
+    background: linear-gradient(140deg, var(--bg-card), var(--bg-elevated));
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px 22px 24px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .entry-hero::after {
+    content: '';
+    position: absolute;
+    top: -40%; right: -20%;
+    width: 70%; height: 140%;
+    background: radial-gradient(circle, var(--accent-soft), transparent 70%);
+    pointer-events: none;
+  }
+  .entry-hero-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .entry-hero-value {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 38px;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    color: var(--text);
+    position: relative;
+  }
+  .entry-hero-value .currency {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+
   /* ============ SECTION TITLES ============ */
   .section-title {
     font-family: 'Fraunces', serif;
@@ -245,7 +289,7 @@
     color: var(--text);
     position: relative;
     overflow: hidden;
-    min-height: 92px;
+    min-height: 88px;
     display: flex;
     flex-direction: column;
   }
@@ -887,6 +931,12 @@
 <main>
   <!-- ============ TAB 1: VERİ GİRİŞİ ============ -->
   <section class="panel active" id="panel-entry">
+    <!-- Üstte büyük portföy toplamı -->
+    <div class="entry-hero" id="entryHero">
+      <div class="entry-hero-label">Toplam Portföy Değeri</div>
+      <div class="entry-hero-value"><span id="entryHeroTotal">0,00</span><span class="currency">TL</span></div>
+    </div>
+
     <h2 class="section-title">Yeni yatırım ekle</h2>
     <p class="section-sub">Eklemek istediğiniz enstrümanı seçin.</p>
     <div class="instrument-grid" id="instrumentGrid"></div>
@@ -1315,6 +1365,10 @@ function renderInstrumentGrid() {
     portfolioTotal += r.current;
   });
 
+  // Üstteki büyük portföy toplamı vitrinini güncelle
+  const entryHeroTotal = document.getElementById('entryHeroTotal');
+  if (entryHeroTotal) entryHeroTotal.textContent = fmt(portfolioTotal);
+
   // INSTRUMENTS sırasına göre kartlar
   const keys = Object.keys(INSTRUMENTS);
   grid.innerHTML = keys.map((key, idx) => {
@@ -1322,12 +1376,8 @@ function renderInstrumentGrid() {
     const total = totalsByType[key] || 0;
     const isEmpty = total === 0;
 
-    // Son iki kart (Euro ve USD) altında portföy toplamı göster
-    const showPortfolio = (key === 'euro' || key === 'usd');
-    const cardClass = 'instrument-btn' + (showPortfolio ? ' has-portfolio-total' : '');
-
     return `
-      <button class="${cardClass}" onclick="openForm('${key}')">
+      <button class="instrument-btn" onclick="openForm('${key}')">
         <span class="plus">+</span>
         <span class="icon" style="color:${inst.color}">${inst.icon}</span>
         <span class="label">${inst.label}</span>
@@ -1335,12 +1385,6 @@ function renderInstrumentGrid() {
           <span class="lbl">Toplam</span>
           ${isEmpty ? '—' : fmtTL(total)}
         </div>
-        ${showPortfolio ? `
-          <div class="portfolio-total">
-            <span class="lbl">Portföy Toplamı</span>
-            ${portfolioTotal === 0 ? '—' : fmtTL(portfolioTotal)}
-          </div>
-        ` : ''}
       </button>
     `;
   }).join('');
