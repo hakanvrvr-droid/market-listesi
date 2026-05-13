@@ -725,7 +725,85 @@
     background: var(--accent);
     color: #ffffff;
   }
+  
+  /* Rapor stilleri */
+  #rapor-canvas-area {
+    color: #1f2027;
+  }
+  .rapor-baslik {
+    text-align: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #b8895a;
+  }
+  .rapor-baslik h2 {
+    font-size: 18px;
+    color: #1f2027;
+    margin-bottom: 4px;
+  }
+  .rapor-baslik .alt {
+    font-size: 12px;
+    color: #555868;
+  }
+  .rapor-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .rapor-table th, .rapor-table td {
+    border: 1px solid #d9d3c7;
+    padding: 8px 6px;
+    text-align: right;
+  }
+  .rapor-table th {
+    background: #f6ebda;
+    color: #1f2027;
+    font-weight: 700;
+    text-align: center;
+  }
+  .rapor-table td.label {
+    text-align: left;
+    font-weight: 600;
+    background: #faf7f1;
+  }
+  .rapor-table td.subitem {
+    padding-left: 18px;
+    color: #555868;
+    font-weight: 500;
+    background: white;
+  }
+  .rapor-table tr.tahsilat-row td {
+    background: #f0fbf3;
+    color: #1f8a4c;
+  }
+  .rapor-table tr.tahsilat-row td.label {
+    background: #d6f0de;
+  }
+  .rapor-table tr.masraf-row td {
+    background: #fef3f3;
+    color: #c43e3e;
+  }
+  .rapor-table tr.masraf-row td.label {
+    background: #fadcdc;
+  }
+  .rapor-table tr.toplam-row td {
+    background: #1f2027;
+    color: white;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .rapor-table .num { font-variant-numeric: tabular-nums; }
+  
+  /* Paylaşım sonrası önizleme modalı */
+  .preview-img {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -854,6 +932,40 @@
     </details>
   </div>
 
+  <!-- RAPOR -->
+  <div class="page" id="page-rapor">
+    <div class="card">
+      <div class="card-title">Rapor Filtreleri</div>
+      <div class="form-group">
+        <label>Rapor Yılı</label>
+        <select id="rapor-yil" onchange="renderRapor()"></select>
+      </div>
+      <div class="form-group">
+        <label>Başlangıç Ayı</label>
+        <select id="rapor-ay" onchange="renderRapor()"></select>
+      </div>
+      <div class="form-group">
+        <label>Kaç Ay Göster?</label>
+        <select id="rapor-sayi" onchange="renderRapor()">
+          <option value="3">3 Ay</option>
+          <option value="4" selected>4 Ay</option>
+          <option value="6">6 Ay</option>
+          <option value="12">12 Ay</option>
+        </select>
+      </div>
+      <button class="btn" onclick="shareRapor()" id="rapor-share-btn">
+        <span style="display:inline-flex;align-items:center;gap:8px;justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.768.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          WhatsApp'a Gönder
+        </span>
+      </button>
+    </div>
+
+    <div id="rapor-canvas-area" style="background:white;padding:20px;border-radius:14px;border:1px solid var(--border);">
+      <div id="rapor-icerik"></div>
+    </div>
+  </div>
+
   <!-- AYARLAR -->
   <div class="page" id="page-ayar">
     
@@ -953,6 +1065,10 @@
   <button class="tab" onclick="showPage('nakit', this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
     Nakit
+  </button>
+  <button class="tab" onclick="showPage('rapor', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Rapor
   </button>
   <button class="tab" onclick="showPage('ayar', this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1226,6 +1342,20 @@
   </div>
 </div>
 
+<!-- Paylaşım Önizleme Modal -->
+<div class="modal-overlay" id="modal-share">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📤 Raporu Paylaş</div>
+      <button class="modal-close" onclick="closeModal('modal-share')">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">Rapor görüntüsü hazır. Aşağıdaki butonla telefonun paylaş menüsünü açıp WhatsApp grubunuza gönderebilirsiniz.</p>
+    <img id="share-preview-img" class="preview-img" alt="Rapor önizleme">
+    <button class="btn" onclick="triggerNativeShare()">📲 WhatsApp / Paylaş Menüsünü Aç</button>
+    <button class="btn secondary" onclick="downloadRapor()" style="margin-top:8px;">💾 Görüntüyü İndir</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1462,6 +1592,27 @@ function render() {
   renderMasraf();
   renderNakit();
   renderAyarFormlari();
+  initRaporFiltreleri();
+  renderRapor();
+}
+
+// Rapor filtre dropdown'larını hazırla (sadece ilk kez)
+let raporFiltreHazir = false;
+function initRaporFiltreleri() {
+  if (raporFiltreHazir) return;
+  const yilSel = document.getElementById('rapor-yil');
+  const aySel = document.getElementById('rapor-ay');
+  if (!yilSel || !aySel) return;
+  
+  const guncelYil = new Date().getFullYear();
+  yilSel.innerHTML = '';
+  for (let y = guncelYil - 3; y <= guncelYil + 2; y++) {
+    yilSel.innerHTML += `<option value="${y}" ${y === guncelYil ? 'selected' : ''}>${y}</option>`;
+  }
+  aySel.innerHTML = AYLAR.map((a, i) => 
+    `<option value="${String(i+1).padStart(2,'0')}" ${i === 0 ? 'selected' : ''}>${a}</option>`
+  ).join('');
+  raporFiltreHazir = true;
 }
 
 function renderHeader() {
@@ -2021,6 +2172,186 @@ function renderNakit() {
       <hr class="divider">`;
   });
   document.getElementById('tum-donem-detay').innerHTML = detayHtml;
+}
+
+// ============= RAPOR =============
+function renderRapor() {
+  const yilSel = document.getElementById('rapor-yil');
+  const aySel = document.getElementById('rapor-ay');
+  const sayiSel = document.getElementById('rapor-sayi');
+  if (!yilSel || !aySel || !sayiSel) return;
+  
+  const yil = parseInt(yilSel.value);
+  const ay = parseInt(aySel.value);
+  const sayi = parseInt(sayiSel.value);
+  if (isNaN(yil) || isNaN(ay) || isNaN(sayi)) return;
+  
+  // Dönem listesi oluştur
+  const donemler = [];
+  let curYil = yil, curAy = ay;
+  for (let i = 0; i < sayi; i++) {
+    donemler.push(curYil + '-' + String(curAy).padStart(2, '0'));
+    curAy++;
+    if (curAy > 12) { curAy = 1; curYil++; }
+  }
+  
+  // Her dönem için: tahsilat, masraf türlerine göre toplam
+  const raporData = donemler.map(dk => {
+    const borc = state.borclar[dk] || {};
+    let tahsilat = 0;
+    state.daireler.forEach(d => {
+      const b = borc[d.id]; if (!b) return;
+      if (d.durum === 'manager') return;
+      if (b.odendi) tahsilat += getEffectiveOdeme(d, b, dk);
+    });
+    
+    // Masrafları türlerine göre grupla
+    const masrafGruplari = {};
+    state.masraflar.filter(m => m.donem === dk).forEach(m => {
+      const tur = m.tur || 'Diğer';
+      masrafGruplari[tur] = (masrafGruplari[tur] || 0) + Number(m.tutar);
+    });
+    const masrafToplam = Object.values(masrafGruplari).reduce((s,v) => s+v, 0);
+    
+    return { donem: dk, tahsilat, masrafGruplari, masrafToplam };
+  });
+  
+  // Tüm dönemlerdeki tüm masraf türlerini topla (satır olarak göstermek için)
+  const tumMasrafTurleri = new Set();
+  raporData.forEach(r => {
+    Object.keys(r.masrafGruplari).forEach(t => tumMasrafTurleri.add(t));
+  });
+  const masrafTurArr = Array.from(tumMasrafTurleri).sort();
+  
+  // Tablo HTML
+  let html = `
+    <div class="rapor-baslik">
+      <h2>🏢 Sevencan Apartmanı</h2>
+      <div class="alt">Tahsilat ve Masraf Raporu</div>
+      <div class="alt" style="margin-top:4px;">${donemAd(donemler[0])} – ${donemAd(donemler[donemler.length-1])}</div>
+    </div>
+    <table class="rapor-table">
+      <thead>
+        <tr>
+          <th style="text-align:left;">Kalem</th>
+          ${donemler.map(dk => `<th>${donemAd(dk).replace(' ' + yil, '').replace(' ' + (yil+1), '')}</th>`).join('')}
+          <th>Toplam</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="tahsilat-row">
+          <td class="label">Tahsil Edilen Aidat Gelirleri</td>
+          ${raporData.map(r => `<td class="num">${fmtTLKisa(r.tahsilat)}</td>`).join('')}
+          <td class="num">${fmtTLKisa(raporData.reduce((s,r) => s + r.tahsilat, 0))}</td>
+        </tr>
+        <tr class="masraf-row">
+          <td class="label">Masraflar</td>
+          ${raporData.map(r => `<td class="num">${fmtTLKisa(r.masrafToplam)}</td>`).join('')}
+          <td class="num">${fmtTLKisa(raporData.reduce((s,r) => s + r.masrafToplam, 0))}</td>
+        </tr>`;
+  
+  masrafTurArr.forEach(tur => {
+    html += `<tr>
+      <td class="subitem">${tur}</td>
+      ${raporData.map(r => `<td class="num">${r.masrafGruplari[tur] ? fmtTLKisa(r.masrafGruplari[tur]) : '-'}</td>`).join('')}
+      <td class="num">${fmtTLKisa(raporData.reduce((s,r) => s + (r.masrafGruplari[tur] || 0), 0))}</td>
+    </tr>`;
+  });
+  
+  // Dönem net (Tahsilat - Masraf)
+  html += `<tr class="toplam-row">
+    <td class="label" style="background:#1f2027;color:white;">Dönem Net</td>
+    ${raporData.map(r => `<td class="num">${fmtTLKisa(r.tahsilat - r.masrafToplam)}</td>`).join('')}
+    <td class="num">${fmtTLKisa(raporData.reduce((s,r) => s + (r.tahsilat - r.masrafToplam), 0))}</td>
+  </tr>`;
+  
+  html += `</tbody></table>
+    <div style="margin-top:14px;font-size:11px;color:#555868;text-align:center;">
+      Rapor tarihi: ${new Date().toLocaleDateString('tr-TR')}
+    </div>`;
+  
+  document.getElementById('rapor-icerik').innerHTML = html;
+}
+
+// Kısa TL formatı: tablolarda yer alsın diye
+function fmtTLKisa(n) {
+  n = Number(n) || 0;
+  if (n === 0) return '-';
+  return '₺' + Math.round(n).toLocaleString('tr-TR');
+}
+
+// ============= PAYLAŞIM =============
+let lastRaporBlob = null;
+let lastRaporFile = null;
+
+async function shareRapor() {
+  const btn = document.getElementById('rapor-share-btn');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px;justify-content:center;">⏳ Görüntü hazırlanıyor...</span>';
+  
+  try {
+    const el = document.getElementById('rapor-canvas-area');
+    const canvas = await html2canvas(el, { 
+      scale: 2, 
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+    });
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
+    if (!blob) throw new Error('Görüntü oluşturulamadı');
+    
+    lastRaporBlob = blob;
+    const filename = 'sevencan-rapor-' + new Date().toISOString().split('T')[0] + '.png';
+    lastRaporFile = new File([blob], filename, { type: 'image/png' });
+    
+    // Önizleme göster
+    const url = URL.createObjectURL(blob);
+    document.getElementById('share-preview-img').src = url;
+    openModal('modal-share');
+  } catch (err) {
+    toast('Hata: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+
+async function triggerNativeShare() {
+  if (!lastRaporFile) return;
+  
+  // Web Share API (iPhone Safari, Android Chrome destekler)
+  if (navigator.canShare && navigator.canShare({ files: [lastRaporFile] })) {
+    try {
+      await navigator.share({
+        files: [lastRaporFile],
+        title: 'Sevencan Apartmanı Raporu',
+        text: 'Aidat ve masraf raporu',
+      });
+      closeModal('modal-share');
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        toast('Paylaşım iptal edildi veya hata: ' + err.message);
+      }
+    }
+  } else {
+    // Fallback: WhatsApp Web/uygulamasına metinle yönlendir
+    toast('Cihazınız direkt paylaşımı desteklemiyor — görüntüyü indirip WhatsApp\'tan manuel gönderin');
+    downloadRapor();
+  }
+}
+
+function downloadRapor() {
+  if (!lastRaporBlob) return;
+  const url = URL.createObjectURL(lastRaporBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sevencan-rapor-' + new Date().toISOString().split('T')[0] + '.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast('Görüntü indirildi');
 }
 
 function renderAyarFormlari() {
