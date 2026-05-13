@@ -1500,10 +1500,28 @@ const VARSAYILAN_DAIRELER = [
   { id: 'd14', no: 'DAİRE 14', isim: 'Reyhan Güven Kiracı', durum: 'active', ozelAidat: null },
 ];
 
+const VARSAYILAN_SAHIPLER = [
+  { id: 's0',  daireNo: 'DAİRE 0',  isim: 'Eren Sevencan',     telefon: '0530 626 08 61', foto: null },
+  { id: 's1',  daireNo: 'DAİRE 1',  isim: 'Eren Sevencan',     telefon: '0530 626 08 61', foto: null },
+  { id: 's2',  daireNo: 'DAİRE 2',  isim: 'Alaaddin Bakan',    telefon: '0535 542 24 75', foto: null },
+  { id: 's3',  daireNo: 'DAİRE 3',  isim: 'Kübra Aydın Topçu', telefon: '0532 164 23 38', foto: null },
+  { id: 's4',  daireNo: 'DAİRE 4',  isim: 'Perihan Karademir', telefon: '0538 968 16 14', foto: null },
+  { id: 's5',  daireNo: 'DAİRE 5',  isim: 'Serkan Özdemir',    telefon: '0549 232 79 80', foto: null },
+  { id: 's6',  daireNo: 'DAİRE 6',  isim: 'Hakan Vural',       telefon: '0533 706 65 23', foto: null },
+  { id: 's7',  daireNo: 'DAİRE 7',  isim: 'Sadi Altunbaş',     telefon: '0535 584 11 11', foto: null },
+  { id: 's8',  daireNo: 'DAİRE 8',  isim: 'Didem Tüzen',       telefon: '0532 260 81 19', foto: null },
+  { id: 's9',  daireNo: 'DAİRE 9',  isim: 'Koray Yummuş',      telefon: '0505 296 78 36', foto: null },
+  { id: 's10', daireNo: 'DAİRE 10', isim: 'Coşkun Şenkaya',    telefon: '0535 633 17 53', foto: null },
+  { id: 's11', daireNo: 'DAİRE 11', isim: 'Ayşen Akyüz',       telefon: '0532 435 52 08', foto: null },
+  { id: 's12', daireNo: 'DAİRE 12', isim: 'Soner Öncü',        telefon: '+49 160 2087868', foto: null },
+  { id: 's13', daireNo: 'DAİRE 13', isim: 'Ayşen Akyüz',       telefon: '0532 435 52 08', foto: null },
+  { id: 's14', daireNo: 'DAİRE 14', isim: 'Reyhan Güven',      telefon: '0533 290 83 90', foto: null },
+];
+
 function defaultState() {
   return {
     daireler: VARSAYILAN_DAIRELER,
-    sahipler: [], // [{ id, daireNo, isim, telefon, foto }]
+    sahipler: VARSAYILAN_SAHIPLER,
     donemler: ['2026-05'],
     aktifDonem: '2026-05',
     donemAyarlari: {
@@ -1520,7 +1538,10 @@ function defaultState() {
 let state = JSON.parse(localStorage.getItem('apartmanData')) || defaultState();
 // Geriye dönük uyumluluk: eksik alanları doldur
 if (!state.zamlar) state.zamlar = [];
-if (!state.sahipler) state.sahipler = [];
+if (!state.sahipler || state.sahipler.length === 0) {
+  state.sahipler = VARSAYILAN_SAHIPLER.slice();
+  try { localStorage.setItem('apartmanData', JSON.stringify(state)); } catch(e) {}
+}
 
 // Migration: elektrik ödeyen daire ödediği halde otomatik elektrik masrafı eksikse oluştur
 (function migrationElektrikMasraflari() {
@@ -1643,6 +1664,45 @@ function getEffectiveOdeme(daire, borc, donem) {
     return odenen + elektrikTutar;
   }
   return odenen;
+}
+
+// Bir sakin için görüntülenecek telefon numarasını döndürür.
+// Mantık:
+// 1) Sakinin kendi telefonu varsa onu kullan.
+// 2) Sakinin isminde "kiracı" geçiyorsa (kiracı olduğu belirtilmişse) sahip telefonunu KULLANMA
+//    — kullanıcı manuel olarak kiracının numarasını eklemeli.
+// 3) Aksi halde aynı daire numarasındaki sahip kaydı varsa ve ismi eşleşiyorsa onun telefonunu kullan.
+function getDaireTelefon(d) {
+  if (d.telefon) return d.telefon;
+  if (!state.sahipler) return '';
+  
+  // Sakinin isminde "kiracı" geçiyorsa, sahip telefonu kullanma (farklı kişiler)
+  if (/kirac[ıi]/i.test(d.isim || '')) return '';
+  
+  // İsim normalize: küçük harf, fazla boşluk ve özel karakter sadeleştir
+  const norm = (s) => (s || '')
+    .toLowerCase()
+    .replace(/[''`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const sakinNorm = norm(d.isim);
+  
+  // Aynı daire numarasındaki sahipleri kontrol et
+  const ayniDaire = state.sahipler.filter(s => s.daireNo === d.no);
+  for (const sahip of ayniDaire) {
+    if (norm(sahip.isim) === sakinNorm && sahip.telefon) {
+      return sahip.telefon;
+    }
+  }
+  return '';
+}
+
+// Telefon numarasını tıklanabilir tel: link'i için temizle
+function telLinkHref(tel) {
+  if (!tel) return '';
+  // Sadece + ve rakamları al
+  const temiz = tel.replace(/[^+\d]/g, '');
+  return 'tel:' + temiz;
 }
 
 function fmtTarih(d) {
@@ -2051,8 +2111,9 @@ function renderDaireler() {
     }
     const fotoStyle = d.foto ? `background-image:url('${d.foto}');` : '';
     const fotoIcerik = d.foto ? '' : '👤';
-    const telefonHtml = d.telefon 
-      ? `<div class="daire-meta">📞 ${d.telefon}</div>` 
+    const telefon = getDaireTelefon(d);
+    const telefonHtml = telefon 
+      ? `<div class="daire-meta"><a href="${telLinkHref(telefon)}" onclick="event.stopPropagation();" style="color:inherit;text-decoration:none;">📞 ${telefon}</a></div>` 
       : '';
     return `
       <div class="daire-item ${itemClass}" onclick="openDaireModal('${d.id}')">
@@ -2084,7 +2145,7 @@ function renderSahipler() {
     const fotoStyle = s.foto ? `background-image:url('${s.foto}');` : '';
     const fotoIcerik = s.foto ? '' : '👤';
     const telefonHtml = s.telefon 
-      ? `<div class="daire-meta">📞 ${s.telefon}</div>` 
+      ? `<div class="daire-meta"><a href="${telLinkHref(s.telefon)}" onclick="event.stopPropagation();" style="color:inherit;text-decoration:none;">📞 ${s.telefon}</a></div>` 
       : '';
     return `
       <div class="daire-item" onclick="openSahipModal('${s.id}')">
