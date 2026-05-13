@@ -1859,21 +1859,18 @@ function renderOzet() {
     .filter(m => m.donem === donem)
     .reduce((s, m) => s + Number(m.tutar), 0);
   
-  // Önceki dönemler birikim devri (güncel nakit için)
-  let onceDevir = state.devirAlacak;
-  donemSort(state.donemler).reverse().forEach(dk => {
-    if (dk >= donem) return;
+  // GÜNCEL NAKİT = Başlangıç devri + TÜM dönemlerin tahsil edilen aidatları − TÜM dönemlerin masrafları
+  // Kasa kümülatif; aktif döneme göre filtreleme yapma.
+  let toplamTahsilTumDonem = 0;
+  Object.keys(state.borclar).forEach(dk => {
     const bb = state.borclar[dk] || {};
-    let dt = 0, do_ = 0;
     state.daireler.forEach(d => {
       const x = bb[d.id]; if (!x) return;
-      if (x.odendi) dt += getEffectiveOdeme(d, x, dk);
+      if (x.odendi) toplamTahsilTumDonem += getEffectiveOdeme(d, x, dk);
     });
-    state.masraflar.filter(m => m.donem === dk).forEach(m => do_ += Number(m.tutar));
-    onceDevir += dt - do_;
   });
-  
-  const guncelNakit = onceDevir + toplamTahsil + digerTahsilat - masrafToplam;
+  const toplamMasrafTumDonem = state.masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+  const guncelNakit = state.devirAlacak + toplamTahsilTumDonem - toplamMasrafTumDonem;
   const bekleyenBorc = toplamAlacak - toplamTahsil;
   
   // ============ GEÇMİŞ DÖNEM İSTATİSTİKLERİ ============
@@ -2306,7 +2303,7 @@ function renderNakit() {
     if (b.odendi) donemTahsilat += getEffectiveOdeme(d, b, donem);
   });
   
-  // Bu dönem yapılan diğer tahsilatlar (geçmiş + peşin)
+  // Bu dönem yapılan diğer tahsilatlar (geçmiş + peşin) — sadece listeleme için
   let eskiTahsilat = 0;
   const eskiList = [];
   Object.keys(state.borclar).forEach(dk => {
@@ -2327,21 +2324,19 @@ function renderNakit() {
   
   const odemeler = state.masraflar.filter(m => m.donem === donem).reduce((s,m) => s + Number(m.tutar), 0);
   
-  // Güncel Nakit = (tahsilat efektif) − masraflar + başlangıç devri
-  // Tahsilat efektif = elektrik dairesi tam aidat sayılır; masraflar gerçek olarak düşülür
-  let kasa = state.devirAlacak;
-  donemSort(state.donemler).reverse().forEach(dk => {
-    if (dk >= donem) return;
+  // GÜNCEL NAKİT = Başlangıç devri + (TÜM dönemlerin tahsil edilen aidatları) − (TÜM dönemlerin masrafları)
+  // Tahsil edilen aidat hangi dönem etiketinde olursa olsun aynı kasaya gider.
+  // Aktif döneme göre filtreleme YAPMA — kasa kümülatif.
+  let toplamTahsilTumDonem = 0;
+  Object.keys(state.borclar).forEach(dk => {
     const bb = state.borclar[dk] || {};
-    let tahsil = 0, masraf = 0;
     state.daireler.forEach(d => {
       const x = bb[d.id]; if (!x) return;
-      if (x.odendi) tahsil += getEffectiveOdeme(d, x, dk);
+      if (x.odendi) toplamTahsilTumDonem += getEffectiveOdeme(d, x, dk);
     });
-    state.masraflar.filter(m => m.donem === dk).forEach(m => masraf += Number(m.tutar));
-    kasa += tahsil - masraf;
   });
-  const guncelNakit = kasa + donemTahsilat + eskiTahsilat - odemeler;
+  const toplamMasrafTumDonem = state.masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+  const guncelNakit = state.devirAlacak + toplamTahsilTumDonem - toplamMasrafTumDonem;
   
   document.getElementById('n-devir').textContent = fmtTL(devir);
   document.getElementById('n-donem-alacak').textContent = fmtTL(donemAlacak);
@@ -3727,52 +3722,55 @@ function showDetay(tip) {
   else if (tip === 'nakit') {
     title = 'Güncel Nakit Hesabı';
     
-    // Geçmiş dönem net kasa hareketi (efektif tahsilat − masraf)
-    let gecmisKasa = state.devirAlacak;
-    let gecmisTahsilToplam = 0, gecmisMasrafToplam = 0;
-    donemSort(state.donemler).reverse().forEach(dk => {
-      if (dk >= donem) return;
-      const b = state.borclar[dk] || {};
-      state.daireler.forEach(d => {
-        const x = b[d.id]; if (!x) return;
-        if (x.odendi) gecmisTahsilToplam += getEffectiveOdeme(d, x, dk);
-      });
-      state.masraflar.filter(m => m.donem === dk).forEach(m => gecmisMasrafToplam += Number(m.tutar));
-    });
-    gecmisKasa += gecmisTahsilToplam - gecmisMasrafToplam;
-    
-    let donemTahsilat = 0;
-    state.daireler.forEach(d => {
-      const b = borc[d.id]; if (!b) return;
-      if (d.durum === 'manager') return;
-      if (b.odendi) donemTahsilat += getEffectiveOdeme(d, b, donem);
-    });
-    
-    let eskiTahsilat = 0;
+    // TÜM dönemlerin tahsilatları ve masrafları kümülatif olarak topla
+    // (dönem etiketine göre filtreleme YAPMA - kasa kümülatif)
+    let toplamTahsil = 0;
     Object.keys(state.borclar).forEach(dk => {
-      if (dk === donem) return;
-      Object.keys(state.borclar[dk]).forEach(did => {
-        const b = state.borclar[dk][did];
-        if (b.odendi && b.odemeTarih && b.odemeTarih.startsWith(donem.substring(0,7))) {
-          const d = state.daireler.find(x => x.id === did);
-          eskiTahsilat += getEffectiveOdeme(d, b, dk);
-        }
+      const bb = state.borclar[dk] || {};
+      state.daireler.forEach(d => {
+        const x = bb[d.id]; if (!x) return;
+        if (x.odendi) toplamTahsil += getEffectiveOdeme(d, x, dk);
       });
     });
+    const toplamMasraf = state.masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+    const nakit = state.devirAlacak + toplamTahsil - toplamMasraf;
     
-    const odemeler = state.masraflar.filter(m => m.donem === donem).reduce((s,m) => s + Number(m.tutar), 0);
-    const nakit = gecmisKasa + donemTahsilat + eskiTahsilat - odemeler;
+    // Bilgilendirme için dönem bazlı detay listesi
+    const donemTahsilDetay = {};
+    Object.keys(state.borclar).forEach(dk => {
+      const bb = state.borclar[dk] || {};
+      let dt = 0;
+      state.daireler.forEach(d => {
+        const x = bb[d.id]; if (!x) return;
+        if (x.odendi) dt += getEffectiveOdeme(d, x, dk);
+      });
+      if (dt > 0) donemTahsilDetay[dk] = dt;
+    });
+    const donemMasrafDetay = {};
+    state.masraflar.forEach(m => {
+      donemMasrafDetay[m.donem] = (donemMasrafDetay[m.donem] || 0) + Number(m.tutar);
+    });
     
-    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">Muhasebe kasası. Elektrik ödeyen daire için tam aidat tahsilat sayılır, elektrik faturası ayrı masraf olarak düşülür.</p>';
+    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">Tüm dönemlerin kümülatif nakit durumu. Hangi dönemde tahsilat veya masraf yapıldığı önemli değil, hepsi aynı kasaya gider.</p>';
     html += '<div class="detay-formula">';
     html += `<div class="f-line"><span>Başlangıç devri</span><span>${fmtTL(state.devirAlacak)}</span></div>`;
-    html += `<div class="f-line"><span>Geçmiş Tahsilat (efektif)</span><span class="success">+${fmtTL(gecmisTahsilToplam)}</span></div>`;
-    html += `<div class="f-line"><span>Geçmiş Masraf</span><span class="danger">−${fmtTL(gecmisMasrafToplam)}</span></div>`;
-    html += `<div class="f-line op">+ Bu dönem tahsilatları</div>`;
-    html += `<div class="f-line"><span>Bu Dönem Aidat Tahsilatı</span><span class="success">+${fmtTL(donemTahsilat)}</span></div>`;
-    html += `<div class="f-line"><span>Diğer Dönem Tahsilatı (Geçmiş+Peşin)</span><span class="success">+${fmtTL(eskiTahsilat)}</span></div>`;
-    html += `<div class="f-line op">− Bu dönem masrafları</div>`;
-    html += `<div class="f-line"><span>Masraflar</span><span class="danger">−${fmtTL(odemeler)}</span></div>`;
+    
+    // Tahsilatları dönem bazlı listele
+    if (Object.keys(donemTahsilDetay).length > 0) {
+      html += `<div class="f-line op">+ Tahsilatlar (dönem bazlı)</div>`;
+      donemSort(Object.keys(donemTahsilDetay)).reverse().forEach(dk => {
+        html += `<div class="f-line"><span>${donemAd(dk)} tahsilat</span><span class="success">+${fmtTL(donemTahsilDetay[dk])}</span></div>`;
+      });
+    }
+    
+    // Masrafları dönem bazlı listele
+    if (Object.keys(donemMasrafDetay).length > 0) {
+      html += `<div class="f-line op">− Masraflar (dönem bazlı)</div>`;
+      donemSort(Object.keys(donemMasrafDetay)).reverse().forEach(dk => {
+        html += `<div class="f-line"><span>${donemAd(dk)} masraf</span><span class="danger">−${fmtTL(donemMasrafDetay[dk])}</span></div>`;
+      });
+    }
+    
     html += `<div class="f-line sum"><span>GÜNCEL NAKİT</span><span class="accent">${fmtTL(nakit)}</span></div></div>`;
     content = html;
   }
