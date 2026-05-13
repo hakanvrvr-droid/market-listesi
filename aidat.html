@@ -726,6 +726,48 @@
     color: #ffffff;
   }
   
+  /* Daire fotoğraf */
+  .daire-foto-preview-large {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg-card-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+  }
+  .daire-foto-preview-large .placeholder {
+    font-size: 36px;
+    color: var(--text-muted);
+  }
+  
+  .daire-foto-mini {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg-card-2);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  
+  .btn.small {
+    padding: 8px 12px;
+    font-size: 12px;
+    width: auto;
+    flex: 1;
+  }
+  
   /* Rapor stilleri */
   #rapor-canvas-area {
     color: #1f2027;
@@ -945,12 +987,10 @@
         <select id="rapor-ay" onchange="renderRapor()"></select>
       </div>
       <div class="form-group">
-        <label>Kaç Ay Göster?</label>
+        <label>Rapor Tipi</label>
         <select id="rapor-sayi" onchange="renderRapor()">
-          <option value="3">3 Ay</option>
-          <option value="4" selected>4 Ay</option>
-          <option value="6">6 Ay</option>
-          <option value="12">12 Ay</option>
+          <option value="1" selected>Aylık (Tek Ay)</option>
+          <option value="3">3 Aylık</option>
         </select>
       </div>
       <button class="btn" onclick="shareRapor()" id="rapor-share-btn">
@@ -1086,6 +1126,26 @@
       <button class="modal-close" onclick="closeModal('modal-daire')">×</button>
     </div>
     <input type="hidden" id="daire-id">
+    
+    <!-- Fotoğraf -->
+    <div class="form-group" style="text-align:center;">
+      <label>Fotoğraf</label>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div id="daire-foto-preview" class="daire-foto-preview-large">
+          <span class="placeholder">📷</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn secondary small" onclick="document.getElementById('daire-foto-input').click()" type="button">
+            📷 Resim Ekle
+          </button>
+          <button class="btn secondary small" id="daire-foto-sil-btn" onclick="clearDaireFoto()" type="button" style="display:none;">
+            🗑️ Kaldır
+          </button>
+        </div>
+        <input type="file" id="daire-foto-input" accept="image/*" style="display:none;" onchange="handleDaireFotoSecim(event)">
+      </div>
+    </div>
+    
     <div class="form-group">
       <label>Daire No</label>
       <input type="text" id="daire-no">
@@ -1093,6 +1153,10 @@
     <div class="form-group">
       <label>Ad Soyad</label>
       <input type="text" id="daire-isim">
+    </div>
+    <div class="form-group">
+      <label>Telefon</label>
+      <input type="tel" id="daire-telefon" placeholder="0532 123 45 67">
     </div>
     <div class="form-group">
       <label>Aidat Tutarı (₺) - boş bırakırsanız varsayılan kullanılır</label>
@@ -1494,7 +1558,13 @@ function ensureBorclar(donem) {
 }
 
 function save() {
-  localStorage.setItem('apartmanData', JSON.stringify(state));
+  try {
+    localStorage.setItem('apartmanData', JSON.stringify(state));
+  } catch (err) {
+    // QuotaExceededError - localStorage doldu (genelde fotoğraflar yüzünden)
+    console.error('localStorage save hatası:', err);
+    throw new Error('Depolama alanı doldu. Fotoğrafları azaltın veya küçültün.');
+  }
 }
 
 function fmtTL(n) {
@@ -1920,12 +1990,18 @@ function renderDaireler() {
       badge = '<span class="badge partial">Elektrik</span>';
       itemClass = 'partial';
     }
+    const fotoStyle = d.foto ? `background-image:url('${d.foto}');` : '';
+    const fotoIcerik = d.foto ? '' : '👤';
+    const telefonHtml = d.telefon 
+      ? `<div class="daire-meta">📞 ${d.telefon}</div>` 
+      : '';
     return `
       <div class="daire-item ${itemClass}" onclick="openDaireModal('${d.id}')">
-        <div class="daire-no">${d.no.replace('DAİRE ', 'D')}</div>
+        <div class="daire-foto-mini" style="${fotoStyle}">${fotoIcerik}</div>
         <div class="daire-info">
-          <div class="daire-name">${d.isim}</div>
-          <div class="daire-meta">${d.no}${d.ozelAidat != null ? ' · Özel: ' + fmtTL(d.ozelAidat) : ''}</div>
+          <div class="daire-name">${d.no.replace('DAİRE ', 'D')} · ${d.isim}</div>
+          ${telefonHtml}
+          ${d.ozelAidat != null ? `<div class="daire-meta">Özel aidat: ${fmtTL(d.ozelAidat)}</div>` : ''}
         </div>
         ${badge}
       </div>`;
@@ -2265,8 +2341,42 @@ function renderRapor() {
     <td class="num">${fmtTLKisa(raporData.reduce((s,r) => s + (r.tahsilat - r.masrafToplam), 0))}</td>
   </tr>`;
   
-  html += `</tbody></table>
-    <div style="margin-top:14px;font-size:11px;color:#555868;text-align:center;">
+  html += `</tbody></table>`;
+  
+  // Ödenmemiş daireler listesi
+  const odenmemisler = [];
+  donemler.forEach(dk => {
+    const borc = state.borclar[dk] || {};
+    const elkTutar = Number((state.donemAyarlari[dk] || {}).elektrikTutar) || 0;
+    state.daireler.forEach(d => {
+      const b = borc[d.id]; if (!b) return;
+      if (d.durum === 'manager') return;
+      if (!b.odendi) {
+        const eff = d.durum === 'electric' ? b.tutar + elkTutar : b.tutar;
+        odenmemisler.push({ daire: d, donem: dk, tutar: eff });
+      }
+    });
+  });
+  
+  if (odenmemisler.length > 0) {
+    html += `
+      <div style="margin-top:18px;padding:12px;background:#fadcdc;border-radius:8px;border-left:4px solid #c43e3e;">
+        <div style="font-size:13px;font-weight:700;color:#c43e3e;margin-bottom:8px;">
+          ⚠ Ödenmemiş Aidatlar (${odenmemisler.length} kayıt)
+        </div>
+        <div style="font-size:12px;color:#1f2027;line-height:1.8;">`;
+    odenmemisler.forEach(o => {
+      html += `${o.daire.no} ${o.daire.isim} - ${donemAd(o.donem)} - ${fmtTLKisa(o.tutar)}<br>`;
+    });
+    html += `</div></div>`;
+  } else {
+    html += `
+      <div style="margin-top:18px;padding:12px;background:#d6f0de;border-radius:8px;border-left:4px solid #1f8a4c;font-size:13px;font-weight:600;color:#1f8a4c;text-align:center;">
+        ✓ Bu dönemde ödenmemiş aidat yok
+      </div>`;
+  }
+  
+  html += `<div style="margin-top:14px;font-size:11px;color:#555868;text-align:center;">
       Rapor tarihi: ${new Date().toLocaleDateString('tr-TR')}
     </div>`;
   
@@ -2479,6 +2589,9 @@ function saveElektrikDaire() {
 function openModal(id) { document.getElementById(id).classList.add('active'); }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
+// Daire modalında geçici tutulan foto (data URL)
+let gecicidaireFoto = null;
+
 function openDaireModal(id) {
   const d = state.daireler.find(x => x.id === id);
   if (!d) return;
@@ -2486,9 +2599,64 @@ function openDaireModal(id) {
   document.getElementById('daire-id').value = id;
   document.getElementById('daire-no').value = d.no;
   document.getElementById('daire-isim').value = d.isim;
+  document.getElementById('daire-telefon').value = d.telefon || '';
   document.getElementById('daire-aidat').value = d.ozelAidat != null ? d.ozelAidat : '';
   document.getElementById('daire-durum').value = d.durum;
+  
+  // Fotoğraf önizleme
+  gecicidaireFoto = d.foto || null;
+  updateDaireFotoPreview();
+  document.getElementById('daire-foto-input').value = '';
+  
   openModal('modal-daire');
+}
+
+function updateDaireFotoPreview() {
+  const preview = document.getElementById('daire-foto-preview');
+  const silBtn = document.getElementById('daire-foto-sil-btn');
+  if (gecicidaireFoto) {
+    preview.innerHTML = '';
+    preview.style.backgroundImage = `url('${gecicidaireFoto}')`;
+    silBtn.style.display = 'inline-flex';
+  } else {
+    preview.innerHTML = '<span class="placeholder">📷</span>';
+    preview.style.backgroundImage = '';
+    silBtn.style.display = 'none';
+  }
+}
+
+function handleDaireFotoSecim(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // Görüntüyü küçült (max 400px) — localStorage limiti için
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxBoyut = 400;
+      let { width, height } = img;
+      if (width > height) {
+        if (width > maxBoyut) { height = (height * maxBoyut) / width; width = maxBoyut; }
+      } else {
+        if (height > maxBoyut) { width = (width * maxBoyut) / height; height = maxBoyut; }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      gecicidaireFoto = canvas.toDataURL('image/jpeg', 0.75);
+      updateDaireFotoPreview();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearDaireFoto() {
+  gecicidaireFoto = null;
+  updateDaireFotoPreview();
+  document.getElementById('daire-foto-input').value = '';
 }
 
 function saveDaire() {
@@ -2497,6 +2665,8 @@ function saveDaire() {
   if (!d) return;
   d.no = document.getElementById('daire-no').value.trim();
   d.isim = document.getElementById('daire-isim').value.trim();
+  d.telefon = document.getElementById('daire-telefon').value.trim();
+  d.foto = gecicidaireFoto;
   const aidatVal = document.getElementById('daire-aidat').value;
   d.ozelAidat = aidatVal === '' ? null : Number(aidatVal);
   const yeniDurum = document.getElementById('daire-durum').value;
@@ -2514,7 +2684,12 @@ function saveDaire() {
     const b = state.borclar[state.aktifDonem][did];
     if (b.otomatik && !b.odendi) delete state.borclar[state.aktifDonem][did];
   });
-  save();
+  try {
+    save();
+  } catch (err) {
+    toast('Hata: Veri kaydedilemedi (alan dolu olabilir). Fotoğrafları azaltın.');
+    return;
+  }
   closeModal('modal-daire');
   render();
   toast('Daire güncellendi');
