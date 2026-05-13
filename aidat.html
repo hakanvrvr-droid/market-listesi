@@ -861,12 +861,15 @@
     <details class="section" open>
       <summary>💰 Aidat & Dönem Ayarları</summary>
       <div class="content">
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">
+          Aşağıdaki ayarlar <strong id="ayar-aktif-donem" style="color:var(--accent);">aktif dönem</strong> içindir. Farklı dönem ayarı için üst kısımdaki dönem seçicisini değiştirin veya zam / elektrik yönetimini kullanın.
+        </p>
         <div class="form-group">
-          <label>Bu Dönem Aidat Tutarı (₺)</label>
+          <label>Aidat Tutarı (₺)</label>
           <input type="number" id="aidatTutar" onchange="saveAidatTutar()" placeholder="Örn: 1500">
         </div>
         <div class="form-group">
-          <label>Bu Dönem Elektrik Faturası (₺) - Daire 6 düşülür</label>
+          <label>Elektrik Faturası (₺) - Elektrik ödeyen daireden düşülür</label>
           <input type="number" id="elektrikTutar" onchange="saveElektrikTutar()" placeholder="Örn: 850">
         </div>
         <div class="form-group">
@@ -877,7 +880,10 @@
           <label>Elektrik Ödeyen Daire</label>
           <select id="elektrikDaire" onchange="saveElektrikDaire()"></select>
         </div>
-        <button class="btn secondary" onclick="openZamModal()">📈 Aidat Zammı Yönetimi</button>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn secondary" onclick="openZamModal()">📈 Aidat Zammı</button>
+          <button class="btn secondary" onclick="openElektrikModal()">⚡ Elektrik Faturaları</button>
+        </div>
       </div>
     </details>
 
@@ -1177,6 +1183,36 @@
     <button class="btn" onclick="saveZam()" style="margin-bottom:14px;">+ Zam Ekle</button>
     <div class="card-title">Mevcut Zamlar (Tarih Sırasıyla)</div>
     <div id="zam-listesi"></div>
+  </div>
+</div>
+
+<!-- Elektrik Faturası Yönetimi Modal -->
+<div class="modal-overlay" id="modal-elektrik">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⚡ Elektrik Faturaları</div>
+      <button class="modal-close" onclick="closeModal('modal-elektrik')">×</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.5;">
+      Her dönem için elektrik faturası tutarını ayrı girin. İlgili dönemde elektrik ödeyen daire (Daire 6) aidatından bu tutar düşülür.
+    </p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Yıl</label>
+        <select id="elk-yil"></select>
+      </div>
+      <div class="form-group">
+        <label>Ay</label>
+        <select id="elk-ay"></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Elektrik Tutarı (₺)</label>
+      <input type="number" id="elk-tutar" placeholder="Örn: 850">
+    </div>
+    <button class="btn" onclick="saveElektrikDonem()" style="margin-bottom:14px;">+ Elektrik Faturası Kaydet</button>
+    <div class="card-title">Mevcut Faturalar (En Yeni Üstte)</div>
+    <div id="elk-listesi"></div>
   </div>
 </div>
 
@@ -1921,6 +1957,10 @@ function renderAyarFormlari() {
   const aidatInput = document.getElementById('aidatTutar');
   const aktifAidat = getAidatForDonem(state.aktifDonem);
   
+  // Aktif dönem etiketi
+  const aktifDonemEl = document.getElementById('ayar-aktif-donem');
+  if (aktifDonemEl) aktifDonemEl.textContent = donemAd(state.aktifDonem);
+  
   // Dönem için elle değer girilmemişse, zam veya boş göster
   if (ayar.aidatTutar && ayar.aidatTutar > 0) {
     aidatInput.value = ayar.aidatTutar;
@@ -2484,6 +2524,108 @@ function deleteZam(id) {
   renderZamList();
   render();
   toast('Zam silindi');
+}
+
+// ============= ELEKTRİK YÖNETİMİ =============
+function openElektrikModal() {
+  const yilSel = document.getElementById('elk-yil');
+  const aySel = document.getElementById('elk-ay');
+  const guncelYil = new Date().getFullYear();
+  yilSel.innerHTML = '';
+  for (let y = guncelYil - 5; y <= guncelYil + 2; y++) {
+    yilSel.innerHTML += `<option value="${y}" ${y === guncelYil ? 'selected' : ''}>${y}</option>`;
+  }
+  aySel.innerHTML = AYLAR.map((a,i) => 
+    `<option value="${String(i+1).padStart(2,'0')}" ${i === new Date().getMonth() ? 'selected' : ''}>${a}</option>`
+  ).join('');
+  // Varsayılan: aktif dönem
+  const [ay, ai] = state.aktifDonem.split('-');
+  yilSel.value = ay;
+  aySel.value = ai;
+  document.getElementById('elk-tutar').value = '';
+  renderElektrikList();
+  openModal('modal-elektrik');
+}
+
+function renderElektrikList() {
+  // donemAyarlari'ndaki elektrikTutar > 0 olanları listele
+  const liste = [];
+  Object.keys(state.donemAyarlari).forEach(dk => {
+    const ayar = state.donemAyarlari[dk];
+    if (ayar && Number(ayar.elektrikTutar) > 0) {
+      liste.push({ donem: dk, tutar: Number(ayar.elektrikTutar) });
+    }
+  });
+  liste.sort((a, b) => b.donem.localeCompare(a.donem)); // en yeni üstte
+  
+  if (liste.length === 0) {
+    document.getElementById('elk-listesi').innerHTML = '<div class="empty">Henüz elektrik faturası girilmemiş</div>';
+    return;
+  }
+  document.getElementById('elk-listesi').innerHTML = liste.map(e => `
+    <div class="zam-item">
+      <div class="zam-info">
+        <div class="zam-baslik">${fmtTL(e.tutar)}</div>
+        <div class="zam-meta">${donemAd(e.donem)}</div>
+      </div>
+      <button class="icon-btn danger" onclick="deleteElektrik('${e.donem}')">Sil</button>
+    </div>
+  `).join('');
+}
+
+function saveElektrikDonem() {
+  const yil = document.getElementById('elk-yil').value;
+  const ay = document.getElementById('elk-ay').value;
+  const tutar = Number(document.getElementById('elk-tutar').value);
+  const donem = yil + '-' + ay;
+  if (!tutar || tutar < 0) { toast('Geçerli tutar girin'); return; }
+  
+  // Dönem yoksa oluştur
+  if (!state.donemler.includes(donem)) {
+    state.donemler.push(donem);
+  }
+  if (!state.donemAyarlari[donem]) {
+    state.donemAyarlari[donem] = { aidatTutar: 0, elektrikTutar: 0 };
+  }
+  state.donemAyarlari[donem].elektrikTutar = tutar;
+  
+  // Bu döneme ait elektrik ödeyen dairenin otomatik+ödenmemiş borcunu yenile
+  if (state.borclar[donem]) {
+    Object.keys(state.borclar[donem]).forEach(did => {
+      const daire = state.daireler.find(x => x.id === did);
+      if (!daire) return;
+      if (daire.durum !== 'electric') return;
+      const b = state.borclar[donem][did];
+      if (b.otomatik && !b.odendi) delete state.borclar[donem][did];
+    });
+  }
+  
+  save();
+  document.getElementById('elk-tutar').value = '';
+  renderElektrikList();
+  render();
+  toast(donemAd(donem) + ' elektrik faturası: ' + fmtTL(tutar));
+}
+
+function deleteElektrik(donem) {
+  if (!confirm(donemAd(donem) + ' elektrik kaydını silmek istediğinizden emin misiniz?')) return;
+  if (state.donemAyarlari[donem]) {
+    state.donemAyarlari[donem].elektrikTutar = 0;
+  }
+  // Aynı şekilde elektrik dairesinin borcunu yenile
+  if (state.borclar[donem]) {
+    Object.keys(state.borclar[donem]).forEach(did => {
+      const daire = state.daireler.find(x => x.id === did);
+      if (!daire) return;
+      if (daire.durum !== 'electric') return;
+      const b = state.borclar[donem][did];
+      if (b.otomatik && !b.odendi) delete state.borclar[donem][did];
+    });
+  }
+  save();
+  renderElektrikList();
+  render();
+  toast('Elektrik kaydı silindi');
 }
 
 // ============= DETAY GÖSTERİMİ =============
