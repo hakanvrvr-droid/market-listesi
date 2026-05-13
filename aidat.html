@@ -1373,6 +1373,21 @@ function fmtTL(n) {
   return '₺' + n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
+// Bir dairenin ödendiğinde muhasebede sayılan efektif tahsilat tutarı.
+// Elektrik ödeyen daire için: nakit ödediği (odemeTutar) + dönemin elektrik tutarı
+// (çünkü elektriği apartman adına ayni olarak ödedi sayılır).
+// Diğer daireler: sadece odemeTutar (yoksa tutar).
+function getEffectiveOdeme(daire, borc, donem) {
+  if (!borc || !borc.odendi) return 0;
+  const odenen = Number(borc.odemeTutar || borc.tutar) || 0;
+  if (daire && daire.durum === 'electric') {
+    const ayar = state.donemAyarlari[donem];
+    const elektrikTutar = ayar ? Number(ayar.elektrikTutar) || 0 : 0;
+    return odenen + elektrikTutar;
+  }
+  return odenen;
+}
+
 function fmtTarih(d) {
   if (!d) return '-';
   const dt = new Date(d);
@@ -1476,10 +1491,14 @@ function renderOzet() {
     const b = borc[d.id];
     if (!b) return;
     if (d.durum === 'manager') return;
-    toplamAlacak += b.tutar;
+    // Elektrik dairesi için: gösterilen tutar (340) + elektrik (310) = tam aidat (650) muhasebede sayılır
+    const effectiveTutar = d.durum === 'electric'
+      ? b.tutar + (Number((state.donemAyarlari[donem] || {}).elektrikTutar) || 0)
+      : b.tutar;
+    toplamAlacak += effectiveTutar;
     alacakliSayisi++;
     if (b.odendi) {
-      toplamTahsil += b.odemeTutar || b.tutar;
+      toplamTahsil += getEffectiveOdeme(d, b, donem);
       odenenSayisi++;
     }
   });
@@ -1491,7 +1510,8 @@ function renderOzet() {
     Object.keys(state.borclar[dk]).forEach(did => {
       const b = state.borclar[dk][did];
       if (b.odendi && b.odemeTarih && b.odemeTarih.startsWith(donem.substring(0,7))) {
-        digerTahsilat += b.odemeTutar || b.tutar;
+        const d = state.daireler.find(x => x.id === did);
+        digerTahsilat += getEffectiveOdeme(d, b, dk);
       }
     });
   });
@@ -1508,7 +1528,7 @@ function renderOzet() {
     let dt = 0, do_ = 0;
     state.daireler.forEach(d => {
       const x = bb[d.id]; if (!x) return;
-      if (x.odendi) dt += (x.odemeTutar || x.tutar);
+      if (x.odendi) dt += getEffectiveOdeme(d, x, dk);
     });
     state.masraflar.filter(m => m.donem === dk).forEach(m => do_ += Number(m.tutar));
     onceDevir += dt - do_;
@@ -1522,12 +1542,14 @@ function renderOzet() {
   donemSort(state.donemler).forEach(dk => {
     if (dk >= donem) return;
     const bb = state.borclar[dk] || {};
+    const elkTutar = Number((state.donemAyarlari[dk] || {}).elektrikTutar) || 0;
     state.daireler.forEach(d => {
       const x = bb[d.id]; if (!x) return;
       if (d.durum === 'manager') return;
-      gecmisToplamBorc += x.tutar;
+      const eff = d.durum === 'electric' ? x.tutar + elkTutar : x.tutar;
+      gecmisToplamBorc += eff;
       gecmisToplamDaire++;
-      if (!x.odendi) gecmisOdenmemis += x.tutar;
+      if (!x.odendi) gecmisOdenmemis += eff;
     });
   });
   
@@ -1536,14 +1558,16 @@ function renderOzet() {
   donemSort(state.donemler).forEach(dk => {
     if (dk <= donem) return;
     const bb = state.borclar[dk] || {};
+    const elkTutar = Number((state.donemAyarlari[dk] || {}).elektrikTutar) || 0;
     state.daireler.forEach(d => {
       const x = bb[d.id]; if (!x) return;
       if (d.durum === 'manager') return;
       if (x.odendi) {
-        gelecekPesinTutar += (x.odemeTutar || x.tutar);
+        gelecekPesinTutar += getEffectiveOdeme(d, x, dk);
         gelecekPesinSayi++;
       } else {
-        gelecekBeklenenTutar += x.tutar;
+        const eff = d.durum === 'electric' ? x.tutar + elkTutar : x.tutar;
+        gelecekBeklenenTutar += eff;
       }
     });
   });
@@ -1880,16 +1904,17 @@ function renderNakit() {
   // Devir Alacak = Önceki dönemlerin toplam alacağı (ödendi/ödenmedi fark etmez)
   // − Önceki dönemlerin masrafları
   // + Başlangıç devri
-  // Bu mantıkla geçmiş borçlar (ödenmemişler dahil) ekranda görünür hale gelir.
+  // Elektrik ödeyen daire için tam aidat sayılır (görsel borç + elektrik tutarı).
   let devir = state.devirAlacak;
   donemSort(state.donemler).reverse().forEach(dk => {
     if (dk >= donem) return;
     const b = state.borclar[dk] || {};
+    const elkTutar = Number((state.donemAyarlari[dk] || {}).elektrikTutar) || 0;
     let alacak = 0, masraf = 0;
     state.daireler.forEach(d => {
       const x = b[d.id]; if (!x) return;
       if (d.durum === 'manager') return;
-      alacak += x.tutar; // Hem ödenmiş hem ödenmemiş borçlar
+      alacak += d.durum === 'electric' ? x.tutar + elkTutar : x.tutar;
     });
     state.masraflar.filter(m => m.donem === dk).forEach(m => masraf += Number(m.tutar));
     devir += alacak - masraf;
@@ -1897,12 +1922,13 @@ function renderNakit() {
   
   // Dönem alacak ve tahsilatlar
   const borc = state.borclar[donem] || {};
+  const aktifElkTutar = Number((state.donemAyarlari[donem] || {}).elektrikTutar) || 0;
   let donemAlacak = 0, donemTahsilat = 0;
   state.daireler.forEach(d => {
     const b = borc[d.id]; if (!b) return;
     if (d.durum === 'manager') return;
-    donemAlacak += b.tutar;
-    if (b.odendi) donemTahsilat += (b.odemeTutar || b.tutar);
+    donemAlacak += d.durum === 'electric' ? b.tutar + aktifElkTutar : b.tutar;
+    if (b.odendi) donemTahsilat += getEffectiveOdeme(d, b, donem);
   });
   
   // Bu dönem yapılan diğer tahsilatlar (geçmiş + peşin)
@@ -1914,9 +1940,10 @@ function renderNakit() {
       const b = state.borclar[dk][did];
       if (b.odendi && b.odemeTarih && b.odemeTarih.startsWith(donem.substring(0,7))) {
         const d = state.daireler.find(x => x.id === did);
-        eskiTahsilat += b.odemeTutar || b.tutar;
+        const eff = getEffectiveOdeme(d, b, dk);
+        eskiTahsilat += eff;
         if (d) eskiList.push({ 
-          daire: d, donem: dk, tutar: b.odemeTutar || b.tutar, tarih: b.odemeTarih,
+          daire: d, donem: dk, tutar: eff, tarih: b.odemeTarih,
           tip: dk < donem ? 'gecmis' : 'pesin'
         });
       }
@@ -1925,10 +1952,8 @@ function renderNakit() {
   
   const odemeler = state.masraflar.filter(m => m.donem === donem).reduce((s,m) => s + Number(m.tutar), 0);
   
-  // Güncel Nakit = fiilen kasada olan para
-  // Tüm geçmiş dönemlerden gelen NET tahsil (sadece ödenenler) − tüm geçmiş masraflar
-  // + Bu dönem tahsil − Bu dönem masraf + Bu dönem diğer dönem tahsilatları + Başlangıç devri
-  // Bu hesap "alacak bakiyesi"nden bağımsız, sadece fiziksel kasa hareketi.
+  // Güncel Nakit = (tahsilat efektif) − masraflar + başlangıç devri
+  // Tahsilat efektif = elektrik dairesi tam aidat sayılır; masraflar gerçek olarak düşülür
   let kasa = state.devirAlacak;
   donemSort(state.donemler).reverse().forEach(dk => {
     if (dk >= donem) return;
@@ -1936,7 +1961,7 @@ function renderNakit() {
     let tahsil = 0, masraf = 0;
     state.daireler.forEach(d => {
       const x = bb[d.id]; if (!x) return;
-      if (x.odendi) tahsil += (x.odemeTutar || x.tutar);
+      if (x.odendi) tahsil += getEffectiveOdeme(d, x, dk);
     });
     state.masraflar.filter(m => m.donem === dk).forEach(m => masraf += Number(m.tutar));
     kasa += tahsil - masraf;
@@ -2051,10 +2076,34 @@ function saveElektrikTutar() {
   const v = Number(document.getElementById('elektrikTutar').value) || 0;
   if (!state.donemAyarlari[state.aktifDonem]) state.donemAyarlari[state.aktifDonem] = {};
   state.donemAyarlari[state.aktifDonem].elektrikTutar = v;
-  Object.keys(state.borclar[state.aktifDonem] || {}).forEach(did => {
-    const b = state.borclar[state.aktifDonem][did];
-    if (b.otomatik && !b.odendi) delete state.borclar[state.aktifDonem][did];
-  });
+  
+  // Aktif dönem için elektrik ödeyen dairenin durumunu güncelle
+  const donem = state.aktifDonem;
+  const aidatBase = getAidatForDonem(donem);
+  const yeniElektrikDaireTutar = Math.max(0, aidatBase - v);
+  
+  if (state.borclar[donem]) {
+    state.daireler.forEach(daire => {
+      if (daire.durum !== 'electric') return;
+      const b = state.borclar[donem][daire.id];
+      if (!b) return;
+      if (!b.odendi) {
+        // Ödenmemiş — tutarı doğrudan güncelle
+        b.tutar = yeniElektrikDaireTutar;
+      } else {
+        // Ödenmişse otomatik masrafı yeni elektrik tutarıyla güncelle
+        syncElektrikMasraf(daire.id, donem, b.odemeTarih);
+      }
+    });
+    // Diğer dairelerin (electric olmayan) otomatik+ödenmemiş borçlarını da yenile
+    Object.keys(state.borclar[donem]).forEach(did => {
+      const daire = state.daireler.find(x => x.id === did);
+      if (!daire || daire.durum === 'electric') return;
+      const b = state.borclar[donem][did];
+      if (b.otomatik && !b.odendi) delete state.borclar[donem][did];
+    });
+  }
+  
   save();
   render();
   toast('Elektrik tutarı güncellendi');
@@ -2706,18 +2755,23 @@ function saveElektrikDonem() {
   state.donemAyarlari[donem].elektrikTutar = tutar;
   
   // Bu döneme ait elektrik ödeyen dairenin durumunu güncelle
+  const aidatBase = getAidatForDonem(donem);
+  const yeniElektrikDaireTutar = Math.max(0, aidatBase - tutar);
+  
   if (state.borclar[donem]) {
-    Object.keys(state.borclar[donem]).forEach(did => {
-      const daire = state.daireler.find(x => x.id === did);
-      if (!daire) return;
+    state.daireler.forEach(daire => {
       if (daire.durum !== 'electric') return;
-      const b = state.borclar[donem][did];
-      if (b.otomatik && !b.odendi) {
-        // Ödenmemiş otomatik kaydı sıfırla - yeniden hesaplansın
-        delete state.borclar[donem][did];
-      } else if (b.odendi) {
+      const b = state.borclar[donem][daire.id];
+      if (!b) {
+        // Henüz oluşturulmamışsa ensureBorclar render'da halledecek
+        return;
+      }
+      if (!b.odendi) {
+        // Ödenmemiş — tutarı doğrudan güncelle (otomatik olup olmadığına bakmadan)
+        b.tutar = yeniElektrikDaireTutar;
+      } else {
         // Ödenmişse otomatik masrafı yeni elektrik tutarıyla güncelle
-        syncElektrikMasraf(did, donem, b.odemeTarih);
+        syncElektrikMasraf(daire.id, donem, b.odemeTarih);
       }
     });
   }
@@ -2763,7 +2817,7 @@ function showDetay(tip) {
   
   if (tip === 'devir') {
     title = 'Devir Alacak Detayı';
-    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">Geçmiş dönemlerden gelen ödenmemiş borçlar.</p>';
+    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">Geçmiş dönemlerden gelen ödenmemiş borçlar (elektrik dairesi için tam aidat).</p>';
     
     // Tüm geçmiş dönemlerdeki ödenmemiş borçları topla
     const odenmemisler = [];
@@ -2771,12 +2825,14 @@ function showDetay(tip) {
     donemSort(state.donemler).forEach(dk => {
       if (dk >= donem) return;
       const b = state.borclar[dk] || {};
+      const elkTutar = Number((state.donemAyarlari[dk] || {}).elektrikTutar) || 0;
       state.daireler.forEach(d => {
         const x = b[d.id]; if (!x) return;
         if (d.durum === 'manager') return;
         if (!x.odendi) {
-          odenmemisler.push({ daire: d, donem: dk, tutar: x.tutar });
-          toplamOdenmemis += x.tutar;
+          const eff = d.durum === 'electric' ? x.tutar + elkTutar : x.tutar;
+          odenmemisler.push({ daire: d, donem: dk, tutar: eff });
+          toplamOdenmemis += eff;
         }
       });
     });
@@ -2794,31 +2850,40 @@ function showDetay(tip) {
   }
   else if (tip === 'donem-alacak') {
     title = 'Dönem Alacak Detayı';
-    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">' + donemAd(donem) + ' için tüm dairelerden alınması gereken toplam.</p>';
+    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">' + donemAd(donem) + ' için tüm dairelerden alınması gereken toplam (muhasebe).</p>';
     html += '<div class="detay-formula">';
     let toplam = 0;
+    const aktifElkTutar = Number((state.donemAyarlari[donem] || {}).elektrikTutar) || 0;
     state.daireler.forEach(d => {
       const b = borc[d.id]; if (!b) return;
       if (d.durum === 'manager') return;
-      toplam += b.tutar;
-      const dnotu = d.durum === 'electric' ? ' (elektrik düşülmüş)' : '';
-      html += `<div class="f-line"><span>${d.no} · ${d.isim}${dnotu}</span><span>${fmtTL(b.tutar)}</span></div>`;
+      let dnotu = '';
+      let satirTutar = b.tutar;
+      if (d.durum === 'electric') {
+        satirTutar = b.tutar + aktifElkTutar;
+        dnotu = ` <span style="color:var(--text-dim);font-size:11px;">(₺${b.tutar} nakit + ₺${aktifElkTutar} elektrik)</span>`;
+      }
+      toplam += satirTutar;
+      html += `<div class="f-line"><span>${d.no} · ${d.isim}${dnotu}</span><span>${fmtTL(satirTutar)}</span></div>`;
     });
     html += `<div class="f-line sum"><span>TOPLAM ALACAK</span><span>${fmtTL(toplam)}</span></div></div>`;
     content = html;
   }
   else if (tip === 'tahsilat') {
     title = 'Tahsilat Detayı';
-    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">' + donemAd(donem) + ' içinde gerçekleşen tüm tahsilatlar.</p>';
+    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">' + donemAd(donem) + ' içinde gerçekleşen tüm tahsilatlar (elektrik dairesi için ayni ödeme dahil).</p>';
     
     // Bu döneme ait tahsilatlar
     let bugun = 0;
     let buHtml = '';
     state.daireler.forEach(d => {
       const b = borc[d.id]; if (!b || !b.odendi || d.durum === 'manager') return;
-      const t = b.odemeTutar || b.tutar;
+      const t = getEffectiveOdeme(d, b, donem);
+      const nakit = Number(b.odemeTutar || b.tutar) || 0;
+      const ek = t - nakit;
+      const ekNotu = ek > 0 ? ` <span style="color:var(--text-dim);font-size:11px;">(₺${nakit} nakit + ₺${ek} elektrik)</span>` : '';
       bugun += t;
-      buHtml += `<div class="f-line"><span>${d.no} · ${d.isim} · ${fmtTarih(b.odemeTarih)}</span><span class="success">${fmtTL(t)}</span></div>`;
+      buHtml += `<div class="f-line"><span>${d.no} · ${d.isim} · ${fmtTarih(b.odemeTarih)}${ekNotu}</span><span class="success">${fmtTL(t)}</span></div>`;
     });
     
     // Bu dönem içinde yapılmış diğer dönem ödemeleri (geçmiş + peşin)
@@ -2831,7 +2896,7 @@ function showDetay(tip) {
         if (b.odendi && b.odemeTarih && b.odemeTarih.startsWith(donem.substring(0,7))) {
           const d = state.daireler.find(x => x.id === did);
           if (!d) return;
-          const t = b.odemeTutar || b.tutar;
+          const t = getEffectiveOdeme(d, b, dk);
           const satir = `<div class="f-line"><span>${d.no} · ${d.isim} · ${donemAd(dk)} (${fmtTarih(b.odemeTarih)})</span><span class="success">${fmtTL(t)}</span></div>`;
           if (dk < donem) {
             eskiBugun += t;
@@ -2880,7 +2945,7 @@ function showDetay(tip) {
   else if (tip === 'nakit') {
     title = 'Güncel Nakit Hesabı';
     
-    // Geçmiş dönem net kasa hareketi (tahsilat − masraf)
+    // Geçmiş dönem net kasa hareketi (efektif tahsilat − masraf)
     let gecmisKasa = state.devirAlacak;
     let gecmisTahsilToplam = 0, gecmisMasrafToplam = 0;
     donemSort(state.donemler).reverse().forEach(dk => {
@@ -2888,7 +2953,7 @@ function showDetay(tip) {
       const b = state.borclar[dk] || {};
       state.daireler.forEach(d => {
         const x = b[d.id]; if (!x) return;
-        if (x.odendi) gecmisTahsilToplam += (x.odemeTutar || x.tutar);
+        if (x.odendi) gecmisTahsilToplam += getEffectiveOdeme(d, x, dk);
       });
       state.masraflar.filter(m => m.donem === dk).forEach(m => gecmisMasrafToplam += Number(m.tutar));
     });
@@ -2898,7 +2963,7 @@ function showDetay(tip) {
     state.daireler.forEach(d => {
       const b = borc[d.id]; if (!b) return;
       if (d.durum === 'manager') return;
-      if (b.odendi) donemTahsilat += (b.odemeTutar || b.tutar);
+      if (b.odendi) donemTahsilat += getEffectiveOdeme(d, b, donem);
     });
     
     let eskiTahsilat = 0;
@@ -2907,7 +2972,8 @@ function showDetay(tip) {
       Object.keys(state.borclar[dk]).forEach(did => {
         const b = state.borclar[dk][did];
         if (b.odendi && b.odemeTarih && b.odemeTarih.startsWith(donem.substring(0,7))) {
-          eskiTahsilat += b.odemeTutar || b.tutar;
+          const d = state.daireler.find(x => x.id === did);
+          eskiTahsilat += getEffectiveOdeme(d, b, dk);
         }
       });
     });
@@ -2915,10 +2981,10 @@ function showDetay(tip) {
     const odemeler = state.masraflar.filter(m => m.donem === donem).reduce((s,m) => s + Number(m.tutar), 0);
     const nakit = gecmisKasa + donemTahsilat + eskiTahsilat - odemeler;
     
-    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">Fiilen kasada olan para. Ödenmemiş borçlar bu hesaba dahil DEĞİL (onlar Devir Alacak satırında).</p>';
+    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">Muhasebe kasası. Elektrik ödeyen daire için tam aidat tahsilat sayılır, elektrik faturası ayrı masraf olarak düşülür.</p>';
     html += '<div class="detay-formula">';
     html += `<div class="f-line"><span>Başlangıç devri</span><span>${fmtTL(state.devirAlacak)}</span></div>`;
-    html += `<div class="f-line"><span>Geçmiş Tahsilat</span><span class="success">+${fmtTL(gecmisTahsilToplam)}</span></div>`;
+    html += `<div class="f-line"><span>Geçmiş Tahsilat (efektif)</span><span class="success">+${fmtTL(gecmisTahsilToplam)}</span></div>`;
     html += `<div class="f-line"><span>Geçmiş Masraf</span><span class="danger">−${fmtTL(gecmisMasrafToplam)}</span></div>`;
     html += `<div class="f-line op">+ Bu dönem tahsilatları</div>`;
     html += `<div class="f-line"><span>Bu Dönem Aidat Tahsilatı</span><span class="success">+${fmtTL(donemTahsilat)}</span></div>`;
