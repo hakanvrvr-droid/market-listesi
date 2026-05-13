@@ -829,6 +829,16 @@
   .rapor-table tr.masraf-row td.label {
     background: #fadcdc;
   }
+  .rapor-table tr.devir-row td {
+    background: #fdf4e7;
+    color: #8a5a2b;
+    font-weight: 600;
+    font-style: italic;
+  }
+  .rapor-table tr.devir-row td.label {
+    background: #f6e6cd;
+    font-style: normal;
+  }
   .rapor-table tr.toplam-row td {
     background: #1f2027;
     color: white;
@@ -2436,6 +2446,27 @@ function renderRapor() {
     return { donem: dk, tahsilat, masrafGruplari, masrafToplam };
   });
   
+  // Devreden Nakit: Rapor başlangıcından ÖNCEKİ tüm dönemlerin net hareketi
+  const ilkDonem = donemler[0];
+  let devredenNakit = state.devirAlacak;
+  Object.keys(state.borclar).forEach(dk => {
+    if (dk >= ilkDonem) return; // sadece daha önceki dönemler
+    const bb = state.borclar[dk] || {};
+    state.daireler.forEach(d => {
+      const x = bb[d.id]; if (!x) return;
+      if (x.odendi) devredenNakit += getEffectiveOdeme(d, x, dk);
+    });
+  });
+  state.masraflar.forEach(m => {
+    if (m.donem < ilkDonem) devredenNakit -= Number(m.tutar);
+  });
+  
+  // Devreden satırı için etiket — önceki ayın adı
+  const [iyl, iay] = ilkDonem.split('-');
+  let prevAy = parseInt(iay) - 1, prevYil = parseInt(iyl);
+  if (prevAy < 1) { prevAy = 12; prevYil--; }
+  const devirEtiket = AYLAR[prevAy - 1] + ' ' + prevYil + ' Devreden';
+  
   // Tüm dönemlerdeki tüm masraf türlerini topla (satır olarak göstermek için)
   const tumMasrafTurleri = new Set();
   raporData.forEach(r => {
@@ -2459,6 +2490,12 @@ function renderRapor() {
         </tr>
       </thead>
       <tbody>
+        <tr class="devir-row">
+          <td class="label">${devirEtiket}</td>
+          <td class="num">${fmtTLKisa(devredenNakit)}</td>
+          ${donemler.slice(1).map(() => '<td class="num">-</td>').join('')}
+          <td class="num">${fmtTLKisa(devredenNakit)}</td>
+        </tr>
         <tr class="tahsilat-row">
           <td class="label">Tahsil Edilen Aidat Gelirleri</td>
           ${raporData.map(r => `<td class="num">${fmtTLKisa(r.tahsilat)}</td>`).join('')}
@@ -2478,11 +2515,18 @@ function renderRapor() {
     </tr>`;
   });
   
-  // Dönem net (Tahsilat - Masraf)
+  // Dönem Net = Devreden (sadece ilk sütun) + Tahsilat − Masraf
+  // Her ayın net'i kendi hesabıdır; ilk aya devreden eklenir
+  const donemNetler = raporData.map((r, i) => {
+    const dev = i === 0 ? devredenNakit : 0;
+    return dev + r.tahsilat - r.masrafToplam;
+  });
+  const toplamNet = devredenNakit + raporData.reduce((s,r) => s + r.tahsilat - r.masrafToplam, 0);
+  
   html += `<tr class="toplam-row">
     <td class="label" style="background:#1f2027;color:white;">Dönem Net</td>
-    ${raporData.map(r => `<td class="num">${fmtTLKisa(r.tahsilat - r.masrafToplam)}</td>`).join('')}
-    <td class="num">${fmtTLKisa(raporData.reduce((s,r) => s + (r.tahsilat - r.masrafToplam), 0))}</td>
+    ${donemNetler.map(n => `<td class="num">${fmtTLKisa(n)}</td>`).join('')}
+    <td class="num">${fmtTLKisa(toplamNet)}</td>
   </tr>`;
   
   html += `</tbody></table>`;
