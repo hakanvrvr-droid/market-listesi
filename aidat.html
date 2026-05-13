@@ -1808,6 +1808,9 @@ function renderMasrafAll() {
 
 // Tek bir masraf kartı HTML'i (her iki görünümde de kullanılır)
 function masrafItemHtml(m, compact) {
+  const autoBadge = m.auto === 'elektrik' 
+    ? ' <span class="badge future" style="font-size:9px;padding:2px 5px;vertical-align:middle;">Otomatik</span>' 
+    : '';
   const subMeta = compact 
     ? `${fmtTarih(m.tarih)}${m.aciklama ? ' · ' + m.aciklama : ''}`
     : `${fmtTarih(m.tarih)} · ${donemAd(m.donem)}${m.aciklama ? ' · ' + m.aciklama : ''}`;
@@ -1815,7 +1818,7 @@ function masrafItemHtml(m, compact) {
     <div class="tx-item">
       <div class="tx-row">
         <div class="tx-info">
-          <div class="tx-title">${m.tur}${m.firma ? ' · ' + m.firma : ''}</div>
+          <div class="tx-title">${m.tur}${m.firma ? ' · ' + m.firma : ''}${autoBadge}</div>
           <div class="tx-meta">${subMeta}</div>
         </div>
         <div class="tx-amount out">${fmtTL(m.tutar)}</div>
@@ -2118,6 +2121,7 @@ function saveOdeme() {
   state.borclar[donem][did].odendi = true;
   state.borclar[donem][did].odemeTutar = tutar;
   state.borclar[donem][did].odemeTarih = tarih;
+  syncElektrikMasraf(did, donem, tarih);
   save();
   closeModal('modal-odeme');
   render();
@@ -2130,9 +2134,48 @@ function undoOdeme(did, donem) {
   state.borclar[donem][did].odendi = false;
   state.borclar[donem][did].odemeTutar = null;
   state.borclar[donem][did].odemeTarih = null;
+  removeElektrikMasraf(did, donem);
   save();
   render();
   toast('Ödeme geri alındı');
+}
+
+// Elektrik ödeyen daire ödendi olarak işlendiğinde, o dönemin elektrik faturası kadar
+// otomatik bir masraf kaydı oluşturur (CK Elektrik). Tekrar çağrılırsa günceller.
+function syncElektrikMasraf(did, donem, tarih) {
+  const daire = state.daireler.find(x => x.id === did);
+  if (!daire || daire.durum !== 'electric') return;
+  const ayar = state.donemAyarlari[donem];
+  const elektrikTutar = ayar ? Number(ayar.elektrikTutar) || 0 : 0;
+  if (elektrikTutar <= 0) return;
+  
+  // Aynı daire+dönem için mevcut otomatik elektrik masrafı var mı?
+  const mevcut = state.masraflar.find(m => 
+    m.auto === 'elektrik' && m.autoDaireId === did && m.donem === donem
+  );
+  if (mevcut) {
+    // Güncelle (tutar veya tarih değişmiş olabilir)
+    mevcut.tutar = elektrikTutar;
+    mevcut.tarih = tarih;
+  } else {
+    state.masraflar.push({
+      id: 'm' + Date.now(),
+      tur: 'Elektrik',
+      firma: 'CK Elektrik',
+      tarih: tarih,
+      tutar: elektrikTutar,
+      aciklama: `${daire.no} (${daire.isim}) elektrik ödemesi`,
+      donem: donem,
+      auto: 'elektrik',
+      autoDaireId: did,
+    });
+  }
+}
+
+function removeElektrikMasraf(did, donem) {
+  state.masraflar = state.masraflar.filter(m => 
+    !(m.auto === 'elektrik' && m.autoDaireId === did && m.donem === donem)
+  );
 }
 
 function openCustomAmount(did, donem) {
@@ -2175,7 +2218,13 @@ function openMasrafModal(id) {
   openModal('modal-masraf');
 }
 
-function editMasraf(id) { openMasrafModal(id); }
+function editMasraf(id) {
+  const m = state.masraflar.find(x => x.id === id);
+  if (m && m.auto === 'elektrik') {
+    if (!confirm('Bu masraf, elektrik ödeyen dairenin ödemesi sonucu otomatik oluşturulmuştur. Manuel düzenleme önerilmez — bunun yerine "Elektrik Faturaları" yönetiminden tutarı değiştirin.\n\nYine de düzenlemek istiyor musunuz?')) return;
+  }
+  openMasrafModal(id);
+}
 
 function saveMasraf() {
   const id = document.getElementById('masraf-id').value;
@@ -2204,6 +2253,22 @@ function saveMasraf() {
 }
 
 function deleteMasraf(id) {
+  const m = state.masraflar.find(x => x.id === id);
+  if (m && m.auto === 'elektrik') {
+    if (!confirm('Bu masraf, elektrik ödeyen dairenin ödemesi sonucu otomatik oluşturulmuştur. Silerseniz daire ödemesi de geri alınacaktır. Devam edilsin mi?')) return;
+    // Otomatik masrafı silmek demek = daire ödemesini de geri al
+    if (m.autoDaireId && state.borclar[m.donem] && state.borclar[m.donem][m.autoDaireId]) {
+      const b = state.borclar[m.donem][m.autoDaireId];
+      b.odendi = false;
+      b.odemeTutar = null;
+      b.odemeTarih = null;
+    }
+    state.masraflar = state.masraflar.filter(x => x.id !== id);
+    save();
+    render();
+    toast('Masraf ve daire ödemesi geri alındı');
+    return;
+  }
   if (!confirm('Bu masrafı silmek istediğinizden emin misiniz?')) return;
   state.masraflar = state.masraflar.filter(m => m.id !== id);
   save();
@@ -2420,6 +2485,7 @@ function savePesinOdeme() {
     odemeTutar: tutar,
     otomatik: mevcut ? mevcut.otomatik : true,
   };
+  syncElektrikMasraf(did, donem, tarih);
   save();
   closeModal('modal-eski');
   render();
@@ -2589,14 +2655,20 @@ function saveElektrikDonem() {
   }
   state.donemAyarlari[donem].elektrikTutar = tutar;
   
-  // Bu döneme ait elektrik ödeyen dairenin otomatik+ödenmemiş borcunu yenile
+  // Bu döneme ait elektrik ödeyen dairenin durumunu güncelle
   if (state.borclar[donem]) {
     Object.keys(state.borclar[donem]).forEach(did => {
       const daire = state.daireler.find(x => x.id === did);
       if (!daire) return;
       if (daire.durum !== 'electric') return;
       const b = state.borclar[donem][did];
-      if (b.otomatik && !b.odendi) delete state.borclar[donem][did];
+      if (b.otomatik && !b.odendi) {
+        // Ödenmemiş otomatik kaydı sıfırla - yeniden hesaplansın
+        delete state.borclar[donem][did];
+      } else if (b.odendi) {
+        // Ödenmişse otomatik masrafı yeni elektrik tutarıyla güncelle
+        syncElektrikMasraf(did, donem, b.odemeTarih);
+      }
     });
   }
   
@@ -2612,14 +2684,19 @@ function deleteElektrik(donem) {
   if (state.donemAyarlari[donem]) {
     state.donemAyarlari[donem].elektrikTutar = 0;
   }
-  // Aynı şekilde elektrik dairesinin borcunu yenile
+  // Elektrik ödeyen daire varsa durumu güncelle
   if (state.borclar[donem]) {
     Object.keys(state.borclar[donem]).forEach(did => {
       const daire = state.daireler.find(x => x.id === did);
       if (!daire) return;
       if (daire.durum !== 'electric') return;
       const b = state.borclar[donem][did];
-      if (b.otomatik && !b.odendi) delete state.borclar[donem][did];
+      if (b.otomatik && !b.odendi) {
+        delete state.borclar[donem][did];
+      } else if (b.odendi) {
+        // Ödenmişse: artık elektrik 0 — otomatik masrafı sil
+        removeElektrikMasraf(did, donem);
+      }
     });
   }
   save();
