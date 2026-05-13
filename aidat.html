@@ -1048,6 +1048,16 @@
       </div>
     </details>
 
+    <!-- AYARLAR: Daire Sahipleri -->
+    <details class="section">
+      <summary>🔑 Daire Sahipleri</summary>
+      <div class="content">
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">Ev sahipleri (kiracı durumunda asıl mal sahibi). Sakinlerden farklı kişiler için kullanın.</p>
+        <button class="btn" onclick="openSahipModal()" style="margin-bottom:12px;">+ Yeni Daire Sahibi Ekle</button>
+        <div id="sahip-listesi"></div>
+      </div>
+    </details>
+
     <!-- AYARLAR: Veri Yönetimi -->
     <details class="section">
       <summary>💾 Veri Yönetimi</summary>
@@ -1171,6 +1181,52 @@
       </select>
     </div>
     <button class="btn" onclick="saveDaire()">Kaydet</button>
+  </div>
+</div>
+
+<!-- Daire Sahibi Modalı -->
+<div class="modal-overlay" id="modal-sahip">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-sahip-title">Daire Sahibi Ekle</div>
+      <button class="modal-close" onclick="closeModal('modal-sahip')">×</button>
+    </div>
+    <input type="hidden" id="sahip-id">
+    
+    <!-- Fotoğraf -->
+    <div class="form-group" style="text-align:center;">
+      <label>Fotoğraf</label>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div id="sahip-foto-preview" class="daire-foto-preview-large">
+          <span class="placeholder">📷</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn secondary small" onclick="document.getElementById('sahip-foto-input').click()" type="button">
+            📷 Resim Ekle
+          </button>
+          <button class="btn secondary small" id="sahip-foto-sil-btn" onclick="clearSahipFoto()" type="button" style="display:none;">
+            🗑️ Kaldır
+          </button>
+        </div>
+        <input type="file" id="sahip-foto-input" accept="image/*" style="display:none;" onchange="handleSahipFotoSecim(event)">
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label>Daire No</label>
+      <select id="sahip-daire-no"></select>
+    </div>
+    <div class="form-group">
+      <label>Ad Soyad</label>
+      <input type="text" id="sahip-isim" placeholder="Örn: Ahmet Yılmaz">
+    </div>
+    <div class="form-group">
+      <label>Telefon</label>
+      <input type="tel" id="sahip-telefon" placeholder="0532 123 45 67">
+    </div>
+    
+    <button class="btn" onclick="saveSahip()">Kaydet</button>
+    <button class="btn danger" id="sahip-sil-btn" onclick="deleteSahip()" style="margin-top:8px;display:none;">Sil</button>
   </div>
 </div>
 
@@ -1447,6 +1503,7 @@ const VARSAYILAN_DAIRELER = [
 function defaultState() {
   return {
     daireler: VARSAYILAN_DAIRELER,
+    sahipler: [], // [{ id, daireNo, isim, telefon, foto }]
     donemler: ['2026-05'],
     aktifDonem: '2026-05',
     donemAyarlari: {
@@ -1463,6 +1520,7 @@ function defaultState() {
 let state = JSON.parse(localStorage.getItem('apartmanData')) || defaultState();
 // Geriye dönük uyumluluk: eksik alanları doldur
 if (!state.zamlar) state.zamlar = [];
+if (!state.sahipler) state.sahipler = [];
 
 // Migration: elektrik ödeyen daire ödediği halde otomatik elektrik masrafı eksikse oluştur
 (function migrationElektrikMasraflari() {
@@ -1659,6 +1717,7 @@ function render() {
   renderHeader();
   renderOzet();
   renderDaireler();
+  renderSahipler();
   renderMasraf();
   renderNakit();
   renderAyarFormlari();
@@ -2007,6 +2066,35 @@ function renderDaireler() {
       </div>`;
   }).join('');
   document.getElementById('daire-listesi').innerHTML = html;
+}
+
+function renderSahipler() {
+  const liste = state.sahipler || [];
+  if (liste.length === 0) {
+    document.getElementById('sahip-listesi').innerHTML = '<div class="empty">Henüz daire sahibi eklenmemiş</div>';
+    return;
+  }
+  // Daire no'ya göre sırala
+  const sirali = liste.slice().sort((a, b) => {
+    const sayia = parseInt((a.daireNo || '').replace(/\D/g, '')) || 0;
+    const sayib = parseInt((b.daireNo || '').replace(/\D/g, '')) || 0;
+    return sayia - sayib;
+  });
+  document.getElementById('sahip-listesi').innerHTML = sirali.map(s => {
+    const fotoStyle = s.foto ? `background-image:url('${s.foto}');` : '';
+    const fotoIcerik = s.foto ? '' : '👤';
+    const telefonHtml = s.telefon 
+      ? `<div class="daire-meta">📞 ${s.telefon}</div>` 
+      : '';
+    return `
+      <div class="daire-item" onclick="openSahipModal('${s.id}')">
+        <div class="daire-foto-mini" style="${fotoStyle}">${fotoIcerik}</div>
+        <div class="daire-info">
+          <div class="daire-name">${s.daireNo || '-'} · ${s.isim}</div>
+          ${telefonHtml}
+        </div>
+      </div>`;
+  }).join('');
 }
 
 let aidatFilter = 'all';
@@ -2693,6 +2781,134 @@ function saveDaire() {
   closeModal('modal-daire');
   render();
   toast('Daire güncellendi');
+}
+
+// ============= DAİRE SAHİPLERİ =============
+let geciciSahipFoto = null;
+
+function openSahipModal(id) {
+  // Daire no dropdown'ı doldur — mevcut daire no'larını listele
+  const daireNoSel = document.getElementById('sahip-daire-no');
+  const daireOptions = state.daireler.map(d => `<option value="${d.no}">${d.no} (${d.isim})</option>`).join('');
+  daireNoSel.innerHTML = '<option value="">— Seçin —</option>' + daireOptions;
+  
+  if (id) {
+    const s = state.sahipler.find(x => x.id === id);
+    if (!s) return;
+    document.getElementById('modal-sahip-title').textContent = 'Daire Sahibi Düzenle';
+    document.getElementById('sahip-id').value = id;
+    document.getElementById('sahip-daire-no').value = s.daireNo || '';
+    document.getElementById('sahip-isim').value = s.isim || '';
+    document.getElementById('sahip-telefon').value = s.telefon || '';
+    geciciSahipFoto = s.foto || null;
+    document.getElementById('sahip-sil-btn').style.display = 'block';
+  } else {
+    document.getElementById('modal-sahip-title').textContent = 'Yeni Daire Sahibi';
+    document.getElementById('sahip-id').value = '';
+    document.getElementById('sahip-daire-no').value = '';
+    document.getElementById('sahip-isim').value = '';
+    document.getElementById('sahip-telefon').value = '';
+    geciciSahipFoto = null;
+    document.getElementById('sahip-sil-btn').style.display = 'none';
+  }
+  updateSahipFotoPreview();
+  document.getElementById('sahip-foto-input').value = '';
+  openModal('modal-sahip');
+}
+
+function updateSahipFotoPreview() {
+  const preview = document.getElementById('sahip-foto-preview');
+  const silBtn = document.getElementById('sahip-foto-sil-btn');
+  if (geciciSahipFoto) {
+    preview.innerHTML = '';
+    preview.style.backgroundImage = `url('${geciciSahipFoto}')`;
+    silBtn.style.display = 'inline-flex';
+  } else {
+    preview.innerHTML = '<span class="placeholder">📷</span>';
+    preview.style.backgroundImage = '';
+    silBtn.style.display = 'none';
+  }
+}
+
+function handleSahipFotoSecim(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxBoyut = 400;
+      let { width, height } = img;
+      if (width > height) {
+        if (width > maxBoyut) { height = (height * maxBoyut) / width; width = maxBoyut; }
+      } else {
+        if (height > maxBoyut) { width = (width * maxBoyut) / height; height = maxBoyut; }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      geciciSahipFoto = canvas.toDataURL('image/jpeg', 0.75);
+      updateSahipFotoPreview();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearSahipFoto() {
+  geciciSahipFoto = null;
+  updateSahipFotoPreview();
+  document.getElementById('sahip-foto-input').value = '';
+}
+
+function saveSahip() {
+  const id = document.getElementById('sahip-id').value;
+  const daireNo = document.getElementById('sahip-daire-no').value;
+  const isim = document.getElementById('sahip-isim').value.trim();
+  const telefon = document.getElementById('sahip-telefon').value.trim();
+  
+  if (!isim) { toast('İsim girin'); return; }
+  if (!daireNo) { toast('Daire seçin'); return; }
+  
+  if (!state.sahipler) state.sahipler = [];
+  
+  if (id) {
+    const s = state.sahipler.find(x => x.id === id);
+    if (s) {
+      s.daireNo = daireNo;
+      s.isim = isim;
+      s.telefon = telefon;
+      s.foto = geciciSahipFoto;
+    }
+  } else {
+    state.sahipler.push({
+      id: 's' + Date.now(),
+      daireNo, isim, telefon,
+      foto: geciciSahipFoto,
+    });
+  }
+  
+  try {
+    save();
+  } catch (err) {
+    toast('Hata: Veri kaydedilemedi (alan dolu olabilir).');
+    return;
+  }
+  closeModal('modal-sahip');
+  render();
+  toast(id ? 'Daire sahibi güncellendi' : 'Daire sahibi eklendi ✓');
+}
+
+function deleteSahip() {
+  const id = document.getElementById('sahip-id').value;
+  if (!id) return;
+  if (!confirm('Bu daire sahibini silmek istediğinizden emin misiniz?')) return;
+  state.sahipler = state.sahipler.filter(s => s.id !== id);
+  save();
+  closeModal('modal-sahip');
+  render();
+  toast('Daire sahibi silindi');
 }
 
 function openOdemeModal(daireId, donem) {
