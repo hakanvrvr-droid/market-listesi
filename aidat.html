@@ -1271,6 +1271,16 @@ let state = JSON.parse(localStorage.getItem('apartmanData')) || defaultState();
 // Geriye dönük uyumluluk: eksik alanları doldur
 if (!state.zamlar) state.zamlar = [];
 
+// Migration: önceki sürümlerde otomatik eklenen "CK Elektrik" masrafları
+// çifte düşmeye yol açıyordu — bunları temizle
+if (state.masraflar) {
+  const eskiSayisi = state.masraflar.length;
+  state.masraflar = state.masraflar.filter(m => m.auto !== 'elektrik');
+  if (state.masraflar.length !== eskiSayisi) {
+    localStorage.setItem('apartmanData', JSON.stringify(state));
+  }
+}
+
 // Belirli bir dönem için geçerli aidat tutarını hesapla
 // Öncelik sırası: 1) o dönemin elle girilmiş tutarı (varsa ve >0)
 //                 2) o döneme uygulanan en güncel zam
@@ -1594,9 +1604,17 @@ function renderOzet() {
         </div>`;
     }
     
-    const meta = d.durum === 'manager' 
-      ? 'Aidat ödemez'
-      : 'Aidat: ' + fmtTL(b.tutar) + (d.durum === 'electric' ? ' (elektrik düşülmüş)' : '');
+    let meta;
+    if (d.durum === 'manager') {
+      meta = 'Aidat ödemez';
+    } else if (d.durum === 'electric') {
+      const tamAidat = getAidatForDonem(donem);
+      const ayar = state.donemAyarlari[donem] || {};
+      const elektrik = Number(ayar.elektrikTutar) || 0;
+      meta = `Aidat: ${fmtTL(tamAidat)} − Elektrik: ${fmtTL(elektrik)} = <strong style="color:var(--accent);">${fmtTL(b.tutar)}</strong>`;
+    } else {
+      meta = 'Aidat: ' + fmtTL(b.tutar);
+    }
     
     ozetHtml += `
       <div class="daire-item ${itemClass}" style="flex-direction:column;align-items:stretch;">
@@ -1808,9 +1826,6 @@ function renderMasrafAll() {
 
 // Tek bir masraf kartı HTML'i (her iki görünümde de kullanılır)
 function masrafItemHtml(m, compact) {
-  const autoBadge = m.auto === 'elektrik' 
-    ? ' <span class="badge future" style="font-size:9px;padding:2px 5px;vertical-align:middle;">Otomatik</span>' 
-    : '';
   const subMeta = compact 
     ? `${fmtTarih(m.tarih)}${m.aciklama ? ' · ' + m.aciklama : ''}`
     : `${fmtTarih(m.tarih)} · ${donemAd(m.donem)}${m.aciklama ? ' · ' + m.aciklama : ''}`;
@@ -1818,7 +1833,7 @@ function masrafItemHtml(m, compact) {
     <div class="tx-item">
       <div class="tx-row">
         <div class="tx-info">
-          <div class="tx-title">${m.tur}${m.firma ? ' · ' + m.firma : ''}${autoBadge}</div>
+          <div class="tx-title">${m.tur}${m.firma ? ' · ' + m.firma : ''}</div>
           <div class="tx-meta">${subMeta}</div>
         </div>
         <div class="tx-amount out">${fmtTL(m.tutar)}</div>
@@ -2140,36 +2155,11 @@ function undoOdeme(did, donem) {
   toast('Ödeme geri alındı');
 }
 
-// Elektrik ödeyen daire ödendi olarak işlendiğinde, o dönemin elektrik faturası kadar
-// otomatik bir masraf kaydı oluşturur (CK Elektrik). Tekrar çağrılırsa günceller.
+// Elektrik ödeyen dairenin aidat tutarı zaten elektrik faturası kadar düşülmüş olduğundan,
+// ayrıca masraf eklemek çifte düşme olur. Bu fonksiyon artık masraf eklemez,
+// sadece eski sürümlerden kalan otomatik elektrik masraflarını temizler.
 function syncElektrikMasraf(did, donem, tarih) {
-  const daire = state.daireler.find(x => x.id === did);
-  if (!daire || daire.durum !== 'electric') return;
-  const ayar = state.donemAyarlari[donem];
-  const elektrikTutar = ayar ? Number(ayar.elektrikTutar) || 0 : 0;
-  if (elektrikTutar <= 0) return;
-  
-  // Aynı daire+dönem için mevcut otomatik elektrik masrafı var mı?
-  const mevcut = state.masraflar.find(m => 
-    m.auto === 'elektrik' && m.autoDaireId === did && m.donem === donem
-  );
-  if (mevcut) {
-    // Güncelle (tutar veya tarih değişmiş olabilir)
-    mevcut.tutar = elektrikTutar;
-    mevcut.tarih = tarih;
-  } else {
-    state.masraflar.push({
-      id: 'm' + Date.now(),
-      tur: 'Elektrik',
-      firma: 'CK Elektrik',
-      tarih: tarih,
-      tutar: elektrikTutar,
-      aciklama: `${daire.no} (${daire.isim}) elektrik ödemesi`,
-      donem: donem,
-      auto: 'elektrik',
-      autoDaireId: did,
-    });
-  }
+  removeElektrikMasraf(did, donem);
 }
 
 function removeElektrikMasraf(did, donem) {
@@ -2219,10 +2209,6 @@ function openMasrafModal(id) {
 }
 
 function editMasraf(id) {
-  const m = state.masraflar.find(x => x.id === id);
-  if (m && m.auto === 'elektrik') {
-    if (!confirm('Bu masraf, elektrik ödeyen dairenin ödemesi sonucu otomatik oluşturulmuştur. Manuel düzenleme önerilmez — bunun yerine "Elektrik Faturaları" yönetiminden tutarı değiştirin.\n\nYine de düzenlemek istiyor musunuz?')) return;
-  }
   openMasrafModal(id);
 }
 
@@ -2253,22 +2239,6 @@ function saveMasraf() {
 }
 
 function deleteMasraf(id) {
-  const m = state.masraflar.find(x => x.id === id);
-  if (m && m.auto === 'elektrik') {
-    if (!confirm('Bu masraf, elektrik ödeyen dairenin ödemesi sonucu otomatik oluşturulmuştur. Silerseniz daire ödemesi de geri alınacaktır. Devam edilsin mi?')) return;
-    // Otomatik masrafı silmek demek = daire ödemesini de geri al
-    if (m.autoDaireId && state.borclar[m.donem] && state.borclar[m.donem][m.autoDaireId]) {
-      const b = state.borclar[m.donem][m.autoDaireId];
-      b.odendi = false;
-      b.odemeTutar = null;
-      b.odemeTarih = null;
-    }
-    state.masraflar = state.masraflar.filter(x => x.id !== id);
-    save();
-    render();
-    toast('Masraf ve daire ödemesi geri alındı');
-    return;
-  }
   if (!confirm('Bu masrafı silmek istediğinizden emin misiniz?')) return;
   state.masraflar = state.masraflar.filter(m => m.id !== id);
   save();
