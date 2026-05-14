@@ -880,6 +880,31 @@
     accent-color: white;
   }
   
+  /* Telefon arama butonu */
+  .ara-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #25D366; /* WhatsApp/iOS yeşili gibi */
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    flex-shrink: 0;
+    margin-left: 8px;
+    transition: transform 0.15s, background 0.15s;
+    box-shadow: 0 2px 6px rgba(37, 211, 102, 0.3);
+  }
+  .ara-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+  .ara-btn:active {
+    transform: scale(0.92);
+    background: #1ea951;
+  }
+  
   /* Paylaşım sonrası önizleme modalı */
   .preview-img {
     width: 100%;
@@ -889,12 +914,36 @@
   }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- Firebase v9 compat SDK (script tag uyumlu) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+  // Firebase Configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyAbB1bbbuGhb1b4CG4e0IOq_Zi6MFaWMug",
+    authDomain: "aidat-787cc.firebaseapp.com",
+    databaseURL: "https://aidat-787cc-default-rtdb.firebaseio.com",
+    projectId: "aidat-787cc",
+    storageBucket: "aidat-787cc.firebasestorage.app",
+    messagingSenderId: "267861538853",
+    appId: "1:267861538853:web:9a7a8a4bd00a6af9f0e7cc",
+    measurementId: "G-X4RX0VSPEY"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const fbDb = firebase.database();
+  const fbRef = fbDb.ref('apartman/sevencan');
+  // Offline cache - bağlantı kesilse bile veri elde edilir
+  fbDb.goOnline();
+</script>
 </head>
 <body>
 
 <div class="header">
   <h1>🏢 Sevencan Apartmanı</h1>
-  <div class="subtitle">Aidat & Nakit Takip Sistemi</div>
+  <div class="subtitle">
+    Aidat & Nakit Takip Sistemi
+    <span id="sync-durum" style="font-size:11px;margin-left:8px;font-weight:600;">⏳ Bağlanıyor...</span>
+  </div>
   <div class="period-selector">
     <label>Dönem:</label>
     <select id="currentPeriod" onchange="changePeriod()"></select>
@@ -1122,14 +1171,24 @@
 
     <!-- AYARLAR: Senkronizasyon -->
     <details class="section">
-      <summary>📱 Çoklu Cihaz Senkronizasyonu</summary>
+      <summary>☁ Bulut Senkronizasyon</summary>
       <div class="content">
-        <p style="font-size:13px;color:var(--text-dim);line-height:1.5;">
-          Bu uygulama veriyi cihazda saklar. 3 iPhone'da senkron için:
-          <br><br>
-          <strong>1.</strong> Bir cihazda "Veriyi İndir" ile JSON al<br>
-          <strong>2.</strong> AirDrop / iCloud Drive / WhatsApp ile diğerlerine gönder<br>
-          <strong>3.</strong> Diğer cihazlarda "Veri Yükle" ile içe aktar
+        <p style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:12px;">
+          Veriler Firebase bulutunda saklanıyor. 3 iPhone'da aynı veriyi görür ve değişiklikler anlık eşitlenir.
+        </p>
+        <div style="background:var(--bg-card-2);padding:10px;border-radius:8px;margin-bottom:12px;">
+          <div style="font-size:12px;color:var(--text-dim);">Durum:</div>
+          <div id="sync-durum-detay" style="font-size:14px;font-weight:600;color:var(--accent);">Kontrol ediliyor...</div>
+        </div>
+        <button class="btn secondary" onclick="firebaseManuelYukle()" style="margin-bottom:8px;">
+          ⬆ Bu Cihazdaki Veriyi Buluta Yükle
+        </button>
+        <button class="btn secondary" onclick="firebaseManuelIndir()" style="margin-bottom:8px;">
+          ⬇ Buluttaki Veriyi Bu Cihaza İndir
+        </button>
+        <p style="font-size:11px;color:var(--text-dim);line-height:1.4;margin-top:8px;">
+          ⚠ "Buluta Yükle" → bu cihazın verisi diğer cihazlara da yansır.<br>
+          ⚠ "Buluttan İndir" → buluttaki veri bu cihaza yüklenir, mevcut veri üzerine yazılır.
         </p>
       </div>
     </details>
@@ -1139,8 +1198,8 @@
       <summary>ℹ️ Hakkında</summary>
       <div class="content">
         <p style="font-size:13px;color:var(--text-dim);line-height:1.5;">
-          Sevencan Apartmanı Aidat Takip Sistemi v1.0<br>
-          Veriler cihazınızın yerel deposunda (localStorage) saklanır.
+          Sevencan Apartmanı Aidat Takip Sistemi v2.0<br>
+          Veriler Firebase Realtime Database'de saklanır, yerel cache (localStorage) ile yedeklenir.
         </p>
       </div>
     </details>
@@ -1687,14 +1746,173 @@ function ensureBorclar(donem) {
   });
 }
 
+// ============= FIREBASE SENKRONİZASYON =============
+// Kendi yazdığımız değişikliği geri yansıtmamak için flag
+let kendiYazimiz = false;
+let firebaseHazir = false;
+let firebaseSenkronAcik = true; // Kapatılabilir
+
 function save() {
+  // 1. Önce localStorage (offline yedek + hızlı erişim)
   try {
     localStorage.setItem('apartmanData', JSON.stringify(state));
   } catch (err) {
-    // QuotaExceededError - localStorage doldu (genelde fotoğraflar yüzünden)
     console.error('localStorage save hatası:', err);
     throw new Error('Depolama alanı doldu. Fotoğrafları azaltın veya küçültün.');
   }
+  
+  // 2. Firebase'e yaz (gerçek zamanlı senkron)
+  if (firebaseSenkronAcik && typeof fbRef !== 'undefined') {
+    kendiYazimiz = true;
+    fbRef.set(state)
+      .then(() => {
+        // Yazma tamamlandı, küçük bir gecikme sonra flag'i sıfırla
+        setTimeout(() => { kendiYazimiz = false; }, 500);
+        updateSyncDurum('senkronize');
+      })
+      .catch((err) => {
+        kendiYazimiz = false;
+        console.error('Firebase yazma hatası:', err);
+        updateSyncDurum('hata', err.message);
+      });
+  }
+}
+
+// Firebase'i başlat ve dinleyici kur
+function firebaseBaslat() {
+  if (typeof fbRef === 'undefined') {
+    console.warn('Firebase yüklenemedi');
+    return;
+  }
+  
+  updateSyncDurum('bağlanıyor');
+  
+  // Bağlantı durumu izle
+  const connRef = fbDb.ref('.info/connected');
+  connRef.on('value', (snap) => {
+    if (snap.val() === true) {
+      updateSyncDurum('senkronize');
+    } else {
+      updateSyncDurum('offline');
+    }
+  });
+  
+  // Anlık dinleyici - başka cihazdaki değişiklikleri yakala
+  fbRef.on('value', (snapshot) => {
+    if (kendiYazimiz) return; // Kendi yazdığımız değişikliği yansıtma
+    
+    const cloudData = snapshot.val();
+    if (!cloudData) {
+      // Bulutta veri yok, mevcut local state'i yükle
+      if (!firebaseHazir) {
+        firebaseHazir = true;
+        // İlk yükleme: local state'i buluta gönder
+        kendiYazimiz = true;
+        fbRef.set(state).then(() => {
+          setTimeout(() => { kendiYazimiz = false; }, 500);
+        });
+      }
+      return;
+    }
+    
+    // Bulut verisi geldi
+    firebaseHazir = true;
+    
+    // Eksik alanları doldur (geriye dönük uyumluluk)
+    if (!cloudData.zamlar) cloudData.zamlar = [];
+    if (!cloudData.sahipler || cloudData.sahipler.length === 0) {
+      cloudData.sahipler = VARSAYILAN_SAHIPLER.slice();
+    }
+    if (!cloudData.daireler || cloudData.daireler.length === 0) {
+      cloudData.daireler = VARSAYILAN_DAIRELER.slice();
+    }
+    if (!cloudData.donemler) cloudData.donemler = ['2026-05'];
+    if (!cloudData.aktifDonem) cloudData.aktifDonem = cloudData.donemler[0];
+    if (!cloudData.borclar) cloudData.borclar = {};
+    if (!cloudData.masraflar) cloudData.masraflar = [];
+    if (!cloudData.donemAyarlari) cloudData.donemAyarlari = {};
+    if (cloudData.devirAlacak === undefined) cloudData.devirAlacak = 0;
+    
+    // State'i güncelle
+    state = cloudData;
+    
+    // localStorage'a da yaz (offline yedek)
+    try {
+      localStorage.setItem('apartmanData', JSON.stringify(state));
+    } catch(e) { console.warn('localStorage yazma hatası:', e); }
+    
+    // UI'yı yenile
+    render();
+    updateSyncDurum('senkronize');
+  }, (err) => {
+    console.error('Firebase dinleyici hatası:', err);
+    updateSyncDurum('hata', err.message);
+  });
+}
+
+function updateSyncDurum(durum, mesaj) {
+  const el = document.getElementById('sync-durum');
+  const elDetay = document.getElementById('sync-durum-detay');
+  let txt = '', renk = '';
+  switch(durum) {
+    case 'senkronize': txt = '☁ Senkron'; renk = '#1f8a4c'; break;
+    case 'bağlanıyor': txt = '⏳ Bağlanıyor...'; renk = '#b8895a'; break;
+    case 'offline': txt = '📴 Offline'; renk = '#888'; break;
+    case 'hata': txt = '⚠ Senkron hatası'; renk = '#c43e3e'; break;
+  }
+  if (el) {
+    el.textContent = txt;
+    el.style.color = renk;
+    if (mesaj) el.title = mesaj;
+  }
+  if (elDetay) {
+    elDetay.textContent = txt + (mesaj ? ' (' + mesaj + ')' : '');
+    elDetay.style.color = renk;
+  }
+}
+
+function firebaseManuelYukle() {
+  if (typeof fbRef === 'undefined') {
+    toast('Firebase bağlantısı yok'); return;
+  }
+  if (!confirm('Bu cihazdaki TÜM veriyi buluta gönder?\n\nDiğer cihazlardaki veriler bununla değiştirilecek. Devam edilsin mi?')) return;
+  
+  kendiYazimiz = true;
+  fbRef.set(state)
+    .then(() => {
+      setTimeout(() => { kendiYazimiz = false; }, 500);
+      toast('✓ Veri buluta yüklendi');
+      updateSyncDurum('senkronize');
+    })
+    .catch((err) => {
+      kendiYazimiz = false;
+      toast('Hata: ' + err.message);
+      updateSyncDurum('hata', err.message);
+    });
+}
+
+function firebaseManuelIndir() {
+  if (typeof fbRef === 'undefined') {
+    toast('Firebase bağlantısı yok'); return;
+  }
+  if (!confirm('Buluttaki veriyi bu cihaza indir?\n\nBu cihazdaki mevcut veriler üzerine yazılacak. Devam edilsin mi?')) return;
+  
+  fbRef.once('value')
+    .then((snap) => {
+      const cloudData = snap.val();
+      if (!cloudData) {
+        toast('Bulutta veri yok'); return;
+      }
+      // Eksik alanları doldur
+      if (!cloudData.zamlar) cloudData.zamlar = [];
+      if (!cloudData.sahipler || cloudData.sahipler.length === 0) cloudData.sahipler = VARSAYILAN_SAHIPLER.slice();
+      
+      state = cloudData;
+      try { localStorage.setItem('apartmanData', JSON.stringify(state)); } catch(e) {}
+      render();
+      toast('✓ Bulut verisi indirildi');
+    })
+    .catch((err) => toast('Hata: ' + err.message));
 }
 
 function fmtTL(n) {
@@ -2161,7 +2379,12 @@ function renderDaireler() {
     const fotoIcerik = d.foto ? '' : '👤';
     const telefon = getDaireTelefon(d);
     const telefonHtml = telefon 
-      ? `<div class="daire-meta"><a href="${telLinkHref(telefon)}" onclick="event.stopPropagation();" style="color:inherit;text-decoration:none;">📞 ${telefon}</a></div>` 
+      ? `<div class="daire-meta">${telefon}</div>` 
+      : '';
+    const aramaBtn = telefon 
+      ? `<a class="ara-btn" href="${telLinkHref(telefon)}" onclick="event.stopPropagation();" title="Ara: ${telefon}" aria-label="Ara">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </a>` 
       : '';
     return `
       <div class="daire-item ${itemClass}" onclick="openDaireModal('${d.id}')">
@@ -2172,6 +2395,7 @@ function renderDaireler() {
           ${d.ozelAidat != null ? `<div class="daire-meta">Özel aidat: ${fmtTL(d.ozelAidat)}</div>` : ''}
         </div>
         ${badge}
+        ${aramaBtn}
       </div>`;
   }).join('');
   document.getElementById('daire-listesi').innerHTML = html;
@@ -2193,7 +2417,12 @@ function renderSahipler() {
     const fotoStyle = s.foto ? `background-image:url('${s.foto}');` : '';
     const fotoIcerik = s.foto ? '' : '👤';
     const telefonHtml = s.telefon 
-      ? `<div class="daire-meta"><a href="${telLinkHref(s.telefon)}" onclick="event.stopPropagation();" style="color:inherit;text-decoration:none;">📞 ${s.telefon}</a></div>` 
+      ? `<div class="daire-meta">${s.telefon}</div>` 
+      : '';
+    const aramaBtn = s.telefon 
+      ? `<a class="ara-btn" href="${telLinkHref(s.telefon)}" onclick="event.stopPropagation();" title="Ara: ${s.telefon}" aria-label="Ara">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </a>` 
       : '';
     return `
       <div class="daire-item" onclick="openSahipModal('${s.id}')">
@@ -2202,6 +2431,7 @@ function renderSahipler() {
           <div class="daire-name">${s.daireNo || '-'} · ${s.isim}</div>
           ${telefonHtml}
         </div>
+        ${aramaBtn}
       </div>`;
   }).join('');
 }
@@ -3959,6 +4189,8 @@ function resetData() {
 // ============= BAŞLAT =============
 setOzetView('guncel');
 render();
+// Firebase senkronizasyonunu başlat
+firebaseBaslat();
 </script>
 
 </body>
