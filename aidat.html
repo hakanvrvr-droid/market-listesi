@@ -905,6 +905,79 @@
     background: #1ea951;
   }
   
+  /* Masraf makbuz/fatura görseli */
+  .masraf-foto-preview {
+    width: 100%;
+    min-height: 180px;
+    max-height: 280px;
+    border-radius: 10px;
+    border: 2px dashed var(--border);
+    background: var(--bg-card-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .masraf-foto-preview:hover {
+    border-color: var(--accent);
+  }
+  .masraf-foto-preview.has-image {
+    border-style: solid;
+    background-color: #1a1a1a;
+    min-height: 220px;
+  }
+  .masraf-foto-preview .placeholder {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  
+  /* Tam ekran görsel modal */
+  .img-fullscreen {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.95);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    cursor: zoom-out;
+  }
+  .img-fullscreen.active { display: flex; }
+  .img-fullscreen img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+  .img-fullscreen .close-btn {
+    position: absolute;
+    top: 20px; right: 20px;
+    width: 44px; height: 44px;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  
+  /* Masraf listesinde makbuz ikonu */
+  .masraf-foto-ikon {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 6px;
+  }
+  
   /* Paylaşım sonrası önizleme modalı */
   .preview-img {
     width: 100%;
@@ -1379,6 +1452,24 @@
       <button class="modal-close" onclick="closeModal('modal-masraf')">×</button>
     </div>
     <input type="hidden" id="masraf-id">
+    
+    <!-- Makbuz/Fatura Görseli -->
+    <div class="form-group">
+      <label>📎 Makbuz / Fatura Görseli (opsiyonel)</label>
+      <div id="masraf-foto-preview" class="masraf-foto-preview" onclick="masrafFotoTamEkran()">
+        <span class="placeholder">📎 Görsel yok</span>
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn secondary small" onclick="document.getElementById('masraf-foto-input').click()" type="button">
+          📷 Görsel Ekle
+        </button>
+        <button class="btn secondary small" id="masraf-foto-sil-btn" onclick="clearMasrafFoto()" type="button" style="display:none;">
+          🗑️ Kaldır
+        </button>
+      </div>
+      <input type="file" id="masraf-foto-input" accept="image/*" style="display:none;" onchange="handleMasrafFotoSecim(event)">
+    </div>
+    
     <div class="form-group">
       <label>Masraf Türü</label>
       <select id="masraf-tur">
@@ -1587,6 +1678,12 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Tam ekran görsel görüntüleyici -->
+<div class="img-fullscreen" id="img-fullscreen" onclick="this.classList.remove('active');">
+  <button class="close-btn" onclick="event.stopPropagation();document.getElementById('img-fullscreen').classList.remove('active');">×</button>
+  <img id="img-fullscreen-img" src="" alt="Tam ekran görsel">
+</div>
 
 <script>
 // ============= VERİ MODELİ =============
@@ -2532,19 +2629,26 @@ function masrafItemHtml(m, compact) {
   const autoBadge = m.auto === 'elektrik' 
     ? ' <span class="badge future" style="font-size:9px;padding:2px 5px;vertical-align:middle;">Otomatik</span>' 
     : '';
+  const fotoBadge = m.foto
+    ? ' <span class="masraf-foto-ikon">📎 Makbuz</span>'
+    : '';
   const subMeta = compact 
     ? `${fmtTarih(m.tarih)}${m.aciklama ? ' · ' + m.aciklama : ''}`
     : `${fmtTarih(m.tarih)} · ${donemAd(m.donem)}${m.aciklama ? ' · ' + m.aciklama : ''}`;
+  const fotoBtn = m.foto
+    ? `<button class="icon-btn" onclick="event.stopPropagation();showMasrafFoto('${m.id}')" style="color:var(--accent);">📎 Makbuz Göster</button>`
+    : '';
   return `
     <div class="tx-item">
       <div class="tx-row">
         <div class="tx-info">
-          <div class="tx-title">${m.tur}${m.firma ? ' · ' + m.firma : ''}${autoBadge}</div>
+          <div class="tx-title">${m.tur}${m.firma ? ' · ' + m.firma : ''}${autoBadge}${fotoBadge}</div>
           <div class="tx-meta">${subMeta}</div>
         </div>
         <div class="tx-amount out">${fmtTL(m.tutar)}</div>
       </div>
       <div class="tx-actions">
+        ${fotoBtn}
         <button class="icon-btn" onclick="event.stopPropagation();editMasraf('${m.id}')">Düzenle</button>
         <button class="icon-btn danger" onclick="event.stopPropagation();deleteMasraf('${m.id}')">Sil</button>
       </div>
@@ -3431,6 +3535,9 @@ function openCustomAmount(did, donem) {
   toast('Tutar güncellendi');
 }
 
+// Masraf modalında geçici tutulan makbuz/fatura görseli
+let geciciMasrafFoto = null;
+
 function openMasrafModal(id) {
   document.getElementById('masraf-id').value = id || '';
   document.getElementById('modal-masraf-title').textContent = id ? 'Masraf Düzenle' : 'Yeni Masraf';
@@ -3448,6 +3555,7 @@ function openMasrafModal(id) {
       document.getElementById('masraf-tutar').value = m.tutar;
       document.getElementById('masraf-aciklama').value = m.aciklama || '';
       document.getElementById('masraf-donem').value = m.donem;
+      geciciMasrafFoto = m.foto || null;
     }
   } else {
     document.getElementById('masraf-firma').value = '';
@@ -3455,8 +3563,80 @@ function openMasrafModal(id) {
     document.getElementById('masraf-tutar').value = '';
     document.getElementById('masraf-aciklama').value = '';
     document.getElementById('masraf-donem').value = state.aktifDonem;
+    geciciMasrafFoto = null;
   }
+  
+  updateMasrafFotoPreview();
+  document.getElementById('masraf-foto-input').value = '';
   openModal('modal-masraf');
+}
+
+function updateMasrafFotoPreview() {
+  const preview = document.getElementById('masraf-foto-preview');
+  const silBtn = document.getElementById('masraf-foto-sil-btn');
+  if (geciciMasrafFoto) {
+    preview.innerHTML = '';
+    preview.style.backgroundImage = `url('${geciciMasrafFoto}')`;
+    preview.classList.add('has-image');
+    silBtn.style.display = 'inline-flex';
+  } else {
+    preview.innerHTML = '<span class="placeholder">📎 Görsel yok — Aşağıdaki butondan ekleyin</span>';
+    preview.style.backgroundImage = '';
+    preview.classList.remove('has-image');
+    silBtn.style.display = 'none';
+  }
+}
+
+function handleMasrafFotoSecim(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      // Makbuz için daha büyük max boyut: 1000px (okunabilirlik için)
+      const maxBoyut = 1000;
+      let { width, height } = img;
+      if (width > height) {
+        if (width > maxBoyut) { height = (height * maxBoyut) / width; width = maxBoyut; }
+      } else {
+        if (height > maxBoyut) { width = (width * maxBoyut) / height; height = maxBoyut; }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      // JPEG %78 kaliteyle sıkıştır (yazılar okunabilsin diye dengeli)
+      geciciMasrafFoto = canvas.toDataURL('image/jpeg', 0.78);
+      updateMasrafFotoPreview();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearMasrafFoto() {
+  if (geciciMasrafFoto && !confirm('Makbuz görselini kaldırmak istediğinize emin misiniz?')) return;
+  geciciMasrafFoto = null;
+  updateMasrafFotoPreview();
+  document.getElementById('masraf-foto-input').value = '';
+}
+
+function masrafFotoTamEkran() {
+  if (!geciciMasrafFoto) return;
+  const fs = document.getElementById('img-fullscreen');
+  document.getElementById('img-fullscreen-img').src = geciciMasrafFoto;
+  fs.classList.add('active');
+}
+
+// Liste içinde herhangi bir makbuz görselini tam ekranda göster
+function showMasrafFoto(masrafId) {
+  const m = state.masraflar.find(x => x.id === masrafId);
+  if (!m || !m.foto) return;
+  const fs = document.getElementById('img-fullscreen');
+  document.getElementById('img-fullscreen-img').src = m.foto;
+  fs.classList.add('active');
 }
 
 function editMasraf(id) {
@@ -3480,14 +3660,20 @@ function saveMasraf() {
   
   if (id) {
     const m = state.masraflar.find(x => x.id === id);
-    if (m) Object.assign(m, { tur, firma, tarih, tutar, aciklama, donem });
+    if (m) Object.assign(m, { tur, firma, tarih, tutar, aciklama, donem, foto: geciciMasrafFoto });
   } else {
     state.masraflar.push({
       id: 'm' + Date.now(),
-      tur, firma, tarih, tutar, aciklama, donem
+      tur, firma, tarih, tutar, aciklama, donem,
+      foto: geciciMasrafFoto,
     });
   }
-  save();
+  try {
+    save();
+  } catch (err) {
+    toast('Hata: Veri kaydedilemedi (depolama dolu olabilir).');
+    return;
+  }
   closeModal('modal-masraf');
   render();
   toast(id ? 'Masraf güncellendi' : 'Masraf eklendi ✓');
