@@ -1002,11 +1002,25 @@
     appId: "1:267861538853:web:9a7a8a4bd00a6af9f0e7cc",
     measurementId: "G-X4RX0VSPEY"
   };
-  firebase.initializeApp(firebaseConfig);
-  const fbDb = firebase.database();
-  const fbRef = fbDb.ref('apartman/sevencan');
-  // Offline cache - bağlantı kesilse bile veri elde edilir
-  fbDb.goOnline();
+  // Firebase yüklenememiş olabilir (şirket ağı engellemesi, internet yok vs.) — try-catch ile koru
+  var fbDb = null;
+  var fbRef = null;
+  var firebaseYuklendi = false;
+  try {
+    if (typeof firebase !== 'undefined' && firebase.initializeApp) {
+      firebase.initializeApp(firebaseConfig);
+      fbDb = firebase.database();
+      fbRef = fbDb.ref('apartman/sevencan');
+      fbDb.goOnline();
+      firebaseYuklendi = true;
+    } else {
+      console.warn('Firebase SDK yüklenemedi - offline mod (yalnızca yerel depolama)');
+    }
+  } catch (err) {
+    console.warn('Firebase başlatılamadı:', err.message);
+    fbDb = null;
+    fbRef = null;
+  }
 </script>
 </head>
 <body>
@@ -1159,9 +1173,9 @@
         </select>
       </div>
       
-      <!-- Kara Liste -->
+      <!-- Aidatını Ödemeyenler -->
       <div class="form-group" id="kara-liste-filtre">
-        <label>🚫 Kara Liste — Ödenmemiş Aidatları Hangi Aylarda Göster?</label>
+        <label>🚫 Aidatını Ödemeyenler — Hangi Aylarda Göster?</label>
         <p style="font-size:11px;color:var(--text-dim);margin:-4px 0 8px 0;">Seçili aylardaki ödemesi olmayan daireler raporun altında listelenir.</p>
         <div id="kara-liste-checkboxlar" style="display:flex;flex-direction:column;gap:6px;"></div>
       </div>
@@ -1859,7 +1873,7 @@ function save() {
   }
   
   // 2. Firebase'e yaz (gerçek zamanlı senkron)
-  if (firebaseSenkronAcik && typeof fbRef !== 'undefined') {
+  if (firebaseSenkronAcik && fbRef) {
     kendiYazimiz = true;
     fbRef.set(state)
       .then(() => {
@@ -1877,8 +1891,9 @@ function save() {
 
 // Firebase'i başlat ve dinleyici kur
 function firebaseBaslat() {
-  if (typeof fbRef === 'undefined') {
-    console.warn('Firebase yüklenemedi');
+  if (!fbRef) {
+    updateSyncDurum('yok');
+    console.warn('Firebase yüklenemedi - offline mod');
     return;
   }
   
@@ -1956,6 +1971,7 @@ function updateSyncDurum(durum, mesaj) {
     case 'bağlanıyor': txt = '⏳ Bağlanıyor...'; renk = '#b8895a'; break;
     case 'offline': txt = '📴 Offline'; renk = '#888'; break;
     case 'hata': txt = '⚠ Senkron hatası'; renk = '#c43e3e'; break;
+    case 'yok': txt = '⚠ Bulut bağlantısı yok'; renk = '#888'; break;
   }
   if (el) {
     el.textContent = txt;
@@ -1969,8 +1985,8 @@ function updateSyncDurum(durum, mesaj) {
 }
 
 function firebaseManuelYukle() {
-  if (typeof fbRef === 'undefined') {
-    toast('Firebase bağlantısı yok'); return;
+  if (!fbRef) {
+    toast('Firebase bağlantısı yok - internet ya da ağ engellemesi'); return;
   }
   if (!confirm('Bu cihazdaki TÜM veriyi buluta gönder?\n\nDiğer cihazlardaki veriler bununla değiştirilecek. Devam edilsin mi?')) return;
   
@@ -1989,8 +2005,8 @@ function firebaseManuelYukle() {
 }
 
 function firebaseManuelIndir() {
-  if (typeof fbRef === 'undefined') {
-    toast('Firebase bağlantısı yok'); return;
+  if (!fbRef) {
+    toast('Firebase bağlantısı yok - internet ya da ağ engellemesi'); return;
   }
   if (!confirm('Buluttaki veriyi bu cihaza indir?\n\nBu cihazdaki mevcut veriler üzerine yazılacak. Devam edilsin mi?')) return;
   
@@ -2945,12 +2961,12 @@ function renderRapor() {
     html += `
       <div style="margin-top:18px;padding:12px;background:#fadcdc;border-radius:8px;border-left:4px solid #c43e3e;">
         <div style="font-size:13px;font-weight:700;color:#c43e3e;margin-bottom:6px;">
-          🚫 Kara Liste (${odenmemisler.length} kayıt)
+          🚫 Aidatını Ödemeyenler (${odenmemisler.length} kayıt)
         </div>
         <div style="font-size:11px;color:#8a4040;margin-bottom:8px;">Filtre: ${ayEtiket}</div>
         <div style="font-size:12px;color:#1f2027;line-height:1.8;">`;
     odenmemisler.forEach(o => {
-      html += `${o.daire.no} ${o.daire.isim} - ${donemAd(o.donem)} - ${fmtTLKisa(o.tutar)}<br>`;
+      html += `${o.daire.no} ${o.daire.isim} - ${fmtTLKisa(o.tutar)}<br>`;
     });
     html += `</div></div>`;
   } else {
