@@ -2966,7 +2966,10 @@ function renderRapor() {
         <div style="font-size:11px;color:#8a4040;margin-bottom:8px;">Filtre: ${ayEtiket}</div>
         <div style="font-size:12px;color:#1f2027;line-height:1.8;">`;
     odenmemisler.forEach(o => {
-      html += `${o.daire.no} ${o.daire.isim} - ${fmtTLKisa(o.tutar)}<br>`;
+      // Dönem formatı: 'YYYY-MM' → 'MM-YYYY'
+      const [y, m] = o.donem.split('-');
+      const donemMMYYYY = m + '-' + y;
+      html += `${o.daire.no} ${o.daire.isim} - ${donemMMYYYY} - ${fmtTLKisa(o.tutar)}<br>`;
     });
     html += `</div></div>`;
   } else {
