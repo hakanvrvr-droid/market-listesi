@@ -390,11 +390,9 @@
     <option value="">Hangi marketten?</option>
     <option value="BİM">BİM</option>
     <option value="Çamlıca">Çamlıca</option>
+    <option value="Çiğ Köfteci">Çiğ Köfteci</option>
     <option value="Gedikler">Gedikler</option>
-    <option value="Happy">Happy</option>
     <option value="Kuruyemişçi">Kuruyemişçi</option>
-    <option value="Migros">Migros</option>
-    <option value="Tekel">Tekel</option>
     <option value="__other__">Diğer (elle yaz)</option>
   </select>
   <input type="text" id="market-input" placeholder="Market adını yaz" style="display: none;">
@@ -440,7 +438,7 @@
   const itemsCol = collection(db, "market-items");
 
   // Önceden tanımlı market listesi (hem yeni ekleme hem düzenleme dropdown'unda kullanılır)
-  const PRESET_MARKETS = ["BİM", "Çamlıca", "Gedikler", "Happy", "Kuruyemişçi", "Migros", "Tekel"];
+  const PRESET_MARKETS = ["BİM", "Çamlıca", "Çiğ Köfteci", "Gedikler", "Kuruyemişçi"];
 
   let allItems = [];
   let selectedDates = []; // Çoklu seçili tarihler (boşsa bugün gösterilir)
