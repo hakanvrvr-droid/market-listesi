@@ -1,0 +1,4408 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f5f3ef">
+<title>Sevencan Apartmanı - Aidat Takip</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #f5f3ef;
+    --bg-card: #ffffff;
+    --bg-card-2: #f0ece4;
+    --border: #d9d3c7;
+    --border-strong: #b8b1a0;
+    --text: #1f2027;
+    --text-dim: #555868;
+    --text-muted: #8a8d99;
+    --accent: #b8895a;
+    --accent-dim: #9c7148;
+    --accent-bg: #f6ebda;
+    --success: #1f8a4c;
+    --success-bg: #d6f0de;
+    --success-border: #6ec48a;
+    --danger: #c43e3e;
+    --danger-bg: #fadcdc;
+    --danger-border: #e98989;
+    --warning: #c47a1a;
+    --warning-bg: #faebd0;
+    --warning-border: #e8b966;
+    --info: #2a6fbf;
+    --info-bg: #d6e4f5;
+    --info-border: #7da8d8;
+  }
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    padding-bottom: 90px;
+    padding-top: env(safe-area-inset-top);
+  }
+  .header {
+    background: linear-gradient(135deg, #ffffff 0%, #f6ebda 100%);
+    padding: 20px 16px 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .header .subtitle {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .period-selector {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card-2);
+    padding: 8px 12px;
+    border-radius: 10px;
+  }
+  .period-selector label {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .period-selector select {
+    flex: 1;
+    background: transparent;
+    color: var(--text);
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    outline: none;
+  }
+  .container { padding: 16px; max-width: 600px; margin: 0 auto; }
+  
+  /* Tab Bar */
+  .tabbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding: 8px 4px calc(8px + env(safe-area-inset-bottom));
+    z-index: 100;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+  }
+  .tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 8px 4px;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.2s;
+  }
+  .tab.active { color: var(--accent); }
+  .tab svg { width: 22px; height: 22px; }
+  
+  /* Page */
+  .page { display: none; }
+  .page.active { display: block; }
+  
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  
+  /* Stats Grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .stat-card.full { grid-column: 1 / -1; }
+  
+  /* Vurgulu kart - Güncel Nakit için: dikkat çekici kırmızı çerçeve */
+  .stat-card.highlight {
+    border: 4px solid #e74c3c;
+  }
+  
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .stat-value.success { color: var(--success); }
+  .stat-value.danger { color: var(--danger); }
+  .stat-value.warning { color: var(--warning); }
+  .stat-value.info { color: var(--info); }
+  .stat-value.accent { color: var(--accent); }
+  .stat-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  
+  /* Daire Listesi */
+  .daire-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.15s;
+  }
+  .daire-item > .daire-no,
+  .daire-item > .daire-info,
+  .daire-item > .badge {
+    /* Doğrudan child ise flex satırında kal */
+  }
+  .daire-item.paid {
+    background: var(--success-bg);
+    border-color: var(--success-border);
+  }
+  .daire-item.unpaid {
+    background: var(--danger-bg);
+    border-color: var(--danger-border);
+  }
+  .daire-item.exempt {
+    background: var(--info-bg);
+    border-color: var(--info-border);
+  }
+  .daire-item.partial {
+    background: var(--warning-bg);
+    border-color: var(--warning-border);
+  }
+  .daire-item.future-paid {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+  }
+  .daire-no {
+    background: var(--bg-card);
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    min-width: 56px;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+  .daire-info { flex: 1; min-width: 0; }
+  .daire-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+  }
+  .daire-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .badge {
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .badge.paid { background: var(--success); color: white; }
+  .badge.unpaid { background: var(--danger); color: white; }
+  .badge.partial { background: var(--warning); color: white; }
+  .badge.exempt { background: var(--info); color: white; }
+  .badge.future { background: var(--accent); color: white; }
+  
+  /* Buttons */
+  .btn {
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: opacity 0.2s;
+  }
+  .btn:active { opacity: 0.7; }
+  .btn.secondary {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+  }
+  .btn.danger { background: var(--danger); color: white; }
+  .btn.small { padding: 8px 12px; font-size: 12px; width: auto; }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row .btn { flex: 1; }
+  
+  /* Form */
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    -webkit-appearance: none;
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus { border-color: var(--accent); }
+  .form-group textarea { resize: vertical; min-height: 70px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(31, 32, 39, 0.4);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 1000;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--bg-card);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .modal-title { font-size: 17px; font-weight: 700; }
+  .modal-close {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  
+  /* Masraf / Tahsilat Listesi */
+  .tx-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .tx-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .tx-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .tx-amount {
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    margin-left: 12px;
+  }
+  .tx-amount.in { color: var(--success); }
+  .tx-amount.out { color: var(--danger); }
+  .tx-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .icon-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .icon-btn.danger { color: var(--danger); border-color: var(--danger-border); }
+  
+  /* Ödenen liste */
+  .pay-list {
+    margin-top: 8px;
+    padding: 8px 0 0;
+    border-top: 1px dashed var(--border);
+  }
+  .pay-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    padding: 4px 0;
+    color: var(--text-dim);
+  }
+  .pay-row strong { color: var(--text); font-weight: 600; }
+  
+  .empty {
+    text-align: center;
+    padding: 30px 16px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  
+  .fab {
+    position: fixed;
+    bottom: calc(80px + env(safe-area-inset-bottom));
+    right: 16px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 16px rgba(184, 137, 90, 0.4);
+    cursor: pointer;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fab svg { width: 24px; height: 24px; }
+  
+  .sync-bar {
+    background: var(--info-bg);
+    border: 1px solid var(--info);
+    color: var(--info);
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .sync-bar.success { background: var(--success-bg); border-color: var(--success); color: var(--success); }
+  
+  .filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .filter-chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .filter-chip.active { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+  
+  .toast {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    border: 1px solid var(--accent);
+    color: #ffffff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.3s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+  .toast.show { opacity: 1; }
+  
+  details.section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  details.section summary {
+    padding: 14px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  details.section summary::after {
+    content: '›';
+    font-size: 22px;
+    color: var(--text-dim);
+    transform: rotate(90deg);
+    transition: transform 0.2s;
+  }
+  details.section[open] summary::after { transform: rotate(-90deg); }
+  details.section .content { padding: 0 14px 14px; }
+  
+  /* Masraf dönem grup kartları */
+  details.masraf-grup {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  details.masraf-grup.active-donem {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+  }
+  details.masraf-grup summary {
+    padding: 14px;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  details.masraf-grup summary::-webkit-details-marker { display: none; }
+  details.masraf-grup summary::after {
+    content: '›';
+    font-size: 22px;
+    color: var(--text-dim);
+    transform: rotate(90deg);
+    transition: transform 0.2s;
+    margin-left: 8px;
+    flex-shrink: 0;
+  }
+  details.masraf-grup[open] summary::after { transform: rotate(-90deg); }
+  details.masraf-grup .grup-info { flex: 1; min-width: 0; }
+  details.masraf-grup .grup-baslik {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  details.masraf-grup .grup-tag {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    vertical-align: middle;
+  }
+  details.masraf-grup .grup-meta {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  details.masraf-grup .grup-tutar {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--danger);
+    white-space: nowrap;
+  }
+  details.masraf-grup .grup-icerik {
+    padding: 0 12px 12px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-card);
+  }
+  details.masraf-grup[open] .grup-icerik {
+    padding-top: 12px;
+  }
+  details.masraf-grup.active-donem .grup-icerik {
+    background: var(--bg-card);
+  }
+  
+  hr.divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 12px 0;
+  }
+  
+  .summary-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+  }
+  .summary-line.total {
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    padding-top: 12px;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .summary-line .label { color: var(--text-dim); }
+  .summary-line .val { font-weight: 600; }
+  .summary-line .val.success { color: var(--success); }
+  .summary-line .val.danger { color: var(--danger); }
+  .summary-line.clickable { cursor: pointer; transition: background 0.15s; }
+  .summary-line.clickable:active { background: var(--bg-card-2); }
+  .info-i {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    line-height: 14px;
+    text-align: center;
+    border: 1px solid var(--text-muted);
+    border-radius: 50%;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-style: normal;
+    margin-left: 4px;
+    font-weight: 600;
+  }
+  
+  .detay-section {
+    margin-bottom: 16px;
+  }
+  .detay-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .detay-formula {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+  .detay-formula .f-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+  }
+  .detay-formula .f-line.sum {
+    border-top: 1px solid var(--border);
+    margin-top: 6px;
+    padding-top: 8px;
+    font-weight: 700;
+  }
+  .detay-formula .f-line.op {
+    color: var(--text-dim);
+    font-size: 11px;
+  }
+  
+  .zam-item {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .zam-info { flex: 1; }
+  .zam-baslik {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .zam-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  
+  .tabs-pill {
+    display: flex;
+    background: var(--bg-card-2);
+    border-radius: 10px;
+    padding: 4px;
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .pill-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    padding: 10px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .pill-tab.active {
+    background: var(--accent);
+    color: #ffffff;
+  }
+  
+  /* Daire fotoğraf */
+  .daire-foto-preview-large {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg-card-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+  }
+  .daire-foto-preview-large .placeholder {
+    font-size: 36px;
+    color: var(--text-muted);
+  }
+  
+  .daire-foto-mini {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg-card-2);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  
+  .btn.small {
+    padding: 8px 12px;
+    font-size: 12px;
+    width: auto;
+    flex: 1;
+  }
+  
+  /* Rapor stilleri */
+  #rapor-canvas-area {
+    color: #1f2027;
+  }
+  .rapor-baslik {
+    text-align: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #b8895a;
+  }
+  .rapor-baslik h2 {
+    font-size: 18px;
+    color: #1f2027;
+    margin-bottom: 4px;
+  }
+  .rapor-baslik .alt {
+    font-size: 12px;
+    color: #555868;
+  }
+  .rapor-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .rapor-table th, .rapor-table td {
+    border: 1px solid #d9d3c7;
+    padding: 8px 6px;
+    text-align: right;
+  }
+  .rapor-table th {
+    background: #f6ebda;
+    color: #1f2027;
+    font-weight: 700;
+    text-align: center;
+  }
+  .rapor-table td.label {
+    text-align: left;
+    font-weight: 600;
+    background: #faf7f1;
+  }
+  .rapor-table td.subitem {
+    padding-left: 18px;
+    color: #555868;
+    font-weight: 500;
+    background: white;
+  }
+  .rapor-table tr.tahsilat-row td {
+    background: #f0fbf3;
+    color: #1f8a4c;
+  }
+  .rapor-table tr.tahsilat-row td.label {
+    background: #d6f0de;
+  }
+  .rapor-table tr.masraf-row td {
+    background: #fef3f3;
+    color: #c43e3e;
+  }
+  .rapor-table tr.masraf-row td.label {
+    background: #fadcdc;
+  }
+  .rapor-table tr.devir-row td {
+    background: #fdf4e7;
+    color: #8a5a2b;
+    font-weight: 600;
+    font-style: italic;
+  }
+  .rapor-table tr.devir-row td.label {
+    background: #f6e6cd;
+    font-style: normal;
+  }
+  .rapor-table tr.toplam-row td {
+    background: #1f2027;
+    color: white;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .rapor-table .num { font-variant-numeric: tabular-nums; }
+  
+  /* Kara Liste checkbox satırları */
+  .kara-liste-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .kara-liste-row:hover {
+    border-color: var(--accent);
+  }
+  .kara-liste-row.checked {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .kara-liste-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+  }
+  .kara-liste-row.checked input[type="checkbox"] {
+    accent-color: white;
+  }
+  
+  /* Telefon arama butonu */
+  .ara-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #25D366; /* WhatsApp/iOS yeşili gibi */
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    flex-shrink: 0;
+    margin-left: 8px;
+    transition: transform 0.15s, background 0.15s;
+    box-shadow: 0 2px 6px rgba(37, 211, 102, 0.3);
+  }
+  .ara-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+  .ara-btn:active {
+    transform: scale(0.92);
+    background: #1ea951;
+  }
+  
+  /* Masraf makbuz/fatura görseli */
+  .masraf-foto-preview {
+    width: 100%;
+    min-height: 180px;
+    max-height: 280px;
+    border-radius: 10px;
+    border: 2px dashed var(--border);
+    background: var(--bg-card-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .masraf-foto-preview:hover {
+    border-color: var(--accent);
+  }
+  .masraf-foto-preview.has-image {
+    border-style: solid;
+    background-color: #1a1a1a;
+    min-height: 220px;
+  }
+  .masraf-foto-preview .placeholder {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  
+  /* Tam ekran görsel modal */
+  .img-fullscreen {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.95);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    cursor: zoom-out;
+  }
+  .img-fullscreen.active { display: flex; }
+  .img-fullscreen img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+  .img-fullscreen .close-btn {
+    position: absolute;
+    top: 20px; right: 20px;
+    width: 44px; height: 44px;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  
+  /* Masraf listesinde makbuz ikonu */
+  .masraf-foto-ikon {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 6px;
+  }
+  
+  /* Paylaşım sonrası önizleme modalı */
+  .preview-img {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- Firebase v9 compat SDK (script tag uyumlu) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+  // Firebase Configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyAbB1bbbuGhb1b4CG4e0IOq_Zi6MFaWMug",
+    authDomain: "aidat-787cc.firebaseapp.com",
+    databaseURL: "https://aidat-787cc-default-rtdb.firebaseio.com",
+    projectId: "aidat-787cc",
+    storageBucket: "aidat-787cc.firebasestorage.app",
+    messagingSenderId: "267861538853",
+    appId: "1:267861538853:web:9a7a8a4bd00a6af9f0e7cc",
+    measurementId: "G-X4RX0VSPEY"
+  };
+  // Firebase yüklenememiş olabilir (şirket ağı engellemesi, internet yok vs.) — try-catch ile koru
+  var fbDb = null;
+  var fbRef = null;
+  var firebaseYuklendi = false;
+  try {
+    if (typeof firebase !== 'undefined' && firebase.initializeApp) {
+      firebase.initializeApp(firebaseConfig);
+      fbDb = firebase.database();
+      fbRef = fbDb.ref('apartman/sevencan');
+      fbDb.goOnline();
+      firebaseYuklendi = true;
+    } else {
+      console.warn('Firebase SDK yüklenemedi - offline mod (yalnızca yerel depolama)');
+    }
+  } catch (err) {
+    console.warn('Firebase başlatılamadı:', err.message);
+    fbDb = null;
+    fbRef = null;
+  }
+</script>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏢 Sevencan Apartmanı</h1>
+  <div class="subtitle">
+    Aidat & Nakit Takip Sistemi
+    <span id="sync-durum" style="font-size:11px;margin-left:8px;font-weight:600;">⏳ Bağlanıyor...</span>
+  </div>
+  <div class="period-selector">
+    <label>Dönem:</label>
+    <select id="currentPeriod" onchange="changePeriod()"></select>
+    <button class="icon-btn" onclick="openPeriodManager()" style="background:var(--bg-card);">⚙</button>
+  </div>
+</div>
+
+<div class="container">
+  
+  <!-- ÖZET / DASHBOARD -->
+  <div class="page active" id="page-ozet">
+    <!-- Dönem tipi sekmeleri -->
+    <div class="tabs-pill" style="margin-bottom:14px;">
+      <button class="pill-tab" id="ptab-gecmis" onclick="setOzetView('gecmis')">⏰ Geçmiş</button>
+      <button class="pill-tab active" id="ptab-guncel" onclick="setOzetView('guncel')">📍 Güncel</button>
+      <button class="pill-tab" id="ptab-gelecek" onclick="setOzetView('gelecek')">📅 Gelecek</button>
+    </div>
+    
+    <div class="stats-grid">
+      <div class="stat-card highlight" onclick="showDetay('nakit')" style="cursor:pointer;">
+        <div class="stat-label" id="s-nakit-lbl">Güncel Nakit</div>
+        <div class="stat-value" id="s-nakit">₺0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label" id="s-tahsilat-lbl">Tahsilat</div>
+        <div class="stat-value success" id="s-tahsilat">₺0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label" id="s-odenen-lbl">Tahsil Edilen</div>
+        <div class="stat-value success" id="s-odenen">0 / 0</div>
+        <div class="stat-sub" id="s-odenen-sub">daire</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label" id="s-borc-lbl">Bekleyen Borç</div>
+        <div class="stat-value danger" id="s-borc">₺0</div>
+      </div>
+    </div>
+
+    <!-- GÜNCEL görünüm -->
+    <div id="view-guncel">
+      <div class="filters">
+        <button class="filter-chip active" onclick="filterAidat('all', this)">Tümü</button>
+        <button class="filter-chip" onclick="filterAidat('unpaid', this)">Ödenmemiş</button>
+        <button class="filter-chip" onclick="filterAidat('paid', this)">Ödendi</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Aktif Dönem Aidatları</div>
+        <div id="ozet-daireler"></div>
+      </div>
+    </div>
+
+    <!-- GEÇMİŞ görünüm -->
+    <div id="view-gecmis" style="display:none;">
+      <div class="card">
+        <div class="card-title">Geçmiş Dönem Borçları</div>
+        <div id="ozet-eski-borc"></div>
+      </div>
+      <button class="btn secondary" onclick="openEskiBorcModal('borc')">⏰ Geçmiş Borç Ekle</button>
+    </div>
+
+    <!-- GELECEK görünüm -->
+    <div id="view-gelecek" style="display:none;">
+      <div class="card">
+        <div class="card-title">Peşin Ödenen Gelecek Dönemler</div>
+        <div id="ozet-pesin"></div>
+      </div>
+      <button class="btn secondary" onclick="openEskiBorcModal('pesin')">💰 Peşin Ödeme Kaydet</button>
+    </div>
+  </div>
+
+  <!-- MASRAFLAR -->
+  <div class="page" id="page-masraf">
+    <button class="btn" onclick="openMasrafModal()" style="margin-bottom:12px;">+ Yeni Masraf Ekle</button>
+    
+    <div class="filters">
+      <button class="filter-chip active" data-period-filter="current" onclick="filterMasraf(this)">Bu Dönem</button>
+      <button class="filter-chip" data-period-filter="all" onclick="filterMasraf(this)">Tüm Dönemler</button>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">Masraflar</div>
+      <div id="masraf-listesi"></div>
+    </div>
+  </div>
+
+  <!-- NAKİT DURUM -->
+  <div class="page" id="page-nakit">
+    <div class="card">
+      <div class="card-title">Dönem Nakit Özeti</div>
+      <div class="summary-line clickable" onclick="showDetay('devir')">
+        <span class="label">Devir Alacak (Önceki dönemden) <span class="info-i">ℹ</span></span>
+        <span class="val" id="n-devir">₺0</span>
+      </div>
+      <div class="summary-line clickable" onclick="showDetay('donem-alacak')">
+        <span class="label">Dönem Alacak (Bu dönem toplam) <span class="info-i">ℹ</span></span>
+        <span class="val" id="n-donem-alacak">₺0</span>
+      </div>
+      <div class="summary-line clickable" onclick="showDetay('tahsilat')">
+        <span class="label">Tahsilatlar <span class="info-i">ℹ</span></span>
+        <span class="val success" id="n-tahsilat">₺0</span>
+      </div>
+      <div class="summary-line clickable" onclick="showDetay('odeme')">
+        <span class="label">Ödemeler (Masraflar) <span class="info-i">ℹ</span></span>
+        <span class="val danger" id="n-odeme">₺0</span>
+      </div>
+      <div class="summary-line total clickable" onclick="showDetay('nakit')">
+        <span class="label">Güncel Nakit <span class="info-i">ℹ</span></span>
+        <span class="val accent" id="n-nakit">₺0</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Diğer Dönem Tahsilatları (Bu Dönem Yapılan)</div>
+      <div id="eski-tahsilat-listesi"></div>
+    </div>
+
+    <details class="section">
+      <summary>Tüm Dönem Detayları</summary>
+      <div class="content" id="tum-donem-detay"></div>
+    </details>
+  </div>
+
+  <!-- RAPOR -->
+  <div class="page" id="page-rapor">
+    <div class="card">
+      <div class="card-title">Rapor Filtreleri</div>
+      <div class="form-group">
+        <label>Rapor Yılı</label>
+        <select id="rapor-yil" onchange="renderRapor()"></select>
+      </div>
+      <div class="form-group">
+        <label>Başlangıç Ayı</label>
+        <select id="rapor-ay" onchange="renderRapor()"></select>
+      </div>
+      <div class="form-group">
+        <label>Rapor Tipi</label>
+        <select id="rapor-sayi" onchange="renderRapor()">
+          <option value="1" selected>Aylık (Tek Ay)</option>
+          <option value="3">3 Aylık</option>
+        </select>
+      </div>
+      
+      <!-- Aidatını Ödemeyenler -->
+      <div class="form-group" id="kara-liste-filtre">
+        <label>🚫 Aidatını Ödemeyenler — Hangi Aylarda Göster?</label>
+        <p style="font-size:11px;color:var(--text-dim);margin:-4px 0 8px 0;">Seçili aylardaki ödemesi olmayan daireler raporun altında listelenir.</p>
+        <div id="kara-liste-checkboxlar" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+      
+      <button class="btn" onclick="shareRapor()" id="rapor-share-btn">
+        <span style="display:inline-flex;align-items:center;gap:8px;justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.768.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          WhatsApp'a Gönder
+        </span>
+      </button>
+    </div>
+
+    <div id="rapor-canvas-area" style="background:white;padding:20px;border-radius:14px;border:1px solid var(--border);">
+      <div id="rapor-icerik"></div>
+    </div>
+  </div>
+
+  <!-- AYARLAR -->
+  <div class="page" id="page-ayar">
+    
+    <!-- AYARLAR: Dönem Ayarları -->
+    <details class="section" open>
+      <summary>💰 Aidat & Dönem Ayarları</summary>
+      <div class="content">
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">
+          Aşağıdaki ayarlar <strong id="ayar-aktif-donem" style="color:var(--accent);">aktif dönem</strong> içindir. Farklı dönem ayarı için üst kısımdaki dönem seçicisini değiştirin veya zam / elektrik yönetimini kullanın.
+        </p>
+        <div class="form-group">
+          <label>Aidat Tutarı (₺)</label>
+          <input type="number" id="aidatTutar" onchange="saveAidatTutar()" placeholder="Örn: 1500">
+        </div>
+        <div class="form-group">
+          <label>Elektrik Faturası (₺) - Elektrik ödeyen daireden düşülür</label>
+          <input type="number" id="elektrikTutar" onchange="saveElektrikTutar()" placeholder="Örn: 850">
+        </div>
+        <div class="form-group">
+          <label>Yönetici Daire (aidat ödemez)</label>
+          <select id="yoneticiDaire" onchange="saveYonetici()"></select>
+        </div>
+        <div class="form-group">
+          <label>Elektrik Ödeyen Daire</label>
+          <select id="elektrikDaire" onchange="saveElektrikDaire()"></select>
+        </div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn secondary" onclick="openZamModal()">📈 Aidat Zammı</button>
+          <button class="btn secondary" onclick="openElektrikModal()">⚡ Elektrik Faturaları</button>
+        </div>
+      </div>
+    </details>
+
+    <!-- AYARLAR: Daire Sakinleri -->
+    <details class="section">
+      <summary>🏠 Daire Sakinleri</summary>
+      <div class="content">
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">İsim, aidat veya durum değiştirmek için bir daireye dokunun.</p>
+        <div id="daire-listesi"></div>
+      </div>
+    </details>
+
+    <!-- AYARLAR: Daire Sahipleri -->
+    <details class="section">
+      <summary>🔑 Daire Sahipleri</summary>
+      <div class="content">
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">Ev sahipleri (kiracı durumunda asıl mal sahibi). Sakinlerden farklı kişiler için kullanın.</p>
+        <button class="btn" onclick="openSahipModal()" style="margin-bottom:12px;">+ Yeni Daire Sahibi Ekle</button>
+        <div id="sahip-listesi"></div>
+      </div>
+    </details>
+
+    <!-- AYARLAR: Veri Yönetimi -->
+    <details class="section">
+      <summary>💾 Veri Yönetimi</summary>
+      <div class="content">
+        <button class="btn secondary" onclick="exportData()" style="margin-bottom:8px;">📥 Veriyi İndir (JSON)</button>
+        <button class="btn secondary" onclick="document.getElementById('importFile').click()" style="margin-bottom:8px;">📤 Veri Yükle (JSON)</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+        <button class="btn danger" onclick="resetData()">🗑️ Tüm Veriyi Sıfırla</button>
+      </div>
+    </details>
+
+    <!-- AYARLAR: Senkronizasyon -->
+    <details class="section">
+      <summary>☁ Bulut Senkronizasyon</summary>
+      <div class="content">
+        <p style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:12px;">
+          Veriler Firebase bulutunda saklanıyor. 3 iPhone'da aynı veriyi görür ve değişiklikler anlık eşitlenir.
+        </p>
+        <div style="background:var(--bg-card-2);padding:10px;border-radius:8px;margin-bottom:12px;">
+          <div style="font-size:12px;color:var(--text-dim);">Durum:</div>
+          <div id="sync-durum-detay" style="font-size:14px;font-weight:600;color:var(--accent);">Kontrol ediliyor...</div>
+        </div>
+        <button class="btn secondary" onclick="firebaseManuelYukle()" style="margin-bottom:8px;">
+          ⬆ Bu Cihazdaki Veriyi Buluta Yükle
+        </button>
+        <button class="btn secondary" onclick="firebaseManuelIndir()" style="margin-bottom:8px;">
+          ⬇ Buluttaki Veriyi Bu Cihaza İndir
+        </button>
+        <p style="font-size:11px;color:var(--text-dim);line-height:1.4;margin-top:8px;">
+          ⚠ "Buluta Yükle" → bu cihazın verisi diğer cihazlara da yansır.<br>
+          ⚠ "Buluttan İndir" → buluttaki veri bu cihaza yüklenir, mevcut veri üzerine yazılır.
+        </p>
+      </div>
+    </details>
+
+    <!-- AYARLAR: Hakkında -->
+    <details class="section">
+      <summary>ℹ️ Hakkında</summary>
+      <div class="content">
+        <p style="font-size:13px;color:var(--text-dim);line-height:1.5;">
+          Sevencan Apartmanı Aidat Takip Sistemi v2.0<br>
+          Veriler Firebase Realtime Database'de saklanır, yerel cache (localStorage) ile yedeklenir.
+        </p>
+      </div>
+    </details>
+  </div>
+
+</div>
+
+<!-- FAB - Hızlı Aksiyon -->
+<button class="fab" id="fab" onclick="fabAction()" style="display:none;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+<!-- TAB BAR -->
+<nav class="tabbar">
+  <button class="tab active" onclick="showPage('ozet', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Özet
+  </button>
+  <button class="tab" onclick="showPage('masraf', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14l6-6"/><circle cx="9.5" cy="8.5" r="1.5"/><circle cx="14.5" cy="14.5" r="1.5"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+    Masraf
+  </button>
+  <button class="tab" onclick="showPage('nakit', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+    Nakit
+  </button>
+  <button class="tab" onclick="showPage('rapor', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Rapor
+  </button>
+  <button class="tab" onclick="showPage('ayar', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Ayarlar
+  </button>
+</nav>
+
+<!-- MODALLAR -->
+
+<!-- Daire Düzenleme Modal -->
+<div class="modal-overlay" id="modal-daire">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-daire-title">Daire Düzenle</div>
+      <button class="modal-close" onclick="closeModal('modal-daire')">×</button>
+    </div>
+    <input type="hidden" id="daire-id">
+    
+    <!-- Fotoğraf -->
+    <div class="form-group" style="text-align:center;">
+      <label>Fotoğraf</label>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div id="daire-foto-preview" class="daire-foto-preview-large">
+          <span class="placeholder">📷</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn secondary small" onclick="document.getElementById('daire-foto-input').click()" type="button">
+            📷 Resim Ekle
+          </button>
+          <button class="btn secondary small" id="daire-foto-sil-btn" onclick="clearDaireFoto()" type="button" style="display:none;">
+            🗑️ Kaldır
+          </button>
+        </div>
+        <input type="file" id="daire-foto-input" accept="image/*" style="display:none;" onchange="handleDaireFotoSecim(event)">
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label>Daire No</label>
+      <input type="text" id="daire-no">
+    </div>
+    <div class="form-group">
+      <label>Ad Soyad</label>
+      <input type="text" id="daire-isim">
+    </div>
+    <div class="form-group">
+      <label>Telefon</label>
+      <input type="tel" id="daire-telefon" placeholder="0532 123 45 67">
+    </div>
+    <div class="form-group">
+      <label>Aidat Tutarı (₺) - boş bırakırsanız varsayılan kullanılır</label>
+      <input type="number" id="daire-aidat" placeholder="Varsayılan">
+    </div>
+    <div class="form-group">
+      <label>Durum</label>
+      <select id="daire-durum">
+        <option value="active">Aktif (Aidat Öder)</option>
+        <option value="manager">Yönetici (Aidat Ödemez)</option>
+        <option value="electric">Elektrik Ödeyen (Aidat Eksik)</option>
+      </select>
+    </div>
+    <button class="btn" onclick="saveDaire()">Kaydet</button>
+  </div>
+</div>
+
+<!-- Daire Sahibi Modalı -->
+<div class="modal-overlay" id="modal-sahip">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-sahip-title">Daire Sahibi Ekle</div>
+      <button class="modal-close" onclick="closeModal('modal-sahip')">×</button>
+    </div>
+    <input type="hidden" id="sahip-id">
+    
+    <!-- Fotoğraf -->
+    <div class="form-group" style="text-align:center;">
+      <label>Fotoğraf</label>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div id="sahip-foto-preview" class="daire-foto-preview-large">
+          <span class="placeholder">📷</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn secondary small" onclick="document.getElementById('sahip-foto-input').click()" type="button">
+            📷 Resim Ekle
+          </button>
+          <button class="btn secondary small" id="sahip-foto-sil-btn" onclick="clearSahipFoto()" type="button" style="display:none;">
+            🗑️ Kaldır
+          </button>
+        </div>
+        <input type="file" id="sahip-foto-input" accept="image/*" style="display:none;" onchange="handleSahipFotoSecim(event)">
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label>Daire No</label>
+      <select id="sahip-daire-no"></select>
+    </div>
+    <div class="form-group">
+      <label>Ad Soyad</label>
+      <input type="text" id="sahip-isim" placeholder="Örn: Ahmet Yılmaz">
+    </div>
+    <div class="form-group">
+      <label>Telefon</label>
+      <input type="tel" id="sahip-telefon" placeholder="0532 123 45 67">
+    </div>
+    
+    <button class="btn" onclick="saveSahip()">Kaydet</button>
+    <button class="btn danger" id="sahip-sil-btn" onclick="deleteSahip()" style="margin-top:8px;display:none;">Sil</button>
+  </div>
+</div>
+
+<!-- Ödeme Modal -->
+<div class="modal-overlay" id="modal-odeme">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-odeme-title">Ödeme Kaydet</div>
+      <button class="modal-close" onclick="closeModal('modal-odeme')">×</button>
+    </div>
+    <input type="hidden" id="odeme-daire-id">
+    <input type="hidden" id="odeme-donem">
+    <div class="form-group">
+      <label>Daire & Dönem</label>
+      <input type="text" id="odeme-baslik" disabled>
+    </div>
+    <div class="form-group">
+      <label>Borç Tutarı</label>
+      <input type="number" id="odeme-borc" disabled>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Ödeme Tutarı (₺)</label>
+        <input type="number" id="odeme-tutar">
+      </div>
+      <div class="form-group">
+        <label>Ödeme Tarihi</label>
+        <input type="date" id="odeme-tarih">
+      </div>
+    </div>
+    <button class="btn" onclick="saveOdeme()">Ödendi Olarak İşaretle</button>
+  </div>
+</div>
+
+<!-- Masraf Modal -->
+<div class="modal-overlay" id="modal-masraf">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-masraf-title">Yeni Masraf</div>
+      <button class="modal-close" onclick="closeModal('modal-masraf')">×</button>
+    </div>
+    <input type="hidden" id="masraf-id">
+    
+    <!-- Makbuz/Fatura Görseli -->
+    <div class="form-group">
+      <label>📎 Makbuz / Fatura Görseli (opsiyonel)</label>
+      <div id="masraf-foto-preview" class="masraf-foto-preview" onclick="masrafFotoTamEkran()">
+        <span class="placeholder">📎 Görsel yok</span>
+      </div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn secondary small" onclick="document.getElementById('masraf-foto-input').click()" type="button">
+          📷 Görsel Ekle
+        </button>
+        <button class="btn secondary small" id="masraf-foto-sil-btn" onclick="clearMasrafFoto()" type="button" style="display:none;">
+          🗑️ Kaldır
+        </button>
+      </div>
+      <input type="file" id="masraf-foto-input" accept="image/*" style="display:none;" onchange="handleMasrafFotoSecim(event)">
+    </div>
+    
+    <div class="form-group">
+      <label>Masraf Türü</label>
+      <select id="masraf-tur">
+        <option>Elektrik</option>
+        <option>Su</option>
+        <option>Temizlik</option>
+        <option>Bakım/Onarım</option>
+        <option>Asansör</option>
+        <option>Kapıcı</option>
+        <option>Apartman Görevli - FİDAN</option>
+        <option>Diğer</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Firma / Tedarikçi Adı</label>
+      <input type="text" id="masraf-firma" placeholder="Örn: BEDAŞ">
+    </div>
+    <div class="form-group">
+      <label>Ödeme Tarihi</label>
+      <input type="date" id="masraf-tarih">
+    </div>
+    <div class="form-group">
+      <label>Tutar (₺)</label>
+      <input type="number" id="masraf-tutar">
+    </div>
+    <div class="form-group">
+      <label>Açıklama</label>
+      <textarea id="masraf-aciklama" placeholder="Detay..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Hangi Döneme Ait?</label>
+      <select id="masraf-donem"></select>
+    </div>
+    <button class="btn" onclick="saveMasraf()">Kaydet</button>
+  </div>
+</div>
+
+<!-- Dönem Yöneticisi Modal -->
+<div class="modal-overlay" id="modal-donem">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Dönemler</div>
+      <button class="modal-close" onclick="closeModal('modal-donem')">×</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Yıl</label>
+        <select id="yeni-donem-yil"></select>
+      </div>
+      <div class="form-group">
+        <label>Ay</label>
+        <select id="yeni-donem-ay"></select>
+      </div>
+    </div>
+    <button class="btn" onclick="addDonem()" style="margin-bottom:14px;">+ Dönem Ekle</button>
+    <div class="card-title">Mevcut Dönemler</div>
+    <div id="donem-listesi"></div>
+  </div>
+</div>
+
+<!-- Borç & Peşin Ödeme Modal -->
+<div class="modal-overlay" id="modal-eski">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="eski-modal-title">Manuel Kayıt</div>
+      <button class="modal-close" onclick="closeModal('modal-eski')">×</button>
+    </div>
+    
+    <div class="tabs-pill">
+      <button class="pill-tab active" id="pill-borc" onclick="switchEskiTab('borc')">⏰ Geçmiş Borç</button>
+      <button class="pill-tab" id="pill-pesin" onclick="switchEskiTab('pesin')">💰 Peşin Ödeme</button>
+    </div>
+    
+    <p id="eski-aciklama" style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.5;">
+      Geçmiş bir döneme ait ödenmemiş borç ekleyin. Dönem sistemde yoksa otomatik oluşturulur.
+    </p>
+    
+    <div class="form-group">
+      <label>Daire</label>
+      <select id="eski-daire"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Yıl</label>
+        <select id="eski-yil"></select>
+      </div>
+      <div class="form-group">
+        <label>Ay</label>
+        <select id="eski-ay"></select>
+      </div>
+    </div>
+    
+    <!-- Borç moduna özel -->
+    <div id="eski-borc-fields">
+      <div class="form-group">
+        <label>Borç Tutarı (₺)</label>
+        <input type="number" id="eski-tutar">
+      </div>
+      <button class="btn" onclick="saveEskiBorc()">Borç Ekle</button>
+    </div>
+    
+    <!-- Peşin ödeme moduna özel -->
+    <div id="eski-pesin-fields" style="display:none;">
+      <div class="form-group">
+        <label>Beklenen Aidat (otomatik hesap)</label>
+        <input type="number" id="pesin-beklenen" disabled>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Ödeme Tutarı (₺)</label>
+          <input type="number" id="pesin-tutar">
+        </div>
+        <div class="form-group">
+          <label>Ödeme Tarihi</label>
+          <input type="date" id="pesin-tarih">
+        </div>
+      </div>
+      <button class="btn" onclick="savePesinOdeme()">Peşin Ödeme Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Zam Yönetimi Modal -->
+<div class="modal-overlay" id="modal-zam">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Aidat Zamları</div>
+      <button class="modal-close" onclick="closeModal('modal-zam')">×</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.5;">
+      Belirttiğiniz dönemden itibaren tüm dönemler için yeni aidat tutarı otomatik uygulanır. Geçmiş dönemler etkilenmez.
+    </p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Başlangıç Yılı</label>
+        <select id="zam-yil"></select>
+      </div>
+      <div class="form-group">
+        <label>Başlangıç Ayı</label>
+        <select id="zam-ay"></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Yeni Aidat Tutarı (₺)</label>
+      <input type="number" id="zam-tutar" placeholder="Örn: 2000">
+    </div>
+    <button class="btn" onclick="saveZam()" style="margin-bottom:14px;">+ Zam Ekle</button>
+    <div class="card-title">Mevcut Zamlar (Tarih Sırasıyla)</div>
+    <div id="zam-listesi"></div>
+  </div>
+</div>
+
+<!-- Elektrik Faturası Yönetimi Modal -->
+<div class="modal-overlay" id="modal-elektrik">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⚡ Elektrik Faturaları</div>
+      <button class="modal-close" onclick="closeModal('modal-elektrik')">×</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.5;">
+      Her dönem için elektrik faturası tutarını ayrı girin. İlgili dönemde elektrik ödeyen daire (Daire 6) aidatından bu tutar düşülür.
+    </p>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Yıl</label>
+        <select id="elk-yil"></select>
+      </div>
+      <div class="form-group">
+        <label>Ay</label>
+        <select id="elk-ay"></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Elektrik Tutarı (₺)</label>
+      <input type="number" id="elk-tutar" placeholder="Örn: 850">
+    </div>
+    <button class="btn" onclick="saveElektrikDonem()" style="margin-bottom:14px;">+ Elektrik Faturası Kaydet</button>
+    <div class="card-title">Mevcut Faturalar (En Yeni Üstte)</div>
+    <div id="elk-listesi"></div>
+  </div>
+</div>
+
+<!-- Detay Modal -->
+<div class="modal-overlay" id="modal-detay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="detay-title">Detay</div>
+      <button class="modal-close" onclick="closeModal('modal-detay')">×</button>
+    </div>
+    <div id="detay-content"></div>
+  </div>
+</div>
+
+<!-- Paylaşım Önizleme Modal -->
+<div class="modal-overlay" id="modal-share">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📤 Raporu Paylaş</div>
+      <button class="modal-close" onclick="closeModal('modal-share')">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">Rapor görüntüsü hazır. Aşağıdaki butonla telefonun paylaş menüsünü açıp WhatsApp grubunuza gönderebilirsiniz.</p>
+    <img id="share-preview-img" class="preview-img" alt="Rapor önizleme">
+    <button class="btn" onclick="triggerNativeShare()">📲 WhatsApp / Paylaş Menüsünü Aç</button>
+    <button class="btn secondary" onclick="downloadRapor()" style="margin-top:8px;">💾 Görüntüyü İndir</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Tam ekran görsel görüntüleyici -->
+<div class="img-fullscreen" id="img-fullscreen" onclick="this.classList.remove('active');">
+  <button class="close-btn" onclick="event.stopPropagation();document.getElementById('img-fullscreen').classList.remove('active');">×</button>
+  <img id="img-fullscreen-img" src="" alt="Tam ekran görsel">
+</div>
+
+<script>
+// ============= VERİ MODELİ =============
+const AYLAR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+
+const VARSAYILAN_DAIRELER = [
+  { id: 'd0', no: 'DAİRE 0', isim: 'Eren Sevencan Kiracı', durum: 'active', ozelAidat: null },
+  { id: 'd1', no: 'DAİRE 1', isim: 'Eren Sevencan', durum: 'active', ozelAidat: null },
+  { id: 'd2', no: 'DAİRE 2', isim: 'Alaaddin Bakan', durum: 'active', ozelAidat: null },
+  { id: 'd3', no: 'DAİRE 3', isim: 'Faik Köse', durum: 'manager', ozelAidat: null },
+  { id: 'd4', no: 'DAİRE 4', isim: 'Perihan Karademir', durum: 'active', ozelAidat: null },
+  { id: 'd5', no: 'DAİRE 5', isim: "Faik Abi'nin Üstü", durum: 'active', ozelAidat: null },
+  { id: 'd6', no: 'DAİRE 6', isim: 'Hakan Vural', durum: 'electric', ozelAidat: null },
+  { id: 'd7', no: 'DAİRE 7', isim: 'Sami Abi', durum: 'active', ozelAidat: null },
+  { id: 'd8', no: 'DAİRE 8', isim: 'Didem Tüzen Kiracısı', durum: 'active', ozelAidat: null },
+  { id: 'd9', no: 'DAİRE 9', isim: 'Koray Yummuş', durum: 'active', ozelAidat: null },
+  { id: 'd10', no: 'DAİRE 10', isim: 'Coşkun Şenkaya', durum: 'active', ozelAidat: null },
+  { id: 'd11', no: 'DAİRE 11', isim: 'Ayşen Akyüz Kiracı', durum: 'active', ozelAidat: null },
+  { id: 'd12', no: 'DAİRE 12', isim: 'Arda', durum: 'active', ozelAidat: null },
+  { id: 'd13', no: 'DAİRE 13', isim: 'Ayşen Akyüz Kiracı', durum: 'active', ozelAidat: null },
+  { id: 'd14', no: 'DAİRE 14', isim: 'Reyhan Güven Kiracı', durum: 'active', ozelAidat: null },
+];
+
+const VARSAYILAN_SAHIPLER = [
+  { id: 's0',  daireNo: 'DAİRE 0',  isim: 'Eren Sevencan',     telefon: '0530 626 08 61', foto: null },
+  { id: 's1',  daireNo: 'DAİRE 1',  isim: 'Eren Sevencan',     telefon: '0530 626 08 61', foto: null },
+  { id: 's2',  daireNo: 'DAİRE 2',  isim: 'Alaaddin Bakan',    telefon: '0535 542 24 75', foto: null },
+  { id: 's3',  daireNo: 'DAİRE 3',  isim: 'Kübra Aydın Topçu', telefon: '0532 164 23 38', foto: null },
+  { id: 's4',  daireNo: 'DAİRE 4',  isim: 'Perihan Karademir', telefon: '0538 968 16 14', foto: null },
+  { id: 's5',  daireNo: 'DAİRE 5',  isim: 'Serkan Özdemir',    telefon: '0549 232 79 80', foto: null },
+  { id: 's6',  daireNo: 'DAİRE 6',  isim: 'Hakan Vural',       telefon: '0533 706 65 23', foto: null },
+  { id: 's7',  daireNo: 'DAİRE 7',  isim: 'Sadi Altunbaş',     telefon: '0535 584 11 11', foto: null },
+  { id: 's8',  daireNo: 'DAİRE 8',  isim: 'Didem Tüzen',       telefon: '0532 260 81 19', foto: null },
+  { id: 's9',  daireNo: 'DAİRE 9',  isim: 'Koray Yummuş',      telefon: '0505 296 78 36', foto: null },
+  { id: 's10', daireNo: 'DAİRE 10', isim: 'Coşkun Şenkaya',    telefon: '0535 633 17 53', foto: null },
+  { id: 's11', daireNo: 'DAİRE 11', isim: 'Ayşen Akyüz',       telefon: '0532 435 52 08', foto: null },
+  { id: 's12', daireNo: 'DAİRE 12', isim: 'Soner Öncü',        telefon: '+49 160 2087868', foto: null },
+  { id: 's13', daireNo: 'DAİRE 13', isim: 'Ayşen Akyüz',       telefon: '0532 435 52 08', foto: null },
+  { id: 's14', daireNo: 'DAİRE 14', isim: 'Reyhan Güven',      telefon: '0533 290 83 90', foto: null },
+];
+
+function defaultState() {
+  return {
+    daireler: VARSAYILAN_DAIRELER,
+    sahipler: VARSAYILAN_SAHIPLER,
+    donemler: ['2026-05'],
+    aktifDonem: '2026-05',
+    donemAyarlari: {
+      '2026-05': { aidatTutar: 0, elektrikTutar: 0 }
+    },
+    // borclar: { 'donem-key': { 'daireId': { tutar, odendi, odemeTarih, odemeTutar, otomatik } } }
+    borclar: { '2026-05': {} },
+    masraflar: [], // { id, tur, firma, tarih, tutar, aciklama, donem }
+    devirAlacak: 0, // Başlangıç devri
+    zamlar: [], // [{ id, donem: 'YYYY-MM', tutar: number }] - bu dönem ve sonrası bu tutarı kullanır
+  };
+}
+
+let state = JSON.parse(localStorage.getItem('apartmanData')) || defaultState();
+// Geriye dönük uyumluluk: eksik alanları doldur
+if (!state.zamlar) state.zamlar = [];
+if (!state.sahipler || state.sahipler.length === 0) {
+  state.sahipler = VARSAYILAN_SAHIPLER.slice();
+  try { localStorage.setItem('apartmanData', JSON.stringify(state)); } catch(e) {}
+}
+
+// Migration: elektrik ödeyen daire ödediği halde otomatik elektrik masrafı eksikse oluştur
+(function migrationElektrikMasraflari() {
+  let degisti = false;
+  state.daireler.forEach(daire => {
+    if (daire.durum !== 'electric') return;
+    Object.keys(state.borclar).forEach(donem => {
+      const b = state.borclar[donem] && state.borclar[donem][daire.id];
+      if (!b || !b.odendi) return;
+      const ayar = state.donemAyarlari[donem];
+      const elektrikTutar = ayar ? Number(ayar.elektrikTutar) || 0 : 0;
+      if (elektrikTutar <= 0) return;
+      // Bu daire+dönem için mevcut otomatik masraf var mı?
+      const varMi = state.masraflar.some(m => 
+        m.auto === 'elektrik' && m.autoDaireId === daire.id && m.donem === donem
+      );
+      if (!varMi) {
+        state.masraflar.push({
+          id: 'm' + Date.now() + Math.random().toString(36).slice(2,6),
+          tur: 'Elektrik',
+          firma: 'CK Elektrik',
+          tarih: b.odemeTarih,
+          tutar: elektrikTutar,
+          aciklama: `${daire.no} (${daire.isim}) elektrik ödemesi`,
+          donem: donem,
+          auto: 'elektrik',
+          autoDaireId: daire.id,
+        });
+        degisti = true;
+      }
+    });
+  });
+  if (degisti) {
+    localStorage.setItem('apartmanData', JSON.stringify(state));
+  }
+})();
+
+// Belirli bir dönem için geçerli aidat tutarını hesapla
+// Öncelik sırası: 1) o dönemin elle girilmiş tutarı (varsa ve >0)
+//                 2) o döneme uygulanan en güncel zam
+//                 3) son aktif aidat tutarı
+function getAidatForDonem(donem) {
+  // Elle girilmiş döneme özel değer
+  const elleTutar = state.donemAyarlari[donem] && Number(state.donemAyarlari[donem].aidatTutar);
+  if (elleTutar && elleTutar > 0) return elleTutar;
+  
+  // Zamlardan o döneme uyan en yakını bul (donem <= seçilen olan en son)
+  const uyanZamlar = (state.zamlar || [])
+    .filter(z => z.donem <= donem)
+    .sort((a, b) => b.donem.localeCompare(a.donem));
+  if (uyanZamlar.length > 0) return Number(uyanZamlar[0].tutar) || 0;
+  
+  return 0;
+}
+
+// İlk kez açıldıysa daireleri otomatik kuralarla işle
+function ensureBorclar(donem) {
+  if (!state.borclar[donem]) state.borclar[donem] = {};
+  if (!state.donemAyarlari[donem]) state.donemAyarlari[donem] = { aidatTutar: 0, elektrikTutar: 0 };
+  const ayar = state.donemAyarlari[donem];
+  const aidatBase = getAidatForDonem(donem);
+  
+  state.daireler.forEach(d => {
+    if (!state.borclar[donem][d.id]) {
+      let tutar = 0;
+      if (d.durum === 'manager') {
+        tutar = 0;
+      } else if (d.durum === 'electric') {
+        tutar = Math.max(0, aidatBase - (ayar.elektrikTutar || 0));
+      } else {
+        tutar = d.ozelAidat != null ? d.ozelAidat : aidatBase;
+      }
+      state.borclar[donem][d.id] = {
+        tutar,
+        odendi: tutar === 0 && d.durum === 'manager',
+        odemeTarih: null,
+        odemeTutar: tutar === 0 && d.durum === 'manager' ? 0 : null,
+        otomatik: true,
+      };
+    } else if (state.borclar[donem][d.id].otomatik && !state.borclar[donem][d.id].odendi) {
+      // Otomatik hesaplanmışları güncelle (henüz ödenmemişse)
+      let tutar = 0;
+      if (d.durum === 'manager') tutar = 0;
+      else if (d.durum === 'electric') tutar = Math.max(0, aidatBase - (ayar.elektrikTutar || 0));
+      else tutar = d.ozelAidat != null ? d.ozelAidat : aidatBase;
+      state.borclar[donem][d.id].tutar = tutar;
+      if (d.durum === 'manager') {
+        state.borclar[donem][d.id].odendi = true;
+        state.borclar[donem][d.id].odemeTutar = 0;
+      }
+    }
+  });
+}
+
+// ============= FIREBASE SENKRONİZASYON =============
+// Kendi yazdığımız değişikliği geri yansıtmamak için flag
+let kendiYazimiz = false;
+let firebaseHazir = false;
+let firebaseSenkronAcik = true; // Kapatılabilir
+
+function save() {
+  // 1. Önce localStorage (offline yedek + hızlı erişim)
+  try {
+    localStorage.setItem('apartmanData', JSON.stringify(state));
+  } catch (err) {
+    console.error('localStorage save hatası:', err);
+    throw new Error('Depolama alanı doldu. Fotoğrafları azaltın veya küçültün.');
+  }
+  
+  // 2. Firebase'e yaz (gerçek zamanlı senkron)
+  if (firebaseSenkronAcik && fbRef) {
+    kendiYazimiz = true;
+    fbRef.set(state)
+      .then(() => {
+        // Yazma tamamlandı, küçük bir gecikme sonra flag'i sıfırla
+        setTimeout(() => { kendiYazimiz = false; }, 500);
+        updateSyncDurum('senkronize');
+      })
+      .catch((err) => {
+        kendiYazimiz = false;
+        console.error('Firebase yazma hatası:', err);
+        updateSyncDurum('hata', err.message);
+      });
+  }
+}
+
+// Firebase'i başlat ve dinleyici kur
+function firebaseBaslat() {
+  if (!fbRef) {
+    updateSyncDurum('yok');
+    console.warn('Firebase yüklenemedi - offline mod');
+    return;
+  }
+  
+  updateSyncDurum('bağlanıyor');
+  
+  // Bağlantı durumu izle
+  const connRef = fbDb.ref('.info/connected');
+  connRef.on('value', (snap) => {
+    if (snap.val() === true) {
+      updateSyncDurum('senkronize');
+    } else {
+      updateSyncDurum('offline');
+    }
+  });
+  
+  // Anlık dinleyici - başka cihazdaki değişiklikleri yakala
+  fbRef.on('value', (snapshot) => {
+    if (kendiYazimiz) return; // Kendi yazdığımız değişikliği yansıtma
+    
+    const cloudData = snapshot.val();
+    if (!cloudData) {
+      // Bulutta veri yok, mevcut local state'i yükle
+      if (!firebaseHazir) {
+        firebaseHazir = true;
+        // İlk yükleme: local state'i buluta gönder
+        kendiYazimiz = true;
+        fbRef.set(state).then(() => {
+          setTimeout(() => { kendiYazimiz = false; }, 500);
+        });
+      }
+      return;
+    }
+    
+    // Bulut verisi geldi
+    firebaseHazir = true;
+    
+    // Eksik alanları doldur (geriye dönük uyumluluk)
+    if (!cloudData.zamlar) cloudData.zamlar = [];
+    if (!cloudData.sahipler || cloudData.sahipler.length === 0) {
+      cloudData.sahipler = VARSAYILAN_SAHIPLER.slice();
+    }
+    if (!cloudData.daireler || cloudData.daireler.length === 0) {
+      cloudData.daireler = VARSAYILAN_DAIRELER.slice();
+    }
+    if (!cloudData.donemler) cloudData.donemler = ['2026-05'];
+    if (!cloudData.aktifDonem) cloudData.aktifDonem = cloudData.donemler[0];
+    if (!cloudData.borclar) cloudData.borclar = {};
+    if (!cloudData.masraflar) cloudData.masraflar = [];
+    if (!cloudData.donemAyarlari) cloudData.donemAyarlari = {};
+    if (cloudData.devirAlacak === undefined) cloudData.devirAlacak = 0;
+    
+    // State'i güncelle
+    state = cloudData;
+    
+    // localStorage'a da yaz (offline yedek)
+    try {
+      localStorage.setItem('apartmanData', JSON.stringify(state));
+    } catch(e) { console.warn('localStorage yazma hatası:', e); }
+    
+    // UI'yı yenile
+    render();
+    updateSyncDurum('senkronize');
+  }, (err) => {
+    console.error('Firebase dinleyici hatası:', err);
+    updateSyncDurum('hata', err.message);
+  });
+}
+
+function updateSyncDurum(durum, mesaj) {
+  const el = document.getElementById('sync-durum');
+  const elDetay = document.getElementById('sync-durum-detay');
+  let txt = '', renk = '';
+  switch(durum) {
+    case 'senkronize': txt = '☁ Senkron'; renk = '#1f8a4c'; break;
+    case 'bağlanıyor': txt = '⏳ Bağlanıyor...'; renk = '#b8895a'; break;
+    case 'offline': txt = '📴 Offline'; renk = '#888'; break;
+    case 'hata': txt = '⚠ Senkron hatası'; renk = '#c43e3e'; break;
+    case 'yok': txt = '⚠ Bulut bağlantısı yok'; renk = '#888'; break;
+  }
+  if (el) {
+    el.textContent = txt;
+    el.style.color = renk;
+    if (mesaj) el.title = mesaj;
+  }
+  if (elDetay) {
+    elDetay.textContent = txt + (mesaj ? ' (' + mesaj + ')' : '');
+    elDetay.style.color = renk;
+  }
+}
+
+function firebaseManuelYukle() {
+  if (!fbRef) {
+    toast('Firebase bağlantısı yok - internet ya da ağ engellemesi'); return;
+  }
+  if (!confirm('Bu cihazdaki TÜM veriyi buluta gönder?\n\nDiğer cihazlardaki veriler bununla değiştirilecek. Devam edilsin mi?')) return;
+  
+  kendiYazimiz = true;
+  fbRef.set(state)
+    .then(() => {
+      setTimeout(() => { kendiYazimiz = false; }, 500);
+      toast('✓ Veri buluta yüklendi');
+      updateSyncDurum('senkronize');
+    })
+    .catch((err) => {
+      kendiYazimiz = false;
+      toast('Hata: ' + err.message);
+      updateSyncDurum('hata', err.message);
+    });
+}
+
+function firebaseManuelIndir() {
+  if (!fbRef) {
+    toast('Firebase bağlantısı yok - internet ya da ağ engellemesi'); return;
+  }
+  if (!confirm('Buluttaki veriyi bu cihaza indir?\n\nBu cihazdaki mevcut veriler üzerine yazılacak. Devam edilsin mi?')) return;
+  
+  fbRef.once('value')
+    .then((snap) => {
+      const cloudData = snap.val();
+      if (!cloudData) {
+        toast('Bulutta veri yok'); return;
+      }
+      // Eksik alanları doldur
+      if (!cloudData.zamlar) cloudData.zamlar = [];
+      if (!cloudData.sahipler || cloudData.sahipler.length === 0) cloudData.sahipler = VARSAYILAN_SAHIPLER.slice();
+      
+      state = cloudData;
+      try { localStorage.setItem('apartmanData', JSON.stringify(state)); } catch(e) {}
+      render();
+      toast('✓ Bulut verisi indirildi');
+    })
+    .catch((err) => toast('Hata: ' + err.message));
+}
+
+function fmtTL(n) {
+  n = Number(n) || 0;
+  return '₺' + n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+// Bir dairenin ödendiğinde muhasebede sayılan efektif tahsilat tutarı.
+// Elektrik ödeyen daire için: nakit ödediği (odemeTutar) + dönemin elektrik tutarı
+// (çünkü elektriği apartman adına ayni olarak ödedi sayılır).
+// Diğer daireler: sadece odemeTutar (yoksa tutar).
+function getEffectiveOdeme(daire, borc, donem) {
+  if (!borc || !borc.odendi) return 0;
+  const odenen = Number(borc.odemeTutar || borc.tutar) || 0;
+  if (daire && daire.durum === 'electric') {
+    const ayar = state.donemAyarlari[donem];
+    const elektrikTutar = ayar ? Number(ayar.elektrikTutar) || 0 : 0;
+    return odenen + elektrikTutar;
+  }
+  return odenen;
+}
+
+// Bir sakin için görüntülenecek telefon numarasını döndürür.
+// Mantık:
+// 1) Sakinin kendi telefonu varsa onu kullan.
+// 2) Sakinin isminde "kiracı" geçiyorsa (kiracı olduğu belirtilmişse) sahip telefonunu KULLANMA
+//    — kullanıcı manuel olarak kiracının numarasını eklemeli.
+// 3) Aksi halde aynı daire numarasındaki sahip kaydı varsa ve ismi eşleşiyorsa onun telefonunu kullan.
+function getDaireTelefon(d) {
+  if (d.telefon) return d.telefon;
+  if (!state.sahipler) return '';
+  
+  // Sakinin isminde "kiracı" geçiyorsa, sahip telefonu kullanma (farklı kişiler)
+  if (/kirac[ıi]/i.test(d.isim || '')) return '';
+  
+  // İsim normalize: küçük harf, fazla boşluk ve özel karakter sadeleştir
+  const norm = (s) => (s || '')
+    .toLowerCase()
+    .replace(/[''`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const sakinNorm = norm(d.isim);
+  
+  // Aynı daire numarasındaki sahipleri kontrol et
+  const ayniDaire = state.sahipler.filter(s => s.daireNo === d.no);
+  for (const sahip of ayniDaire) {
+    if (norm(sahip.isim) === sakinNorm && sahip.telefon) {
+      return sahip.telefon;
+    }
+  }
+  return '';
+}
+
+// Telefon numarasını tıklanabilir tel: link'i için temizle
+function telLinkHref(tel) {
+  if (!tel) return '';
+  // Sadece + ve rakamları al
+  const temiz = tel.replace(/[^+\d]/g, '');
+  return 'tel:' + temiz;
+}
+
+function fmtTarih(d) {
+  if (!d) return '-';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('tr-TR');
+}
+
+function donemAd(key) {
+  const [y, m] = key.split('-');
+  return AYLAR[parseInt(m) - 1] + ' ' + y;
+}
+
+function donemSort(arr) {
+  return arr.slice().sort((a, b) => b.localeCompare(a));
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ============= NAVIGASYON =============
+let currentPage = 'ozet';
+let ozetView = 'guncel'; // 'gecmis' | 'guncel' | 'gelecek'
+
+function showPage(name, btn) {
+  currentPage = name;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  
+  // FAB göster/gizle
+  const fab = document.getElementById('fab');
+  if (name === 'masraf' || name === 'ozet') {
+    fab.style.display = 'flex';
+  } else {
+    fab.style.display = 'none';
+  }
+  
+  render();
+  window.scrollTo(0, 0);
+}
+
+function fabAction() {
+  if (currentPage === 'masraf') openMasrafModal();
+  else if (currentPage === 'ozet') {
+    // Aktif görünüme göre uygun modu aç
+    if (ozetView === 'gecmis') openEskiBorcModal('borc');
+    else if (ozetView === 'gelecek') openEskiBorcModal('pesin');
+    else openEskiBorcModal('borc'); // güncel görünümde varsayılan borç ekleme
+  }
+}
+
+function setOzetView(view) {
+  ozetView = view;
+  document.getElementById('ptab-gecmis').classList.toggle('active', view === 'gecmis');
+  document.getElementById('ptab-guncel').classList.toggle('active', view === 'guncel');
+  document.getElementById('ptab-gelecek').classList.toggle('active', view === 'gelecek');
+  document.getElementById('view-gecmis').style.display = view === 'gecmis' ? 'block' : 'none';
+  document.getElementById('view-guncel').style.display = view === 'guncel' ? 'block' : 'none';
+  document.getElementById('view-gelecek').style.display = view === 'gelecek' ? 'block' : 'none';
+  renderOzet();
+}
+
+// ============= RENDER =============
+function render() {
+  ensureBorclar(state.aktifDonem);
+  renderHeader();
+  renderOzet();
+  renderDaireler();
+  renderSahipler();
+  renderMasraf();
+  renderNakit();
+  renderAyarFormlari();
+  initRaporFiltreleri();
+  renderRapor();
+}
+
+// Rapor filtre dropdown'larını hazırla (sadece ilk kez)
+let raporFiltreHazir = false;
+function initRaporFiltreleri() {
+  if (raporFiltreHazir) return;
+  const yilSel = document.getElementById('rapor-yil');
+  const aySel = document.getElementById('rapor-ay');
+  if (!yilSel || !aySel) return;
+  
+  const guncelYil = new Date().getFullYear();
+  yilSel.innerHTML = '';
+  for (let y = guncelYil - 3; y <= guncelYil + 2; y++) {
+    yilSel.innerHTML += `<option value="${y}" ${y === guncelYil ? 'selected' : ''}>${y}</option>`;
+  }
+  aySel.innerHTML = AYLAR.map((a, i) => 
+    `<option value="${String(i+1).padStart(2,'0')}" ${i === 0 ? 'selected' : ''}>${a}</option>`
+  ).join('');
+  raporFiltreHazir = true;
+}
+
+function renderHeader() {
+  const sel = document.getElementById('currentPeriod');
+  sel.innerHTML = donemSort(state.donemler).map(d => 
+    `<option value="${d}" ${d === state.aktifDonem ? 'selected' : ''}>${donemAd(d)}</option>`
+  ).join('');
+}
+
+function changePeriod() {
+  state.aktifDonem = document.getElementById('currentPeriod').value;
+  if (!state.donemAyarlari[state.aktifDonem]) {
+    state.donemAyarlari[state.aktifDonem] = { aidatTutar: 0, elektrikTutar: 0 };
+  }
+  save();
+  render();
+}
+
+function renderOzet() {
+  const donem = state.aktifDonem;
+  const borc = state.borclar[donem] || {};
+  
+  // ============ İSTATİSTİK HESAPLAMALARI ============
+  let toplamAlacak = 0, toplamTahsil = 0, odenenSayisi = 0, alacakliSayisi = 0;
+  state.daireler.forEach(d => {
+    const b = borc[d.id];
+    if (!b) return;
+    if (d.durum === 'manager') return;
+    // Elektrik dairesi için: gösterilen tutar (340) + elektrik (310) = tam aidat (650) muhasebede sayılır
+    const effectiveTutar = d.durum === 'electric'
+      ? b.tutar + (Number((state.donemAyarlari[donem] || {}).elektrikTutar) || 0)
+      : b.tutar;
+    toplamAlacak += effectiveTutar;
+    alacakliSayisi++;
+    if (b.odendi) {
+      toplamTahsil += getEffectiveOdeme(d, b, donem);
+      odenenSayisi++;
+    }
+  });
+  
+  // Diğer dönem tahsilatları (bu dönemde yapılan: geçmiş + peşin)
+  let digerTahsilat = 0;
+  Object.keys(state.borclar).forEach(dk => {
+    if (dk === donem) return;
+    Object.keys(state.borclar[dk]).forEach(did => {
+      const b = state.borclar[dk][did];
+      if (b.odendi && b.odemeTarih && b.odemeTarih.startsWith(donem.substring(0,7))) {
+        const d = state.daireler.find(x => x.id === did);
+        digerTahsilat += getEffectiveOdeme(d, b, dk);
+      }
+    });
+  });
+  
+  const masrafToplam = state.masraflar
+    .filter(m => m.donem === donem)
+    .reduce((s, m) => s + Number(m.tutar), 0);
+  
+  // GÜNCEL NAKİT = Başlangıç devri + TÜM dönemlerin tahsil edilen aidatları − TÜM dönemlerin masrafları
+  // Kasa kümülatif; aktif döneme göre filtreleme yapma.
+  let toplamTahsilTumDonem = 0;
+  Object.keys(state.borclar).forEach(dk => {
+    const bb = state.borclar[dk] || {};
+    state.daireler.forEach(d => {
+      const x = bb[d.id]; if (!x) return;
+      if (x.odendi) toplamTahsilTumDonem += getEffectiveOdeme(d, x, dk);
+    });
+  });
+  const toplamMasrafTumDonem = state.masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+  const guncelNakit = state.devirAlacak + toplamTahsilTumDonem - toplamMasrafTumDonem;
+  const bekleyenBorc = toplamAlacak - toplamTahsil;
+  
+  // ============ GEÇMİŞ DÖNEM İSTATİSTİKLERİ ============
+  let gecmisToplamBorc = 0, gecmisOdenmemis = 0, gecmisToplamDaire = 0;
+  donemSort(state.donemler).forEach(dk => {
+    if (dk >= donem) return;
+    const bb = state.borclar[dk] || {};
+    const elkTutar = Number((state.donemAyarlari[dk] || {}).elektrikTutar) || 0;
+    state.daireler.forEach(d => {
+      const x = bb[d.id]; if (!x) return;
+      if (d.durum === 'manager') return;
+      const eff = d.durum === 'electric' ? x.tutar + elkTutar : x.tutar;
+      gecmisToplamBorc += eff;
+      gecmisToplamDaire++;
+      if (!x.odendi) gecmisOdenmemis += eff;
+    });
+  });
+  
+  // ============ GELECEK DÖNEM İSTATİSTİKLERİ ============
+  let gelecekPesinTutar = 0, gelecekPesinSayi = 0, gelecekBeklenenTutar = 0;
+  donemSort(state.donemler).forEach(dk => {
+    if (dk <= donem) return;
+    const bb = state.borclar[dk] || {};
+    const elkTutar = Number((state.donemAyarlari[dk] || {}).elektrikTutar) || 0;
+    state.daireler.forEach(d => {
+      const x = bb[d.id]; if (!x) return;
+      if (d.durum === 'manager') return;
+      if (x.odendi) {
+        gelecekPesinTutar += getEffectiveOdeme(d, x, dk);
+        gelecekPesinSayi++;
+      } else {
+        const eff = d.durum === 'electric' ? x.tutar + elkTutar : x.tutar;
+        gelecekBeklenenTutar += eff;
+      }
+    });
+  });
+  
+  // ============ STATİSTİK KARTLARINI VIEW'A GÖRE GÜNCELLE ============
+  const nakitLbl = document.getElementById('s-nakit-lbl');
+  const tahsilatLbl = document.getElementById('s-tahsilat-lbl');
+  const odenenLbl = document.getElementById('s-odenen-lbl');
+  const borcLbl = document.getElementById('s-borc-lbl');
+  
+  if (ozetView === 'guncel') {
+    nakitLbl.textContent = 'Güncel Nakit';
+    tahsilatLbl.textContent = 'Tahsilat (Bu Dönem)';
+    odenenLbl.textContent = 'Tahsil Edilen';
+    borcLbl.textContent = 'Bekleyen Borç';
+    document.getElementById('s-nakit').textContent = fmtTL(guncelNakit);
+    document.getElementById('s-tahsilat').textContent = fmtTL(toplamTahsil + digerTahsilat);
+    document.getElementById('s-odenen').textContent = odenenSayisi + ' / ' + alacakliSayisi;
+    document.getElementById('s-borc').textContent = fmtTL(bekleyenBorc);
+  } else if (ozetView === 'gecmis') {
+    nakitLbl.textContent = 'Geçmiş Toplam Alacak';
+    tahsilatLbl.textContent = 'Geçmiş Tahsil';
+    odenenLbl.textContent = 'Ödenmemiş Borçlu';
+    borcLbl.textContent = 'Geçmiş Ödenmemiş';
+    document.getElementById('s-nakit').textContent = fmtTL(gecmisToplamBorc);
+    document.getElementById('s-tahsilat').textContent = fmtTL(gecmisToplamBorc - gecmisOdenmemis);
+    let borcluSayisi = 0;
+    donemSort(state.donemler).forEach(dk => {
+      if (dk >= donem) return;
+      const bb = state.borclar[dk] || {};
+      state.daireler.forEach(d => {
+        if (bb[d.id] && !bb[d.id].odendi && d.durum !== 'manager') borcluSayisi++;
+      });
+    });
+    document.getElementById('s-odenen').textContent = borcluSayisi;
+    document.getElementById('s-borc').textContent = fmtTL(gecmisOdenmemis);
+  } else if (ozetView === 'gelecek') {
+    nakitLbl.textContent = 'Peşin Tahsil';
+    tahsilatLbl.textContent = 'Peşin Daire Sayısı';
+    odenenLbl.textContent = 'Beklenen Gelecek Tutar';
+    borcLbl.textContent = 'Tanımlı Gelecek Dönem';
+    document.getElementById('s-nakit').textContent = fmtTL(gelecekPesinTutar);
+    document.getElementById('s-tahsilat').textContent = gelecekPesinSayi;
+    document.getElementById('s-odenen').textContent = fmtTL(gelecekBeklenenTutar);
+    const gelecekDonemSayi = state.donemler.filter(d => d > donem).length;
+    document.getElementById('s-borc').textContent = gelecekDonemSayi;
+  }
+  
+  // ============ GÜNCEL DÖNEM AİDATLARI ============
+  let ozetHtml = '';
+  state.daireler.forEach(d => {
+    const b = borc[d.id];
+    if (!b) return;
+    
+    // Filtre
+    if (aidatFilter === 'paid' && !b.odendi) return;
+    if (aidatFilter === 'unpaid' && (b.odendi || d.durum === 'manager')) return;
+    
+    let itemClass, badge, detayHtml = '';
+    
+    if (d.durum === 'manager') {
+      itemClass = 'exempt';
+      badge = '<span class="badge exempt">Yönetici</span>';
+    } else if (b.odendi) {
+      itemClass = 'paid';
+      badge = '<span class="badge paid">Ödendi</span>';
+      detayHtml = `
+        <div class="pay-list">
+          <div class="pay-row"><span>Borç:</span><strong>${fmtTL(b.tutar)}</strong></div>
+          <div class="pay-row"><span>Ödenen:</span><strong>${fmtTL(b.odemeTutar || b.tutar)}</strong></div>
+          <div class="pay-row"><span>Tarih:</span><strong>${fmtTarih(b.odemeTarih)}</strong></div>
+        </div>
+        <div class="tx-actions">
+          <button class="icon-btn" onclick="event.stopPropagation();openOdemeModal('${d.id}','${donem}')">Düzenle</button>
+          <button class="icon-btn danger" onclick="event.stopPropagation();undoOdeme('${d.id}','${donem}')">Geri Al</button>
+        </div>`;
+    } else {
+      itemClass = 'unpaid';
+      badge = '<span class="badge unpaid">Ödenmedi</span>';
+      detayHtml = `
+        <div class="tx-actions">
+          <button class="icon-btn" onclick="event.stopPropagation();openOdemeModal('${d.id}','${donem}')">Ödeme Kaydet</button>
+          <button class="icon-btn" onclick="event.stopPropagation();openCustomAmount('${d.id}','${donem}')">Tutar Değiştir</button>
+        </div>`;
+    }
+    
+    let meta;
+    if (d.durum === 'manager') {
+      meta = 'Aidat ödemez';
+    } else if (d.durum === 'electric') {
+      const tamAidat = getAidatForDonem(donem);
+      const ayar = state.donemAyarlari[donem] || {};
+      const elektrik = Number(ayar.elektrikTutar) || 0;
+      meta = `Aidat: ${fmtTL(tamAidat)} − Elektrik: ${fmtTL(elektrik)} = <strong style="color:var(--accent);">${fmtTL(b.tutar)}</strong>`;
+    } else {
+      meta = 'Aidat: ' + fmtTL(b.tutar);
+    }
+    
+    ozetHtml += `
+      <div class="daire-item ${itemClass}" style="flex-direction:column;align-items:stretch;">
+        <div style="display:flex;align-items:center;gap:12px;width:100%;">
+          <div class="daire-no">${d.no.replace('DAİRE ', 'D')}</div>
+          <div class="daire-info">
+            <div class="daire-name">${d.isim}</div>
+            <div class="daire-meta">${meta}</div>
+          </div>
+          ${badge}
+        </div>
+        ${detayHtml}
+      </div>`;
+  });
+  document.getElementById('ozet-daireler').innerHTML = ozetHtml || '<div class="empty">Bu filtreye uyan kayıt yok</div>';
+  
+  // ============ GEÇMİŞ DÖNEM BORÇLARI ============
+  let eskiHtml = '';
+  donemSort(state.donemler).forEach(dk => {
+    if (dk >= donem) return;
+    const b = state.borclar[dk] || {};
+    
+    // Hem ödenmemiş hem ödenmiş borçları göster
+    const tumKayitlar = state.daireler.filter(d => b[d.id] && d.durum !== 'manager');
+    if (tumKayitlar.length === 0) return;
+    
+    const unpaidCount = tumKayitlar.filter(d => !b[d.id].odendi).length;
+    eskiHtml += `<div style="font-size:13px;color:var(--accent);margin:14px 0 8px;font-weight:700;">${donemAd(dk)} ${unpaidCount > 0 ? `· <span style="color:var(--danger);">${unpaidCount} borçlu</span>` : '· <span style="color:var(--success);">Hepsi ödendi ✓</span>'}</div>`;
+    
+    tumKayitlar.forEach(d => {
+      const bb = b[d.id];
+      const isPaid = bb.odendi;
+      const itemClass = isPaid ? 'paid' : 'unpaid';
+      const badge = isPaid 
+        ? '<span class="badge paid">Ödendi</span>' 
+        : '<span class="badge unpaid">Borç</span>';
+      const meta = isPaid 
+        ? `${fmtTL(bb.odemeTutar || bb.tutar)} · ${fmtTarih(bb.odemeTarih)}`
+        : `${fmtTL(bb.tutar)}`;
+      eskiHtml += `
+        <div class="daire-item ${itemClass}" onclick="openOdemeModal('${d.id}','${dk}')">
+          <div class="daire-no">${d.no.replace('DAİRE ', 'D')}</div>
+          <div class="daire-info">
+            <div class="daire-name">${d.isim}</div>
+            <div class="daire-meta">${meta}</div>
+          </div>
+          ${badge}
+        </div>`;
+    });
+  });
+  document.getElementById('ozet-eski-borc').innerHTML = eskiHtml || '<div class="empty">Geçmiş kayıt yok</div>';
+  
+  // ============ PEŞİN ÖDEME (GELECEK) ============
+  let pesinHtml = '', gelecekBekHtml = '';
+  donemSort(state.donemler).reverse().forEach(dk => {
+    if (dk <= donem) return;
+    const b = state.borclar[dk] || {};
+    const odenenler = state.daireler.filter(d => b[d.id] && b[d.id].odendi && d.durum !== 'manager');
+    const beklenenler = state.daireler.filter(d => b[d.id] && !b[d.id].odendi && d.durum !== 'manager');
+    
+    if (odenenler.length > 0) {
+      pesinHtml += `<div style="font-size:13px;color:var(--accent);margin:14px 0 8px;font-weight:700;">${donemAd(dk)}</div>`;
+      odenenler.forEach(d => {
+        const bb = b[d.id];
+        pesinHtml += `
+          <div class="daire-item future-paid" onclick="openOdemeModal('${d.id}','${dk}')">
+            <div class="daire-no">${d.no.replace('DAİRE ', 'D')}</div>
+            <div class="daire-info">
+              <div class="daire-name">${d.isim}</div>
+              <div class="daire-meta">${fmtTL(bb.odemeTutar || bb.tutar)} · ${fmtTarih(bb.odemeTarih)}</div>
+            </div>
+            <span class="badge future">Peşin</span>
+          </div>`;
+      });
+    }
+    
+    if (beklenenler.length > 0) {
+      gelecekBekHtml += `<div style="font-size:13px;color:var(--text-dim);margin:14px 0 8px;font-weight:700;">${donemAd(dk)}</div>`;
+      beklenenler.forEach(d => {
+        const bb = b[d.id];
+        gelecekBekHtml += `
+          <div class="daire-item unpaid" onclick="openOdemeModal('${d.id}','${dk}')">
+            <div class="daire-no">${d.no.replace('DAİRE ', 'D')}</div>
+            <div class="daire-info">
+              <div class="daire-name">${d.isim}</div>
+              <div class="daire-meta">${fmtTL(bb.tutar)}</div>
+            </div>
+            <span class="badge unpaid">Beklemede</span>
+          </div>`;
+      });
+    }
+  });
+  document.getElementById('ozet-pesin').innerHTML = pesinHtml || '<div class="empty">Peşin ödeme yok</div>';
+}
+
+function renderDaireler() {
+  const html = state.daireler.map(d => {
+    let badge = '', itemClass = '';
+    if (d.durum === 'manager') {
+      badge = '<span class="badge exempt">Yönetici</span>';
+      itemClass = 'exempt';
+    } else if (d.durum === 'electric') {
+      badge = '<span class="badge partial">Elektrik</span>';
+      itemClass = 'partial';
+    }
+    const fotoStyle = d.foto ? `background-image:url('${d.foto}');` : '';
+    const fotoIcerik = d.foto ? '' : '👤';
+    const telefon = getDaireTelefon(d);
+    const telefonHtml = telefon 
+      ? `<div class="daire-meta">${telefon}</div>` 
+      : '';
+    const aramaBtn = telefon 
+      ? `<a class="ara-btn" href="${telLinkHref(telefon)}" onclick="event.stopPropagation();" title="Ara: ${telefon}" aria-label="Ara">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </a>` 
+      : '';
+    return `
+      <div class="daire-item ${itemClass}" onclick="openDaireModal('${d.id}')">
+        <div class="daire-foto-mini" style="${fotoStyle}">${fotoIcerik}</div>
+        <div class="daire-info">
+          <div class="daire-name">${d.no.replace('DAİRE ', 'D')} · ${d.isim}</div>
+          ${telefonHtml}
+          ${d.ozelAidat != null ? `<div class="daire-meta">Özel aidat: ${fmtTL(d.ozelAidat)}</div>` : ''}
+        </div>
+        ${badge}
+        ${aramaBtn}
+      </div>`;
+  }).join('');
+  document.getElementById('daire-listesi').innerHTML = html;
+}
+
+function renderSahipler() {
+  const liste = state.sahipler || [];
+  if (liste.length === 0) {
+    document.getElementById('sahip-listesi').innerHTML = '<div class="empty">Henüz daire sahibi eklenmemiş</div>';
+    return;
+  }
+  // Daire no'ya göre sırala
+  const sirali = liste.slice().sort((a, b) => {
+    const sayia = parseInt((a.daireNo || '').replace(/\D/g, '')) || 0;
+    const sayib = parseInt((b.daireNo || '').replace(/\D/g, '')) || 0;
+    return sayia - sayib;
+  });
+  document.getElementById('sahip-listesi').innerHTML = sirali.map(s => {
+    const fotoStyle = s.foto ? `background-image:url('${s.foto}');` : '';
+    const fotoIcerik = s.foto ? '' : '👤';
+    const telefonHtml = s.telefon 
+      ? `<div class="daire-meta">${s.telefon}</div>` 
+      : '';
+    const aramaBtn = s.telefon 
+      ? `<a class="ara-btn" href="${telLinkHref(s.telefon)}" onclick="event.stopPropagation();" title="Ara: ${s.telefon}" aria-label="Ara">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </a>` 
+      : '';
+    return `
+      <div class="daire-item" onclick="openSahipModal('${s.id}')">
+        <div class="daire-foto-mini" style="${fotoStyle}">${fotoIcerik}</div>
+        <div class="daire-info">
+          <div class="daire-name">${s.daireNo || '-'} · ${s.isim}</div>
+          ${telefonHtml}
+        </div>
+        ${aramaBtn}
+      </div>`;
+  }).join('');
+}
+
+let aidatFilter = 'all';
+function filterAidat(f, btn) {
+  aidatFilter = f;
+  // Özet sayfasındaki güncel görünümün filtreleri
+  document.querySelectorAll('#view-guncel .filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderOzet();
+}
+
+let masrafFilter = 'current';
+function filterMasraf(btn) {
+  masrafFilter = btn.dataset.periodFilter;
+  document.querySelectorAll('#page-masraf .filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderMasraf();
+}
+
+function renderMasraf() {
+  if (masrafFilter === 'current') {
+    renderMasrafCurrent();
+  } else {
+    renderMasrafAll();
+  }
+}
+
+// Sadece aktif dönem masrafları — düz detay liste
+function renderMasrafCurrent() {
+  let list = state.masraflar.filter(m => m.donem === state.aktifDonem);
+  list.sort((a,b) => (b.tarih || '').localeCompare(a.tarih || ''));
+  
+  const toplam = list.reduce((s,m) => s + Number(m.tutar), 0);
+  
+  let html = `<div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;">
+    <strong style="color:var(--text);">${donemAd(state.aktifDonem)}</strong> · 
+    Toplam: <strong style="color:var(--danger);">${fmtTL(toplam)}</strong> 
+    (${list.length} kayıt)
+  </div>`;
+  
+  if (list.length === 0) {
+    html += '<div class="empty">Bu dönem için masraf kaydı yok</div>';
+  } else {
+    html += list.map(m => masrafItemHtml(m)).join('');
+  }
+  document.getElementById('masraf-listesi').innerHTML = html;
+}
+
+// Tüm dönemler — dönem bazlı gruplu, kart açılır/kapanır
+function renderMasrafAll() {
+  // Dönemleri grupla
+  const gruplar = {};
+  state.masraflar.forEach(m => {
+    if (!gruplar[m.donem]) gruplar[m.donem] = [];
+    gruplar[m.donem].push(m);
+  });
+  
+  const donemler = Object.keys(gruplar).sort((a,b) => b.localeCompare(a)); // en yeni üstte
+  const genelToplam = state.masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+  
+  let html = `<div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;">
+    <strong style="color:var(--text);">Tüm Dönemler</strong> · 
+    Genel Toplam: <strong style="color:var(--danger);">${fmtTL(genelToplam)}</strong> 
+    (${state.masraflar.length} kayıt · ${donemler.length} dönem)
+  </div>`;
+  
+  if (donemler.length === 0) {
+    html += '<div class="empty">Henüz masraf kaydı yok</div>';
+  } else {
+    donemler.forEach(dk => {
+      const masraflar = gruplar[dk].slice().sort((a,b) => (b.tarih || '').localeCompare(a.tarih || ''));
+      const donemToplam = masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+      const isActiveDonem = dk === state.aktifDonem;
+      
+      // Detaylı liste içeriği
+      const detayHtml = masraflar.map(m => masrafItemHtml(m, true)).join('');
+      
+      html += `
+        <details class="masraf-grup ${isActiveDonem ? 'active-donem' : ''}">
+          <summary>
+            <div class="grup-info">
+              <div class="grup-baslik">${donemAd(dk)}${isActiveDonem ? ' <span class="grup-tag">Aktif</span>' : ''}</div>
+              <div class="grup-meta">${masraflar.length} kayıt</div>
+            </div>
+            <div class="grup-tutar">${fmtTL(donemToplam)}</div>
+          </summary>
+          <div class="grup-icerik">${detayHtml}</div>
+        </details>`;
+    });
+  }
+  document.getElementById('masraf-listesi').innerHTML = html;
+}
+
+// Tek bir masraf kartı HTML'i (her iki görünümde de kullanılır)
+function masrafItemHtml(m, compact) {
+  const autoBadge = m.auto === 'elektrik' 
+    ? ' <span class="badge future" style="font-size:9px;padding:2px 5px;vertical-align:middle;">Otomatik</span>' 
+    : '';
+  const fotoBadge = m.foto
+    ? ' <span class="masraf-foto-ikon">📎 Makbuz</span>'
+    : '';
+  const subMeta = compact 
+    ? `${fmtTarih(m.tarih)}${m.aciklama ? ' · ' + m.aciklama : ''}`
+    : `${fmtTarih(m.tarih)} · ${donemAd(m.donem)}${m.aciklama ? ' · ' + m.aciklama : ''}`;
+  const fotoBtn = m.foto
+    ? `<button class="icon-btn" onclick="event.stopPropagation();showMasrafFoto('${m.id}')" style="color:var(--accent);">📎 Makbuz Göster</button>`
+    : '';
+  return `
+    <div class="tx-item">
+      <div class="tx-row">
+        <div class="tx-info">
+          <div class="tx-title">${m.tur}${m.firma ? ' · ' + m.firma : ''}${autoBadge}${fotoBadge}</div>
+          <div class="tx-meta">${subMeta}</div>
+        </div>
+        <div class="tx-amount out">${fmtTL(m.tutar)}</div>
+      </div>
+      <div class="tx-actions">
+        ${fotoBtn}
+        <button class="icon-btn" onclick="event.stopPropagation();editMasraf('${m.id}')">Düzenle</button>
+        <button class="icon-btn danger" onclick="event.stopPropagation();deleteMasraf('${m.id}')">Sil</button>
+      </div>
+    </div>`;
+}
+
+function renderNakit() {
+  const donem = state.aktifDonem;
+  
+  // Devir Alacak = Önceki dönemlerin toplam alacağı (ödendi/ödenmedi fark etmez)
+  // − Önceki dönemlerin masrafları
+  // + Başlangıç devri
+  // Elektrik ödeyen daire için tam aidat sayılır (görsel borç + elektrik tutarı).
+  let devir = state.devirAlacak;
+  donemSort(state.donemler).reverse().forEach(dk => {
+    if (dk >= donem) return;
+    const b = state.borclar[dk] || {};
+    const elkTutar = Number((state.donemAyarlari[dk] || {}).elektrikTutar) || 0;
+    let alacak = 0, masraf = 0;
+    state.daireler.forEach(d => {
+      const x = b[d.id]; if (!x) return;
+      if (d.durum === 'manager') return;
+      alacak += d.durum === 'electric' ? x.tutar + elkTutar : x.tutar;
+    });
+    state.masraflar.filter(m => m.donem === dk).forEach(m => masraf += Number(m.tutar));
+    devir += alacak - masraf;
+  });
+  
+  // Dönem alacak ve tahsilatlar
+  const borc = state.borclar[donem] || {};
+  const aktifElkTutar = Number((state.donemAyarlari[donem] || {}).elektrikTutar) || 0;
+  let donemAlacak = 0, donemTahsilat = 0;
+  state.daireler.forEach(d => {
+    const b = borc[d.id]; if (!b) return;
+    if (d.durum === 'manager') return;
+    donemAlacak += d.durum === 'electric' ? b.tutar + aktifElkTutar : b.tutar;
+    if (b.odendi) donemTahsilat += getEffectiveOdeme(d, b, donem);
+  });
+  
+  // Bu dönem yapılan diğer tahsilatlar (geçmiş + peşin) — sadece listeleme için
+  let eskiTahsilat = 0;
+  const eskiList = [];
+  Object.keys(state.borclar).forEach(dk => {
+    if (dk === donem) return;
+    Object.keys(state.borclar[dk]).forEach(did => {
+      const b = state.borclar[dk][did];
+      if (b.odendi && b.odemeTarih && b.odemeTarih.startsWith(donem.substring(0,7))) {
+        const d = state.daireler.find(x => x.id === did);
+        const eff = getEffectiveOdeme(d, b, dk);
+        eskiTahsilat += eff;
+        if (d) eskiList.push({ 
+          daire: d, donem: dk, tutar: eff, tarih: b.odemeTarih,
+          tip: dk < donem ? 'gecmis' : 'pesin'
+        });
+      }
+    });
+  });
+  
+  const odemeler = state.masraflar.filter(m => m.donem === donem).reduce((s,m) => s + Number(m.tutar), 0);
+  
+  // GÜNCEL NAKİT = Başlangıç devri + (TÜM dönemlerin tahsil edilen aidatları) − (TÜM dönemlerin masrafları)
+  // Tahsil edilen aidat hangi dönem etiketinde olursa olsun aynı kasaya gider.
+  // Aktif döneme göre filtreleme YAPMA — kasa kümülatif.
+  let toplamTahsilTumDonem = 0;
+  Object.keys(state.borclar).forEach(dk => {
+    const bb = state.borclar[dk] || {};
+    state.daireler.forEach(d => {
+      const x = bb[d.id]; if (!x) return;
+      if (x.odendi) toplamTahsilTumDonem += getEffectiveOdeme(d, x, dk);
+    });
+  });
+  const toplamMasrafTumDonem = state.masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+  const guncelNakit = state.devirAlacak + toplamTahsilTumDonem - toplamMasrafTumDonem;
+  
+  document.getElementById('n-devir').textContent = fmtTL(devir);
+  document.getElementById('n-donem-alacak').textContent = fmtTL(donemAlacak);
+  document.getElementById('n-tahsilat').textContent = fmtTL(donemTahsilat + eskiTahsilat);
+  document.getElementById('n-odeme').textContent = fmtTL(odemeler);
+  document.getElementById('n-nakit').textContent = fmtTL(guncelNakit);
+  
+  // Diğer dönem tahsilat listesi (geçmiş + peşin etiketli)
+  // Geçmişler önce, peşinler sonra
+  eskiList.sort((a, b) => {
+    if (a.tip !== b.tip) return a.tip === 'gecmis' ? -1 : 1;
+    return a.donem.localeCompare(b.donem);
+  });
+  
+  let html = '';
+  if (eskiList.length === 0) {
+    html = '<div class="empty">Bu dönem yapılmış diğer tahsilat yok</div>';
+  } else {
+    eskiList.forEach(e => {
+      const etiket = e.tip === 'gecmis'
+        ? '<span class="badge partial">Geçmiş</span>'
+        : '<span class="badge paid">Peşin</span>';
+      html += `
+        <div class="tx-item">
+          <div class="tx-row">
+            <div class="tx-info">
+              <div class="tx-title">${e.daire.no} · ${e.daire.isim} ${etiket}</div>
+              <div class="tx-meta">Dönem: ${donemAd(e.donem)} · Ödeme: ${fmtTarih(e.tarih)}</div>
+            </div>
+            <div class="tx-amount in">${fmtTL(e.tutar)}</div>
+          </div>
+        </div>`;
+    });
+  }
+  document.getElementById('eski-tahsilat-listesi').innerHTML = html;
+  
+  // Tüm dönem detayları
+  let detayHtml = '';
+  donemSort(state.donemler).forEach(dk => {
+    const b = state.borclar[dk] || {};
+    let dt = 0, da = 0;
+    state.daireler.forEach(d => {
+      const x = b[d.id]; if (!x) return;
+      if (d.durum === 'manager') return;
+      da += x.tutar;
+      if (x.odendi) dt += (x.odemeTutar || x.tutar);
+    });
+    const od = state.masraflar.filter(m => m.donem === dk).reduce((s,m) => s + Number(m.tutar), 0);
+    detayHtml += `
+      <div class="summary-line"><span class="label">${donemAd(dk)} Alacak</span><span class="val">${fmtTL(da)}</span></div>
+      <div class="summary-line"><span class="label">${donemAd(dk)} Tahsil</span><span class="val success">${fmtTL(dt)}</span></div>
+      <div class="summary-line"><span class="label">${donemAd(dk)} Masraf</span><span class="val danger">${fmtTL(od)}</span></div>
+      <hr class="divider">`;
+  });
+  document.getElementById('tum-donem-detay').innerHTML = detayHtml;
+}
+
+// ============= RAPOR =============
+function renderRapor() {
+  const yilSel = document.getElementById('rapor-yil');
+  const aySel = document.getElementById('rapor-ay');
+  const sayiSel = document.getElementById('rapor-sayi');
+  if (!yilSel || !aySel || !sayiSel) return;
+  
+  const yil = parseInt(yilSel.value);
+  const ay = parseInt(aySel.value);
+  const sayi = parseInt(sayiSel.value);
+  if (isNaN(yil) || isNaN(ay) || isNaN(sayi)) return;
+  
+  // Dönem listesi oluştur
+  const donemler = [];
+  let curYil = yil, curAy = ay;
+  for (let i = 0; i < sayi; i++) {
+    donemler.push(curYil + '-' + String(curAy).padStart(2, '0'));
+    curAy++;
+    if (curAy > 12) { curAy = 1; curYil++; }
+  }
+  
+  // Her dönem için: tahsilat, masraf türlerine göre toplam
+  const raporData = donemler.map(dk => {
+    const borc = state.borclar[dk] || {};
+    let tahsilat = 0;
+    state.daireler.forEach(d => {
+      const b = borc[d.id]; if (!b) return;
+      if (d.durum === 'manager') return;
+      if (b.odendi) tahsilat += getEffectiveOdeme(d, b, dk);
+    });
+    
+    // Masrafları türlerine göre grupla
+    const masrafGruplari = {};
+    state.masraflar.filter(m => m.donem === dk).forEach(m => {
+      const tur = m.tur || 'Diğer';
+      masrafGruplari[tur] = (masrafGruplari[tur] || 0) + Number(m.tutar);
+    });
+    const masrafToplam = Object.values(masrafGruplari).reduce((s,v) => s+v, 0);
+    
+    return { donem: dk, tahsilat, masrafGruplari, masrafToplam };
+  });
+  
+  // Devreden Nakit: Rapor başlangıcından ÖNCEKİ tüm dönemlerin net hareketi
+  const ilkDonem = donemler[0];
+  let devredenNakit = state.devirAlacak;
+  Object.keys(state.borclar).forEach(dk => {
+    if (dk >= ilkDonem) return; // sadece daha önceki dönemler
+    const bb = state.borclar[dk] || {};
+    state.daireler.forEach(d => {
+      const x = bb[d.id]; if (!x) return;
+      if (x.odendi) devredenNakit += getEffectiveOdeme(d, x, dk);
+    });
+  });
+  state.masraflar.forEach(m => {
+    if (m.donem < ilkDonem) devredenNakit -= Number(m.tutar);
+  });
+  
+  // Devreden satırı için etiket — önceki ayın adı
+  const [iyl, iay] = ilkDonem.split('-');
+  let prevAy = parseInt(iay) - 1, prevYil = parseInt(iyl);
+  if (prevAy < 1) { prevAy = 12; prevYil--; }
+  const devirEtiket = AYLAR[prevAy - 1] + ' ' + prevYil + ' Devreden';
+  
+  // Tüm dönemlerdeki tüm masraf türlerini topla (satır olarak göstermek için)
+  const tumMasrafTurleri = new Set();
+  raporData.forEach(r => {
+    Object.keys(r.masrafGruplari).forEach(t => tumMasrafTurleri.add(t));
+  });
+  const masrafTurArr = Array.from(tumMasrafTurleri).sort();
+  
+  // Tablo HTML
+  let html = `
+    <div class="rapor-baslik">
+      <h2>🏢 Sevencan Apartmanı</h2>
+      <div class="alt">Tahsilat ve Masraf Raporu</div>
+      <div class="alt" style="margin-top:4px;">${donemAd(donemler[0])} – ${donemAd(donemler[donemler.length-1])}</div>
+    </div>
+    <table class="rapor-table">
+      <thead>
+        <tr>
+          <th style="text-align:left;">Kalem</th>
+          ${donemler.map(dk => `<th>${donemAd(dk).replace(' ' + yil, '').replace(' ' + (yil+1), '')}</th>`).join('')}
+          <th>Toplam</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="devir-row">
+          <td class="label">${devirEtiket}</td>
+          <td class="num">${fmtTLKisa(devredenNakit)}</td>
+          ${donemler.slice(1).map(() => '<td class="num">-</td>').join('')}
+          <td class="num">${fmtTLKisa(devredenNakit)}</td>
+        </tr>
+        <tr class="tahsilat-row">
+          <td class="label">Tahsil Edilen Aidat Gelirleri</td>
+          ${raporData.map(r => `<td class="num">${fmtTLKisa(r.tahsilat)}</td>`).join('')}
+          <td class="num">${fmtTLKisa(raporData.reduce((s,r) => s + r.tahsilat, 0))}</td>
+        </tr>
+        <tr class="masraf-row">
+          <td class="label">Masraflar</td>
+          ${raporData.map(r => `<td class="num">${fmtTLKisa(r.masrafToplam)}</td>`).join('')}
+          <td class="num">${fmtTLKisa(raporData.reduce((s,r) => s + r.masrafToplam, 0))}</td>
+        </tr>`;
+  
+  masrafTurArr.forEach(tur => {
+    html += `<tr>
+      <td class="subitem">${tur}</td>
+      ${raporData.map(r => `<td class="num">${r.masrafGruplari[tur] ? fmtTLKisa(r.masrafGruplari[tur]) : '-'}</td>`).join('')}
+      <td class="num">${fmtTLKisa(raporData.reduce((s,r) => s + (r.masrafGruplari[tur] || 0), 0))}</td>
+    </tr>`;
+  });
+  
+  // Dönem Net = Devreden (sadece ilk sütun) + Tahsilat − Masraf
+  // Her ayın net'i kendi hesabıdır; ilk aya devreden eklenir
+  const donemNetler = raporData.map((r, i) => {
+    const dev = i === 0 ? devredenNakit : 0;
+    return dev + r.tahsilat - r.masrafToplam;
+  });
+  const toplamNet = devredenNakit + raporData.reduce((s,r) => s + r.tahsilat - r.masrafToplam, 0);
+  
+  html += `<tr class="toplam-row">
+    <td class="label" style="background:#1f2027;color:white;">Dönem Net</td>
+    ${donemNetler.map(n => `<td class="num">${fmtTLKisa(n)}</td>`).join('')}
+    <td class="num">${fmtTLKisa(toplamNet)}</td>
+  </tr>`;
+  
+  html += `</tbody></table>`;
+  
+  // Kara Liste checkboxlarını güncelle (rapor dönemleriyle senkron)
+  // Sadece güncel rapor dönemleri kalır, eski seçimler silinir
+  if (!window.karaListeSecili) window.karaListeSecili = {};
+  const yeniSecimler = {};
+  donemler.forEach(dk => {
+    yeniSecimler[dk] = window.karaListeSecili[dk] !== undefined ? window.karaListeSecili[dk] : true;
+  });
+  window.karaListeSecili = yeniSecimler;
+  
+  renderKaraListeCheckbox(donemler);
+  
+  // Seçili dönemleri al — rapordaki dönemlerden işaretli olanlar
+  const secilenDonemler = donemler.filter(dk => window.karaListeSecili[dk]);
+  
+  // Ödenmemiş daireler listesi — SADECE seçili dönemlerden
+  const odenmemisler = [];
+  secilenDonemler.forEach(dk => {
+    const borc = state.borclar[dk] || {};
+    const elkTutar = Number((state.donemAyarlari[dk] || {}).elektrikTutar) || 0;
+    state.daireler.forEach(d => {
+      const b = borc[d.id]; if (!b) return;
+      if (d.durum === 'manager') return;
+      if (!b.odendi) {
+        const eff = d.durum === 'electric' ? b.tutar + elkTutar : b.tutar;
+        odenmemisler.push({ daire: d, donem: dk, tutar: eff });
+      }
+    });
+  });
+  
+  if (secilenDonemler.length === 0) {
+    html += `
+      <div style="margin-top:18px;padding:12px;background:#f6e6cd;border-radius:8px;border-left:4px solid #b8895a;font-size:13px;color:#8a5a2b;text-align:center;">
+        Kara liste için en az bir ay seçin.
+      </div>`;
+  } else if (odenmemisler.length > 0) {
+    const ayEtiket = secilenDonemler.map(dk => donemAd(dk)).join(', ');
+    html += `
+      <div style="margin-top:18px;padding:12px;background:#fadcdc;border-radius:8px;border-left:4px solid #c43e3e;">
+        <div style="font-size:13px;font-weight:700;color:#c43e3e;margin-bottom:6px;">
+          🚫 Aidatını Ödemeyenler (${odenmemisler.length} kayıt)
+        </div>
+        <div style="font-size:11px;color:#8a4040;margin-bottom:8px;">Filtre: ${ayEtiket}</div>
+        <div style="font-size:12px;color:#1f2027;line-height:1.8;">`;
+    odenmemisler.forEach(o => {
+      // Dönem formatı: 'YYYY-MM' → 'MM-YYYY'
+      const [y, m] = o.donem.split('-');
+      const donemMMYYYY = m + '-' + y;
+      html += `${o.daire.no} ${o.daire.isim} - ${donemMMYYYY} - ${fmtTLKisa(o.tutar)}<br>`;
+    });
+    html += `</div></div>`;
+  } else {
+    html += `
+      <div style="margin-top:18px;padding:12px;background:#d6f0de;border-radius:8px;border-left:4px solid #1f8a4c;font-size:13px;font-weight:600;color:#1f8a4c;text-align:center;">
+        ✓ Seçili aylarda ödenmemiş aidat yok
+      </div>`;
+  }
+  
+  html += `<div style="margin-top:14px;font-size:11px;color:#555868;text-align:center;">
+      Rapor tarihi: ${new Date().toLocaleDateString('tr-TR')}
+    </div>`;
+  
+  document.getElementById('rapor-icerik').innerHTML = html;
+}
+
+// Kara Liste checkbox'larını üret — rapordaki dönemleri yansıt
+function renderKaraListeCheckbox(donemler) {
+  const cont = document.getElementById('kara-liste-checkboxlar');
+  if (!cont) return;
+  if (!window.karaListeSecili) window.karaListeSecili = {};
+  
+  cont.innerHTML = donemler.map(dk => {
+    if (window.karaListeSecili[dk] === undefined) window.karaListeSecili[dk] = true;
+    const isChecked = window.karaListeSecili[dk];
+    return `
+      <label class="kara-liste-row ${isChecked ? 'checked' : ''}" onclick="event.preventDefault();toggleKaraListe('${dk}', this)">
+        <input type="checkbox" ${isChecked ? 'checked' : ''} onclick="event.preventDefault();">
+        <span>${donemAd(dk)}</span>
+      </label>`;
+  }).join('');
+}
+
+function toggleKaraListe(donem, rowEl) {
+  if (!window.karaListeSecili) window.karaListeSecili = {};
+  window.karaListeSecili[donem] = !window.karaListeSecili[donem];
+  // Görsel güncelleme
+  rowEl.classList.toggle('checked', window.karaListeSecili[donem]);
+  const cb = rowEl.querySelector('input[type="checkbox"]');
+  if (cb) cb.checked = window.karaListeSecili[donem];
+  // Sadece rapor içeriğini yenile
+  renderRapor();
+}
+
+// Kısa TL formatı: tablolarda yer alsın diye
+function fmtTLKisa(n) {
+  n = Number(n) || 0;
+  if (n === 0) return '-';
+  return '₺' + Math.round(n).toLocaleString('tr-TR');
+}
+
+// ============= PAYLAŞIM =============
+let lastRaporBlob = null;
+let lastRaporFile = null;
+
+async function shareRapor() {
+  const btn = document.getElementById('rapor-share-btn');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px;justify-content:center;">⏳ Görüntü hazırlanıyor...</span>';
+  
+  try {
+    const el = document.getElementById('rapor-canvas-area');
+    const canvas = await html2canvas(el, { 
+      scale: 2, 
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+    });
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
+    if (!blob) throw new Error('Görüntü oluşturulamadı');
+    
+    lastRaporBlob = blob;
+    const filename = 'sevencan-rapor-' + new Date().toISOString().split('T')[0] + '.png';
+    lastRaporFile = new File([blob], filename, { type: 'image/png' });
+    
+    // Önizleme göster
+    const url = URL.createObjectURL(blob);
+    document.getElementById('share-preview-img').src = url;
+    openModal('modal-share');
+  } catch (err) {
+    toast('Hata: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+
+async function triggerNativeShare() {
+  if (!lastRaporFile) return;
+  
+  // Web Share API (iPhone Safari, Android Chrome destekler)
+  if (navigator.canShare && navigator.canShare({ files: [lastRaporFile] })) {
+    try {
+      await navigator.share({
+        files: [lastRaporFile],
+        title: 'Sevencan Apartmanı Raporu',
+        text: 'Aidat ve masraf raporu',
+      });
+      closeModal('modal-share');
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        toast('Paylaşım iptal edildi veya hata: ' + err.message);
+      }
+    }
+  } else {
+    // Fallback: WhatsApp Web/uygulamasına metinle yönlendir
+    toast('Cihazınız direkt paylaşımı desteklemiyor — görüntüyü indirip WhatsApp\'tan manuel gönderin');
+    downloadRapor();
+  }
+}
+
+function downloadRapor() {
+  if (!lastRaporBlob) return;
+  const url = URL.createObjectURL(lastRaporBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sevencan-rapor-' + new Date().toISOString().split('T')[0] + '.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast('Görüntü indirildi');
+}
+
+function renderAyarFormlari() {
+  const ayar = state.donemAyarlari[state.aktifDonem] || { aidatTutar: 0, elektrikTutar: 0 };
+  const aidatInput = document.getElementById('aidatTutar');
+  const aktifAidat = getAidatForDonem(state.aktifDonem);
+  
+  // Aktif dönem etiketi
+  const aktifDonemEl = document.getElementById('ayar-aktif-donem');
+  if (aktifDonemEl) aktifDonemEl.textContent = donemAd(state.aktifDonem);
+  
+  // Dönem için elle değer girilmemişse, zam veya boş göster
+  if (ayar.aidatTutar && ayar.aidatTutar > 0) {
+    aidatInput.value = ayar.aidatTutar;
+    aidatInput.placeholder = '';
+  } else if (aktifAidat > 0) {
+    aidatInput.value = '';
+    aidatInput.placeholder = aktifAidat + ' (zam tablosundan)';
+  } else {
+    aidatInput.value = '';
+    aidatInput.placeholder = 'Tutar girin veya zam ekleyin';
+  }
+  
+  document.getElementById('elektrikTutar').value = ayar.elektrikTutar || '';
+  
+  const yon = document.getElementById('yoneticiDaire');
+  const elk = document.getElementById('elektrikDaire');
+  yon.innerHTML = '<option value="">— Yok —</option>' + state.daireler.map(d => 
+    `<option value="${d.id}" ${d.durum === 'manager' ? 'selected' : ''}>${d.no} · ${d.isim}</option>`
+  ).join('');
+  elk.innerHTML = '<option value="">— Yok —</option>' + state.daireler.map(d => 
+    `<option value="${d.id}" ${d.durum === 'electric' ? 'selected' : ''}>${d.no} · ${d.isim}</option>`
+  ).join('');
+}
+
+// ============= AYAR FONKSİYONLARI =============
+function saveAidatTutar() {
+  const v = Number(document.getElementById('aidatTutar').value) || 0;
+  if (!state.donemAyarlari[state.aktifDonem]) state.donemAyarlari[state.aktifDonem] = {};
+  state.donemAyarlari[state.aktifDonem].aidatTutar = v;
+  // Bu dönemin ödenmemiş otomatik borçlarını sıfırla, yeniden hesaplansın
+  Object.keys(state.borclar[state.aktifDonem] || {}).forEach(did => {
+    const b = state.borclar[state.aktifDonem][did];
+    if (b.otomatik && !b.odendi) delete state.borclar[state.aktifDonem][did];
+  });
+  save();
+  render();
+  toast(v > 0 ? 'Aidat tutarı güncellendi' : 'Bu dönem aidatı zam tablosundan alınacak');
+}
+
+function saveElektrikTutar() {
+  const v = Number(document.getElementById('elektrikTutar').value) || 0;
+  if (!state.donemAyarlari[state.aktifDonem]) state.donemAyarlari[state.aktifDonem] = {};
+  state.donemAyarlari[state.aktifDonem].elektrikTutar = v;
+  
+  // Aktif dönem için elektrik ödeyen dairenin durumunu güncelle
+  const donem = state.aktifDonem;
+  const aidatBase = getAidatForDonem(donem);
+  const yeniElektrikDaireTutar = Math.max(0, aidatBase - v);
+  
+  if (state.borclar[donem]) {
+    state.daireler.forEach(daire => {
+      if (daire.durum !== 'electric') return;
+      const b = state.borclar[donem][daire.id];
+      if (!b) return;
+      if (!b.odendi) {
+        // Ödenmemiş — tutarı doğrudan güncelle
+        b.tutar = yeniElektrikDaireTutar;
+      } else {
+        // Ödenmişse otomatik masrafı yeni elektrik tutarıyla güncelle
+        syncElektrikMasraf(daire.id, donem, b.odemeTarih);
+      }
+    });
+    // Diğer dairelerin (electric olmayan) otomatik+ödenmemiş borçlarını da yenile
+    Object.keys(state.borclar[donem]).forEach(did => {
+      const daire = state.daireler.find(x => x.id === did);
+      if (!daire || daire.durum === 'electric') return;
+      const b = state.borclar[donem][did];
+      if (b.otomatik && !b.odendi) delete state.borclar[donem][did];
+    });
+  }
+  
+  save();
+  render();
+  toast('Elektrik tutarı güncellendi');
+}
+
+function saveYonetici() {
+  const id = document.getElementById('yoneticiDaire').value;
+  state.daireler.forEach(d => {
+    if (d.durum === 'manager') d.durum = 'active';
+  });
+  if (id) {
+    const d = state.daireler.find(x => x.id === id);
+    if (d) d.durum = 'manager';
+  }
+  Object.keys(state.borclar[state.aktifDonem] || {}).forEach(did => {
+    const b = state.borclar[state.aktifDonem][did];
+    if (b.otomatik && !b.odendi) delete state.borclar[state.aktifDonem][did];
+  });
+  save();
+  render();
+  toast('Yönetici güncellendi');
+}
+
+function saveElektrikDaire() {
+  const id = document.getElementById('elektrikDaire').value;
+  state.daireler.forEach(d => {
+    if (d.durum === 'electric') d.durum = 'active';
+  });
+  if (id) {
+    const d = state.daireler.find(x => x.id === id);
+    if (d) d.durum = 'electric';
+  }
+  Object.keys(state.borclar[state.aktifDonem] || {}).forEach(did => {
+    const b = state.borclar[state.aktifDonem][did];
+    if (b.otomatik && !b.odendi) delete state.borclar[state.aktifDonem][did];
+  });
+  save();
+  render();
+  toast('Elektrik ödeyen daire güncellendi');
+}
+
+// ============= MODAL =============
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+// Daire modalında geçici tutulan foto (data URL)
+let gecicidaireFoto = null;
+
+function openDaireModal(id) {
+  const d = state.daireler.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('modal-daire-title').textContent = d.no + ' Düzenle';
+  document.getElementById('daire-id').value = id;
+  document.getElementById('daire-no').value = d.no;
+  document.getElementById('daire-isim').value = d.isim;
+  document.getElementById('daire-telefon').value = d.telefon || '';
+  document.getElementById('daire-aidat').value = d.ozelAidat != null ? d.ozelAidat : '';
+  document.getElementById('daire-durum').value = d.durum;
+  
+  // Fotoğraf önizleme
+  gecicidaireFoto = d.foto || null;
+  updateDaireFotoPreview();
+  document.getElementById('daire-foto-input').value = '';
+  
+  openModal('modal-daire');
+}
+
+function updateDaireFotoPreview() {
+  const preview = document.getElementById('daire-foto-preview');
+  const silBtn = document.getElementById('daire-foto-sil-btn');
+  if (gecicidaireFoto) {
+    preview.innerHTML = '';
+    preview.style.backgroundImage = `url('${gecicidaireFoto}')`;
+    silBtn.style.display = 'inline-flex';
+  } else {
+    preview.innerHTML = '<span class="placeholder">📷</span>';
+    preview.style.backgroundImage = '';
+    silBtn.style.display = 'none';
+  }
+}
+
+function handleDaireFotoSecim(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // Görüntüyü küçült (max 400px) — localStorage limiti için
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxBoyut = 400;
+      let { width, height } = img;
+      if (width > height) {
+        if (width > maxBoyut) { height = (height * maxBoyut) / width; width = maxBoyut; }
+      } else {
+        if (height > maxBoyut) { width = (width * maxBoyut) / height; height = maxBoyut; }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      gecicidaireFoto = canvas.toDataURL('image/jpeg', 0.75);
+      updateDaireFotoPreview();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearDaireFoto() {
+  gecicidaireFoto = null;
+  updateDaireFotoPreview();
+  document.getElementById('daire-foto-input').value = '';
+}
+
+function saveDaire() {
+  const id = document.getElementById('daire-id').value;
+  const d = state.daireler.find(x => x.id === id);
+  if (!d) return;
+  d.no = document.getElementById('daire-no').value.trim();
+  d.isim = document.getElementById('daire-isim').value.trim();
+  d.telefon = document.getElementById('daire-telefon').value.trim();
+  d.foto = gecicidaireFoto;
+  const aidatVal = document.getElementById('daire-aidat').value;
+  d.ozelAidat = aidatVal === '' ? null : Number(aidatVal);
+  const yeniDurum = document.getElementById('daire-durum').value;
+  if (yeniDurum !== d.durum) {
+    // Diğer dairelerin aynı durumdaki olanlarını active yap (tek olabilir)
+    if (yeniDurum === 'manager' || yeniDurum === 'electric') {
+      state.daireler.forEach(x => {
+        if (x.id !== id && x.durum === yeniDurum) x.durum = 'active';
+      });
+    }
+    d.durum = yeniDurum;
+  }
+  // Otomatik borçları yenile
+  Object.keys(state.borclar[state.aktifDonem] || {}).forEach(did => {
+    const b = state.borclar[state.aktifDonem][did];
+    if (b.otomatik && !b.odendi) delete state.borclar[state.aktifDonem][did];
+  });
+  try {
+    save();
+  } catch (err) {
+    toast('Hata: Veri kaydedilemedi (alan dolu olabilir). Fotoğrafları azaltın.');
+    return;
+  }
+  closeModal('modal-daire');
+  render();
+  toast('Daire güncellendi');
+}
+
+// ============= DAİRE SAHİPLERİ =============
+let geciciSahipFoto = null;
+
+function openSahipModal(id) {
+  // Daire no dropdown'ı doldur — mevcut daire no'larını listele
+  const daireNoSel = document.getElementById('sahip-daire-no');
+  const daireOptions = state.daireler.map(d => `<option value="${d.no}">${d.no} (${d.isim})</option>`).join('');
+  daireNoSel.innerHTML = '<option value="">— Seçin —</option>' + daireOptions;
+  
+  if (id) {
+    const s = state.sahipler.find(x => x.id === id);
+    if (!s) return;
+    document.getElementById('modal-sahip-title').textContent = 'Daire Sahibi Düzenle';
+    document.getElementById('sahip-id').value = id;
+    document.getElementById('sahip-daire-no').value = s.daireNo || '';
+    document.getElementById('sahip-isim').value = s.isim || '';
+    document.getElementById('sahip-telefon').value = s.telefon || '';
+    geciciSahipFoto = s.foto || null;
+    document.getElementById('sahip-sil-btn').style.display = 'block';
+  } else {
+    document.getElementById('modal-sahip-title').textContent = 'Yeni Daire Sahibi';
+    document.getElementById('sahip-id').value = '';
+    document.getElementById('sahip-daire-no').value = '';
+    document.getElementById('sahip-isim').value = '';
+    document.getElementById('sahip-telefon').value = '';
+    geciciSahipFoto = null;
+    document.getElementById('sahip-sil-btn').style.display = 'none';
+  }
+  updateSahipFotoPreview();
+  document.getElementById('sahip-foto-input').value = '';
+  openModal('modal-sahip');
+}
+
+function updateSahipFotoPreview() {
+  const preview = document.getElementById('sahip-foto-preview');
+  const silBtn = document.getElementById('sahip-foto-sil-btn');
+  if (geciciSahipFoto) {
+    preview.innerHTML = '';
+    preview.style.backgroundImage = `url('${geciciSahipFoto}')`;
+    silBtn.style.display = 'inline-flex';
+  } else {
+    preview.innerHTML = '<span class="placeholder">📷</span>';
+    preview.style.backgroundImage = '';
+    silBtn.style.display = 'none';
+  }
+}
+
+function handleSahipFotoSecim(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxBoyut = 400;
+      let { width, height } = img;
+      if (width > height) {
+        if (width > maxBoyut) { height = (height * maxBoyut) / width; width = maxBoyut; }
+      } else {
+        if (height > maxBoyut) { width = (width * maxBoyut) / height; height = maxBoyut; }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      geciciSahipFoto = canvas.toDataURL('image/jpeg', 0.75);
+      updateSahipFotoPreview();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearSahipFoto() {
+  geciciSahipFoto = null;
+  updateSahipFotoPreview();
+  document.getElementById('sahip-foto-input').value = '';
+}
+
+function saveSahip() {
+  const id = document.getElementById('sahip-id').value;
+  const daireNo = document.getElementById('sahip-daire-no').value;
+  const isim = document.getElementById('sahip-isim').value.trim();
+  const telefon = document.getElementById('sahip-telefon').value.trim();
+  
+  if (!isim) { toast('İsim girin'); return; }
+  if (!daireNo) { toast('Daire seçin'); return; }
+  
+  if (!state.sahipler) state.sahipler = [];
+  
+  if (id) {
+    const s = state.sahipler.find(x => x.id === id);
+    if (s) {
+      s.daireNo = daireNo;
+      s.isim = isim;
+      s.telefon = telefon;
+      s.foto = geciciSahipFoto;
+    }
+  } else {
+    state.sahipler.push({
+      id: 's' + Date.now(),
+      daireNo, isim, telefon,
+      foto: geciciSahipFoto,
+    });
+  }
+  
+  try {
+    save();
+  } catch (err) {
+    toast('Hata: Veri kaydedilemedi (alan dolu olabilir).');
+    return;
+  }
+  closeModal('modal-sahip');
+  render();
+  toast(id ? 'Daire sahibi güncellendi' : 'Daire sahibi eklendi ✓');
+}
+
+function deleteSahip() {
+  const id = document.getElementById('sahip-id').value;
+  if (!id) return;
+  if (!confirm('Bu daire sahibini silmek istediğinizden emin misiniz?')) return;
+  state.sahipler = state.sahipler.filter(s => s.id !== id);
+  save();
+  closeModal('modal-sahip');
+  render();
+  toast('Daire sahibi silindi');
+}
+
+function openOdemeModal(daireId, donem) {
+  const d = state.daireler.find(x => x.id === daireId);
+  ensureBorclar(donem);
+  const b = state.borclar[donem][daireId];
+  if (!d || !b) return;
+  document.getElementById('odeme-daire-id').value = daireId;
+  document.getElementById('odeme-donem').value = donem;
+  document.getElementById('odeme-baslik').value = `${d.no} · ${d.isim} · ${donemAd(donem)}`;
+  document.getElementById('odeme-borc').value = b.tutar;
+  document.getElementById('odeme-tutar').value = b.odemeTutar != null ? b.odemeTutar : b.tutar;
+  document.getElementById('odeme-tarih').value = b.odemeTarih || new Date().toISOString().split('T')[0];
+  openModal('modal-odeme');
+}
+
+function saveOdeme() {
+  const did = document.getElementById('odeme-daire-id').value;
+  const donem = document.getElementById('odeme-donem').value;
+  const tutar = Number(document.getElementById('odeme-tutar').value);
+  const tarih = document.getElementById('odeme-tarih').value;
+  if (!tutar || !tarih) { toast('Tutar ve tarih girin'); return; }
+  ensureBorclar(donem);
+  state.borclar[donem][did].odendi = true;
+  state.borclar[donem][did].odemeTutar = tutar;
+  state.borclar[donem][did].odemeTarih = tarih;
+  syncElektrikMasraf(did, donem, tarih);
+  save();
+  closeModal('modal-odeme');
+  render();
+  toast('Ödeme kaydedildi ✓');
+}
+
+function undoOdeme(did, donem) {
+  if (!confirm('Bu ödemeyi geri almak istediğinizden emin misiniz?')) return;
+  ensureBorclar(donem);
+  state.borclar[donem][did].odendi = false;
+  state.borclar[donem][did].odemeTutar = null;
+  state.borclar[donem][did].odemeTarih = null;
+  removeElektrikMasraf(did, donem);
+  save();
+  render();
+  toast('Ödeme geri alındı');
+}
+
+// Elektrik ödeyen daire ödendi olarak işlendiğinde, o dönemin elektrik faturası kadar
+// otomatik bir masraf kaydı oluşturur (CK Elektrik). Bu masraf, apartmanın elektrik
+// şirketine ödediği gerçek tutarı temsil eder. Tekrar çağrılırsa günceller.
+function syncElektrikMasraf(did, donem, tarih) {
+  const daire = state.daireler.find(x => x.id === did);
+  if (!daire || daire.durum !== 'electric') return;
+  const ayar = state.donemAyarlari[donem];
+  const elektrikTutar = ayar ? Number(ayar.elektrikTutar) || 0 : 0;
+  
+  // Aynı daire+dönem için mevcut otomatik elektrik masrafı var mı?
+  const mevcutIdx = state.masraflar.findIndex(m => 
+    m.auto === 'elektrik' && m.autoDaireId === did && m.donem === donem
+  );
+  
+  // Elektrik tutarı 0 ise, varsa kaydı sil
+  if (elektrikTutar <= 0) {
+    if (mevcutIdx >= 0) state.masraflar.splice(mevcutIdx, 1);
+    return;
+  }
+  
+  if (mevcutIdx >= 0) {
+    // Güncelle (tutar veya tarih değişmiş olabilir)
+    state.masraflar[mevcutIdx].tutar = elektrikTutar;
+    state.masraflar[mevcutIdx].tarih = tarih;
+  } else {
+    state.masraflar.push({
+      id: 'm' + Date.now(),
+      tur: 'Elektrik',
+      firma: 'CK Elektrik',
+      tarih: tarih,
+      tutar: elektrikTutar,
+      aciklama: `${daire.no} (${daire.isim}) elektrik ödemesi`,
+      donem: donem,
+      auto: 'elektrik',
+      autoDaireId: did,
+    });
+  }
+}
+
+function removeElektrikMasraf(did, donem) {
+  state.masraflar = state.masraflar.filter(m => 
+    !(m.auto === 'elektrik' && m.autoDaireId === did && m.donem === donem)
+  );
+}
+
+function openCustomAmount(did, donem) {
+  const yeni = prompt('Bu daire için bu döneme özel borç tutarı (₺):', state.borclar[donem][did].tutar);
+  if (yeni === null) return;
+  const n = Number(yeni);
+  if (isNaN(n) || n < 0) { toast('Geçersiz tutar'); return; }
+  state.borclar[donem][did].tutar = n;
+  state.borclar[donem][did].otomatik = false;
+  save();
+  render();
+  toast('Tutar güncellendi');
+}
+
+// Masraf modalında geçici tutulan makbuz/fatura görseli
+let geciciMasrafFoto = null;
+
+function openMasrafModal(id) {
+  document.getElementById('masraf-id').value = id || '';
+  document.getElementById('modal-masraf-title').textContent = id ? 'Masraf Düzenle' : 'Yeni Masraf';
+  
+  // Dönem listesi
+  const sel = document.getElementById('masraf-donem');
+  sel.innerHTML = donemSort(state.donemler).map(d => `<option value="${d}">${donemAd(d)}</option>`).join('');
+  
+  if (id) {
+    const m = state.masraflar.find(x => x.id === id);
+    if (m) {
+      document.getElementById('masraf-tur').value = m.tur;
+      document.getElementById('masraf-firma').value = m.firma || '';
+      document.getElementById('masraf-tarih').value = m.tarih || '';
+      document.getElementById('masraf-tutar').value = m.tutar;
+      document.getElementById('masraf-aciklama').value = m.aciklama || '';
+      document.getElementById('masraf-donem').value = m.donem;
+      geciciMasrafFoto = m.foto || null;
+    }
+  } else {
+    document.getElementById('masraf-firma').value = '';
+    document.getElementById('masraf-tarih').value = new Date().toISOString().split('T')[0];
+    document.getElementById('masraf-tutar').value = '';
+    document.getElementById('masraf-aciklama').value = '';
+    document.getElementById('masraf-donem').value = state.aktifDonem;
+    geciciMasrafFoto = null;
+  }
+  
+  updateMasrafFotoPreview();
+  document.getElementById('masraf-foto-input').value = '';
+  openModal('modal-masraf');
+}
+
+function updateMasrafFotoPreview() {
+  const preview = document.getElementById('masraf-foto-preview');
+  const silBtn = document.getElementById('masraf-foto-sil-btn');
+  if (geciciMasrafFoto) {
+    preview.innerHTML = '';
+    preview.style.backgroundImage = `url('${geciciMasrafFoto}')`;
+    preview.classList.add('has-image');
+    silBtn.style.display = 'inline-flex';
+  } else {
+    preview.innerHTML = '<span class="placeholder">📎 Görsel yok — Aşağıdaki butondan ekleyin</span>';
+    preview.style.backgroundImage = '';
+    preview.classList.remove('has-image');
+    silBtn.style.display = 'none';
+  }
+}
+
+function handleMasrafFotoSecim(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      // Makbuz için daha büyük max boyut: 1000px (okunabilirlik için)
+      const maxBoyut = 1000;
+      let { width, height } = img;
+      if (width > height) {
+        if (width > maxBoyut) { height = (height * maxBoyut) / width; width = maxBoyut; }
+      } else {
+        if (height > maxBoyut) { width = (width * maxBoyut) / height; height = maxBoyut; }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      // JPEG %78 kaliteyle sıkıştır (yazılar okunabilsin diye dengeli)
+      geciciMasrafFoto = canvas.toDataURL('image/jpeg', 0.78);
+      updateMasrafFotoPreview();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearMasrafFoto() {
+  if (geciciMasrafFoto && !confirm('Makbuz görselini kaldırmak istediğinize emin misiniz?')) return;
+  geciciMasrafFoto = null;
+  updateMasrafFotoPreview();
+  document.getElementById('masraf-foto-input').value = '';
+}
+
+function masrafFotoTamEkran() {
+  if (!geciciMasrafFoto) return;
+  const fs = document.getElementById('img-fullscreen');
+  document.getElementById('img-fullscreen-img').src = geciciMasrafFoto;
+  fs.classList.add('active');
+}
+
+// Liste içinde herhangi bir makbuz görselini tam ekranda göster
+function showMasrafFoto(masrafId) {
+  const m = state.masraflar.find(x => x.id === masrafId);
+  if (!m || !m.foto) return;
+  const fs = document.getElementById('img-fullscreen');
+  document.getElementById('img-fullscreen-img').src = m.foto;
+  fs.classList.add('active');
+}
+
+function editMasraf(id) {
+  const m = state.masraflar.find(x => x.id === id);
+  if (m && m.auto === 'elektrik') {
+    if (!confirm('Bu masraf, elektrik ödeyen dairenin ödemesi sonucu otomatik oluşturulmuştur. Manuel düzenleme önerilmez — bunun yerine "Elektrik Faturaları" yönetiminden tutarı değiştirin.\n\nYine de düzenlemek istiyor musunuz?')) return;
+  }
+  openMasrafModal(id);
+}
+
+function saveMasraf() {
+  const id = document.getElementById('masraf-id').value;
+  const tur = document.getElementById('masraf-tur').value;
+  const firma = document.getElementById('masraf-firma').value.trim();
+  const tarih = document.getElementById('masraf-tarih').value;
+  const tutar = Number(document.getElementById('masraf-tutar').value);
+  const aciklama = document.getElementById('masraf-aciklama').value.trim();
+  const donem = document.getElementById('masraf-donem').value;
+  
+  if (!tutar || !tarih) { toast('Tutar ve tarih zorunlu'); return; }
+  
+  if (id) {
+    const m = state.masraflar.find(x => x.id === id);
+    if (m) Object.assign(m, { tur, firma, tarih, tutar, aciklama, donem, foto: geciciMasrafFoto });
+  } else {
+    state.masraflar.push({
+      id: 'm' + Date.now(),
+      tur, firma, tarih, tutar, aciklama, donem,
+      foto: geciciMasrafFoto,
+    });
+  }
+  try {
+    save();
+  } catch (err) {
+    toast('Hata: Veri kaydedilemedi (depolama dolu olabilir).');
+    return;
+  }
+  closeModal('modal-masraf');
+  render();
+  toast(id ? 'Masraf güncellendi' : 'Masraf eklendi ✓');
+}
+
+function deleteMasraf(id) {
+  const m = state.masraflar.find(x => x.id === id);
+  if (m && m.auto === 'elektrik') {
+    if (!confirm('Bu masraf, elektrik ödeyen dairenin ödemesi sonucu otomatik oluşturulmuştur. Silerseniz daire ödemesi de geri alınacaktır. Devam edilsin mi?')) return;
+    if (m.autoDaireId && state.borclar[m.donem] && state.borclar[m.donem][m.autoDaireId]) {
+      const b = state.borclar[m.donem][m.autoDaireId];
+      b.odendi = false;
+      b.odemeTutar = null;
+      b.odemeTarih = null;
+    }
+    state.masraflar = state.masraflar.filter(x => x.id !== id);
+    save();
+    render();
+    toast('Masraf ve daire ödemesi geri alındı');
+    return;
+  }
+  if (!confirm('Bu masrafı silmek istediğinizden emin misiniz?')) return;
+  state.masraflar = state.masraflar.filter(m => m.id !== id);
+  save();
+  render();
+  toast('Masraf silindi');
+}
+
+// ============= DÖNEM YÖNETİMİ =============
+function openPeriodManager() {
+  const yilSel = document.getElementById('yeni-donem-yil');
+  const aySel = document.getElementById('yeni-donem-ay');
+  const guncelYil = new Date().getFullYear();
+  yilSel.innerHTML = '';
+  for (let y = guncelYil - 2; y <= guncelYil + 2; y++) {
+    yilSel.innerHTML += `<option value="${y}" ${y === guncelYil ? 'selected' : ''}>${y}</option>`;
+  }
+  aySel.innerHTML = AYLAR.map((a,i) => `<option value="${String(i+1).padStart(2,'0')}">${a}</option>`).join('');
+  
+  // Mevcut dönem listesi
+  const list = donemSort(state.donemler);
+  document.getElementById('donem-listesi').innerHTML = list.map(d => `
+    <div class="daire-item">
+      <div class="daire-info">
+        <div class="daire-name">${donemAd(d)}</div>
+        <div class="daire-meta">${d}</div>
+      </div>
+      ${list.length > 1 ? `<button class="icon-btn danger" onclick="deleteDonem('${d}')">Sil</button>` : ''}
+    </div>
+  `).join('');
+  openModal('modal-donem');
+}
+
+function addDonem() {
+  const y = document.getElementById('yeni-donem-yil').value;
+  const m = document.getElementById('yeni-donem-ay').value;
+  const k = y + '-' + m;
+  if (state.donemler.includes(k)) { toast('Bu dönem zaten var'); return; }
+  state.donemler.push(k);
+  state.donemAyarlari[k] = { aidatTutar: 0, elektrikTutar: 0 };
+  state.borclar[k] = {};
+  save();
+  openPeriodManager(); // listeyi yenile
+  renderHeader();
+  toast('Dönem eklendi');
+}
+
+function deleteDonem(k) {
+  if (!confirm(donemAd(k) + ' dönemini ve tüm verilerini silmek istediğinizden emin misiniz?')) return;
+  state.donemler = state.donemler.filter(d => d !== k);
+  delete state.borclar[k];
+  delete state.donemAyarlari[k];
+  state.masraflar = state.masraflar.filter(m => m.donem !== k);
+  if (state.aktifDonem === k) state.aktifDonem = state.donemler[0];
+  save();
+  openPeriodManager();
+  render();
+  toast('Dönem silindi');
+}
+
+// ============= BORÇ & PEŞİN ÖDEME =============
+let eskiModalTab = 'borc';
+
+function openEskiBorcModal(initialTab) {
+  eskiModalTab = initialTab || 'borc';
+  
+  document.getElementById('eski-daire').innerHTML = state.daireler
+    .filter(d => d.durum !== 'manager')
+    .map(d => `<option value="${d.id}">${d.no} · ${d.isim}</option>`)
+    .join('');
+  
+  const yilSel = document.getElementById('eski-yil');
+  const aySel = document.getElementById('eski-ay');
+  const guncelYil = new Date().getFullYear();
+  yilSel.innerHTML = '';
+  for (let y = guncelYil - 5; y <= guncelYil + 5; y++) {
+    yilSel.innerHTML += `<option value="${y}" ${y === guncelYil ? 'selected' : ''}>${y}</option>`;
+  }
+  aySel.innerHTML = AYLAR.map((a,i) => 
+    `<option value="${String(i+1).padStart(2,'0')}">${a}</option>`
+  ).join('');
+  
+  document.getElementById('eski-tutar').value = '';
+  document.getElementById('pesin-tutar').value = '';
+  document.getElementById('pesin-tarih').value = new Date().toISOString().split('T')[0];
+  
+  // Sekmeye göre varsayılan dönem seçimi
+  setEskiDefaultPeriod();
+  
+  // Onchange handlerlar
+  document.getElementById('eski-daire').onchange = updatePesinBeklenen;
+  document.getElementById('eski-yil').onchange = updatePesinBeklenen;
+  document.getElementById('eski-ay').onchange = updatePesinBeklenen;
+  
+  updatePesinBeklenen();
+  applyEskiTab();
+  openModal('modal-eski');
+}
+
+function setEskiDefaultPeriod() {
+  const yilSel = document.getElementById('eski-yil');
+  const aySel = document.getElementById('eski-ay');
+  const [ay, ai] = state.aktifDonem.split('-');
+  let yi = parseInt(ay), mi = parseInt(ai);
+  
+  if (eskiModalTab === 'borc') {
+    // Aktif dönemden bir önce
+    mi--;
+    if (mi < 1) { mi = 12; yi--; }
+  } else {
+    // Aktif dönemden bir sonra
+    mi++;
+    if (mi > 12) { mi = 1; yi++; }
+  }
+  yilSel.value = yi;
+  aySel.value = String(mi).padStart(2, '0');
+}
+
+function switchEskiTab(tab) {
+  eskiModalTab = tab;
+  applyEskiTab();
+  setEskiDefaultPeriod();
+  updatePesinBeklenen();
+}
+
+function applyEskiTab() {
+  const isBorc = eskiModalTab === 'borc';
+  document.getElementById('pill-borc').classList.toggle('active', isBorc);
+  document.getElementById('pill-pesin').classList.toggle('active', !isBorc);
+  document.getElementById('eski-borc-fields').style.display = isBorc ? 'block' : 'none';
+  document.getElementById('eski-pesin-fields').style.display = isBorc ? 'none' : 'block';
+  document.getElementById('eski-modal-title').textContent = isBorc ? 'Geçmiş Dönem Borcu' : 'Peşin Ödeme';
+  document.getElementById('eski-aciklama').textContent = isBorc
+    ? 'Geçmiş bir döneme ait ödenmemiş borç ekleyin. Dönem sistemde yoksa otomatik oluşturulur.'
+    : 'Gelecek bir döneme peşin ödeme kaydedin. Aidat tutarı zam tablosundan otomatik hesaplanır, isterseniz farklı tutar da girebilirsiniz.';
+}
+
+// Peşin ödemede beklenen aidat tutarını hesapla ve göster
+function updatePesinBeklenen() {
+  const did = document.getElementById('eski-daire').value;
+  const yil = document.getElementById('eski-yil').value;
+  const ay = document.getElementById('eski-ay').value;
+  if (!did || !yil || !ay) return;
+  const donem = yil + '-' + ay;
+  const daire = state.daireler.find(x => x.id === did);
+  if (!daire) return;
+  
+  const aidatBase = getAidatForDonem(donem);
+  let beklenen = 0;
+  // Bu döneme ait elle girilmiş bir elektrik tutarı varsa kullan, yoksa son bilinen kullan
+  const ayar = state.donemAyarlari[donem];
+  const elektrikTutar = ayar ? (ayar.elektrikTutar || 0) : 0;
+  
+  if (daire.durum === 'manager') beklenen = 0;
+  else if (daire.durum === 'electric') beklenen = Math.max(0, aidatBase - elektrikTutar);
+  else beklenen = daire.ozelAidat != null ? daire.ozelAidat : aidatBase;
+  
+  const inp = document.getElementById('pesin-beklenen');
+  inp.value = beklenen || 0;
+  
+  // Tutar boşsa beklenen değeri ön-doldur
+  const tutarInp = document.getElementById('pesin-tutar');
+  if (!tutarInp.value) tutarInp.value = beklenen || '';
+}
+
+function saveEskiBorc() {
+  const did = document.getElementById('eski-daire').value;
+  const yil = document.getElementById('eski-yil').value;
+  const ay = document.getElementById('eski-ay').value;
+  const donem = yil + '-' + ay;
+  const tutar = Number(document.getElementById('eski-tutar').value);
+  if (!tutar || tutar <= 0) { toast('Geçerli tutar girin'); return; }
+  
+  ensureDonemExists(donem);
+  if (!state.borclar[donem]) state.borclar[donem] = {};
+  
+  state.borclar[donem][did] = {
+    tutar,
+    odendi: false,
+    odemeTarih: null,
+    odemeTutar: null,
+    otomatik: false,
+  };
+  save();
+  closeModal('modal-eski');
+  render();
+  toast(donemAd(donem) + ' için borç eklendi');
+}
+
+function savePesinOdeme() {
+  const did = document.getElementById('eski-daire').value;
+  const yil = document.getElementById('eski-yil').value;
+  const ay = document.getElementById('eski-ay').value;
+  const donem = yil + '-' + ay;
+  const tutar = Number(document.getElementById('pesin-tutar').value);
+  const tarih = document.getElementById('pesin-tarih').value;
+  const daire = state.daireler.find(x => x.id === did);
+  
+  if (!daire) { toast('Daire seçin'); return; }
+  if (daire.durum === 'manager') { toast('Yönetici daire aidat ödemez'); return; }
+  if (!tutar || tutar <= 0) { toast('Geçerli tutar girin'); return; }
+  if (!tarih) { toast('Tarih girin'); return; }
+  
+  ensureDonemExists(donem);
+  ensureBorclar(donem);
+  
+  // Mevcut borç kaydını al — yoksa otomatik üretilmiştir
+  const mevcut = state.borclar[donem][did];
+  const beklenenTutar = mevcut ? mevcut.tutar : 0;
+  
+  state.borclar[donem][did] = {
+    tutar: beklenenTutar > 0 ? beklenenTutar : tutar,
+    odendi: true,
+    odemeTarih: tarih,
+    odemeTutar: tutar,
+    otomatik: mevcut ? mevcut.otomatik : true,
+  };
+  syncElektrikMasraf(did, donem, tarih);
+  save();
+  closeModal('modal-eski');
+  render();
+  toast(donemAd(donem) + ' için peşin ödeme kaydedildi ✓');
+}
+
+// Dönem yoksa oluştur (peşin ödeme veya geçmiş borç eklerken)
+function ensureDonemExists(donem) {
+  if (!state.donemler.includes(donem)) {
+    state.donemler.push(donem);
+  }
+  if (!state.donemAyarlari[donem]) {
+    state.donemAyarlari[donem] = { aidatTutar: 0, elektrikTutar: 0 };
+  }
+}
+
+// ============= ZAM YÖNETİMİ =============
+function openZamModal() {
+  const yilSel = document.getElementById('zam-yil');
+  const aySel = document.getElementById('zam-ay');
+  const guncelYil = new Date().getFullYear();
+  yilSel.innerHTML = '';
+  for (let y = guncelYil - 1; y <= guncelYil + 3; y++) {
+    yilSel.innerHTML += `<option value="${y}" ${y === guncelYil ? 'selected' : ''}>${y}</option>`;
+  }
+  aySel.innerHTML = AYLAR.map((a,i) => 
+    `<option value="${String(i+1).padStart(2,'0')}" ${i === new Date().getMonth() ? 'selected' : ''}>${a}</option>`
+  ).join('');
+  document.getElementById('zam-tutar').value = '';
+  renderZamList();
+  openModal('modal-zam');
+}
+
+function renderZamList() {
+  const liste = (state.zamlar || []).slice().sort((a, b) => a.donem.localeCompare(b.donem));
+  if (liste.length === 0) {
+    document.getElementById('zam-listesi').innerHTML = '<div class="empty">Henüz zam tanımlı değil</div>';
+    return;
+  }
+  document.getElementById('zam-listesi').innerHTML = liste.map(z => `
+    <div class="zam-item">
+      <div class="zam-info">
+        <div class="zam-baslik">${fmtTL(z.tutar)}</div>
+        <div class="zam-meta">${donemAd(z.donem)} döneminden itibaren</div>
+      </div>
+      <button class="icon-btn danger" onclick="deleteZam('${z.id}')">Sil</button>
+    </div>
+  `).join('');
+}
+
+function saveZam() {
+  const yil = document.getElementById('zam-yil').value;
+  const ay = document.getElementById('zam-ay').value;
+  const tutar = Number(document.getElementById('zam-tutar').value);
+  const donem = yil + '-' + ay;
+  if (!tutar || tutar <= 0) { toast('Geçerli tutar girin'); return; }
+  
+  if (!state.zamlar) state.zamlar = [];
+  // Aynı dönem zam varsa güncelle
+  const mevcut = state.zamlar.find(z => z.donem === donem);
+  if (mevcut) {
+    mevcut.tutar = tutar;
+  } else {
+    state.zamlar.push({ id: 'z' + Date.now(), donem, tutar });
+  }
+  
+  // Bu dönem ve sonrası için otomatik (ödenmemiş) borçları yenile
+  Object.keys(state.borclar).forEach(dk => {
+    if (dk < donem) return;
+    // O döneme elle aidat girilmişse, kullanıcı kararını koru — sadece otomatik+ödenmemiş olanları sıfırla
+    const elleVar = state.donemAyarlari[dk] && Number(state.donemAyarlari[dk].aidatTutar) > 0;
+    if (elleVar) return;
+    Object.keys(state.borclar[dk]).forEach(did => {
+      const b = state.borclar[dk][did];
+      if (b.otomatik && !b.odendi) delete state.borclar[dk][did];
+    });
+  });
+  
+  save();
+  document.getElementById('zam-tutar').value = '';
+  renderZamList();
+  render();
+  toast(donemAd(donem) + ' itibariyle ' + fmtTL(tutar) + ' zam uygulandı');
+}
+
+function deleteZam(id) {
+  if (!confirm('Bu zam kaydını silmek istediğinizden emin misiniz?')) return;
+  const z = state.zamlar.find(x => x.id === id);
+  if (!z) return;
+  state.zamlar = state.zamlar.filter(x => x.id !== id);
+  // Etkilenen dönemlerin otomatik+ödenmemiş borçlarını yenile
+  Object.keys(state.borclar).forEach(dk => {
+    if (dk < z.donem) return;
+    const elleVar = state.donemAyarlari[dk] && Number(state.donemAyarlari[dk].aidatTutar) > 0;
+    if (elleVar) return;
+    Object.keys(state.borclar[dk]).forEach(did => {
+      const b = state.borclar[dk][did];
+      if (b.otomatik && !b.odendi) delete state.borclar[dk][did];
+    });
+  });
+  save();
+  renderZamList();
+  render();
+  toast('Zam silindi');
+}
+
+// ============= ELEKTRİK YÖNETİMİ =============
+function openElektrikModal() {
+  const yilSel = document.getElementById('elk-yil');
+  const aySel = document.getElementById('elk-ay');
+  const guncelYil = new Date().getFullYear();
+  yilSel.innerHTML = '';
+  for (let y = guncelYil - 5; y <= guncelYil + 2; y++) {
+    yilSel.innerHTML += `<option value="${y}" ${y === guncelYil ? 'selected' : ''}>${y}</option>`;
+  }
+  aySel.innerHTML = AYLAR.map((a,i) => 
+    `<option value="${String(i+1).padStart(2,'0')}" ${i === new Date().getMonth() ? 'selected' : ''}>${a}</option>`
+  ).join('');
+  // Varsayılan: aktif dönem
+  const [ay, ai] = state.aktifDonem.split('-');
+  yilSel.value = ay;
+  aySel.value = ai;
+  document.getElementById('elk-tutar').value = '';
+  renderElektrikList();
+  openModal('modal-elektrik');
+}
+
+function renderElektrikList() {
+  // donemAyarlari'ndaki elektrikTutar > 0 olanları listele
+  const liste = [];
+  Object.keys(state.donemAyarlari).forEach(dk => {
+    const ayar = state.donemAyarlari[dk];
+    if (ayar && Number(ayar.elektrikTutar) > 0) {
+      liste.push({ donem: dk, tutar: Number(ayar.elektrikTutar) });
+    }
+  });
+  liste.sort((a, b) => b.donem.localeCompare(a.donem)); // en yeni üstte
+  
+  if (liste.length === 0) {
+    document.getElementById('elk-listesi').innerHTML = '<div class="empty">Henüz elektrik faturası girilmemiş</div>';
+    return;
+  }
+  document.getElementById('elk-listesi').innerHTML = liste.map(e => `
+    <div class="zam-item">
+      <div class="zam-info">
+        <div class="zam-baslik">${fmtTL(e.tutar)}</div>
+        <div class="zam-meta">${donemAd(e.donem)}</div>
+      </div>
+      <button class="icon-btn danger" onclick="deleteElektrik('${e.donem}')">Sil</button>
+    </div>
+  `).join('');
+}
+
+function saveElektrikDonem() {
+  const yil = document.getElementById('elk-yil').value;
+  const ay = document.getElementById('elk-ay').value;
+  const tutar = Number(document.getElementById('elk-tutar').value);
+  const donem = yil + '-' + ay;
+  if (!tutar || tutar < 0) { toast('Geçerli tutar girin'); return; }
+  
+  // Dönem yoksa oluştur
+  if (!state.donemler.includes(donem)) {
+    state.donemler.push(donem);
+  }
+  if (!state.donemAyarlari[donem]) {
+    state.donemAyarlari[donem] = { aidatTutar: 0, elektrikTutar: 0 };
+  }
+  state.donemAyarlari[donem].elektrikTutar = tutar;
+  
+  // Bu döneme ait elektrik ödeyen dairenin durumunu güncelle
+  const aidatBase = getAidatForDonem(donem);
+  const yeniElektrikDaireTutar = Math.max(0, aidatBase - tutar);
+  
+  if (state.borclar[donem]) {
+    state.daireler.forEach(daire => {
+      if (daire.durum !== 'electric') return;
+      const b = state.borclar[donem][daire.id];
+      if (!b) {
+        // Henüz oluşturulmamışsa ensureBorclar render'da halledecek
+        return;
+      }
+      if (!b.odendi) {
+        // Ödenmemiş — tutarı doğrudan güncelle (otomatik olup olmadığına bakmadan)
+        b.tutar = yeniElektrikDaireTutar;
+      } else {
+        // Ödenmişse otomatik masrafı yeni elektrik tutarıyla güncelle
+        syncElektrikMasraf(daire.id, donem, b.odemeTarih);
+      }
+    });
+  }
+  
+  save();
+  document.getElementById('elk-tutar').value = '';
+  renderElektrikList();
+  render();
+  toast(donemAd(donem) + ' elektrik faturası: ' + fmtTL(tutar));
+}
+
+function deleteElektrik(donem) {
+  if (!confirm(donemAd(donem) + ' elektrik kaydını silmek istediğinizden emin misiniz?')) return;
+  if (state.donemAyarlari[donem]) {
+    state.donemAyarlari[donem].elektrikTutar = 0;
+  }
+  // Elektrik ödeyen daire varsa durumu güncelle
+  if (state.borclar[donem]) {
+    Object.keys(state.borclar[donem]).forEach(did => {
+      const daire = state.daireler.find(x => x.id === did);
+      if (!daire) return;
+      if (daire.durum !== 'electric') return;
+      const b = state.borclar[donem][did];
+      if (b.otomatik && !b.odendi) {
+        delete state.borclar[donem][did];
+      } else if (b.odendi) {
+        // Ödenmişse: artık elektrik 0 — otomatik masrafı sil
+        removeElektrikMasraf(did, donem);
+      }
+    });
+  }
+  save();
+  renderElektrikList();
+  render();
+  toast('Elektrik kaydı silindi');
+}
+
+// ============= DETAY GÖSTERİMİ =============
+function showDetay(tip) {
+  const donem = state.aktifDonem;
+  const borc = state.borclar[donem] || {};
+  let title = '', content = '';
+  
+  if (tip === 'devir') {
+    title = 'Devir Alacak Detayı';
+    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">Geçmiş dönemlerden gelen ödenmemiş borçlar (elektrik dairesi için tam aidat).</p>';
+    
+    // Tüm geçmiş dönemlerdeki ödenmemiş borçları topla
+    const odenmemisler = [];
+    let toplamOdenmemis = 0;
+    donemSort(state.donemler).forEach(dk => {
+      if (dk >= donem) return;
+      const b = state.borclar[dk] || {};
+      const elkTutar = Number((state.donemAyarlari[dk] || {}).elektrikTutar) || 0;
+      state.daireler.forEach(d => {
+        const x = b[d.id]; if (!x) return;
+        if (d.durum === 'manager') return;
+        if (!x.odendi) {
+          const eff = d.durum === 'electric' ? x.tutar + elkTutar : x.tutar;
+          odenmemisler.push({ daire: d, donem: dk, tutar: eff });
+          toplamOdenmemis += eff;
+        }
+      });
+    });
+    
+    if (odenmemisler.length === 0) {
+      html += '<div class="empty">Geçmiş dönemden ödenmemiş borç yok 🎉</div>';
+    } else {
+      html += '<div class="detay-formula">';
+      odenmemisler.forEach(o => {
+        html += `<div class="f-line"><span>${o.daire.no} · ${o.daire.isim} · ${donemAd(o.donem)}</span><span class="danger">${fmtTL(o.tutar)}</span></div>`;
+      });
+      html += `<div class="f-line sum"><span>TOPLAM ÖDENMEMİŞ BORÇ</span><span class="danger">${fmtTL(toplamOdenmemis)}</span></div></div>`;
+    }
+    content = html;
+  }
+  else if (tip === 'donem-alacak') {
+    title = 'Dönem Alacak Detayı';
+    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">' + donemAd(donem) + ' için tüm dairelerden alınması gereken toplam (muhasebe).</p>';
+    html += '<div class="detay-formula">';
+    let toplam = 0;
+    const aktifElkTutar = Number((state.donemAyarlari[donem] || {}).elektrikTutar) || 0;
+    state.daireler.forEach(d => {
+      const b = borc[d.id]; if (!b) return;
+      if (d.durum === 'manager') return;
+      let dnotu = '';
+      let satirTutar = b.tutar;
+      if (d.durum === 'electric') {
+        satirTutar = b.tutar + aktifElkTutar;
+        dnotu = ` <span style="color:var(--text-dim);font-size:11px;">(₺${b.tutar} nakit + ₺${aktifElkTutar} elektrik)</span>`;
+      }
+      toplam += satirTutar;
+      html += `<div class="f-line"><span>${d.no} · ${d.isim}${dnotu}</span><span>${fmtTL(satirTutar)}</span></div>`;
+    });
+    html += `<div class="f-line sum"><span>TOPLAM ALACAK</span><span>${fmtTL(toplam)}</span></div></div>`;
+    content = html;
+  }
+  else if (tip === 'tahsilat') {
+    title = 'Tahsilat Detayı';
+    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">' + donemAd(donem) + ' içinde gerçekleşen tüm tahsilatlar (elektrik dairesi için ayni ödeme dahil).</p>';
+    
+    // Bu döneme ait tahsilatlar
+    let bugun = 0;
+    let buHtml = '';
+    state.daireler.forEach(d => {
+      const b = borc[d.id]; if (!b || !b.odendi || d.durum === 'manager') return;
+      const t = getEffectiveOdeme(d, b, donem);
+      const nakit = Number(b.odemeTutar || b.tutar) || 0;
+      const ek = t - nakit;
+      const ekNotu = ek > 0 ? ` <span style="color:var(--text-dim);font-size:11px;">(₺${nakit} nakit + ₺${ek} elektrik)</span>` : '';
+      bugun += t;
+      buHtml += `<div class="f-line"><span>${d.no} · ${d.isim} · ${fmtTarih(b.odemeTarih)}${ekNotu}</span><span class="success">${fmtTL(t)}</span></div>`;
+    });
+    
+    // Bu dönem içinde yapılmış diğer dönem ödemeleri (geçmiş + peşin)
+    let eskiBugun = 0, pesinBugun = 0;
+    let eskiHtml = '', pesinHtml = '';
+    Object.keys(state.borclar).forEach(dk => {
+      if (dk === donem) return;
+      Object.keys(state.borclar[dk]).forEach(did => {
+        const b = state.borclar[dk][did];
+        if (b.odendi && b.odemeTarih && b.odemeTarih.startsWith(donem.substring(0,7))) {
+          const d = state.daireler.find(x => x.id === did);
+          if (!d) return;
+          const t = getEffectiveOdeme(d, b, dk);
+          const satir = `<div class="f-line"><span>${d.no} · ${d.isim} · ${donemAd(dk)} (${fmtTarih(b.odemeTarih)})</span><span class="success">${fmtTL(t)}</span></div>`;
+          if (dk < donem) {
+            eskiBugun += t;
+            eskiHtml += satir;
+          } else {
+            pesinBugun += t;
+            pesinHtml += satir;
+          }
+        }
+      });
+    });
+    
+    html += '<div class="detay-section-title">Bu Dönem Aidatları</div>';
+    html += '<div class="detay-formula">' + (buHtml || '<div class="f-line op">Bu döneme ait tahsilat yok</div>');
+    html += `<div class="f-line sum"><span>ARA TOPLAM</span><span class="success">${fmtTL(bugun)}</span></div></div>`;
+    
+    html += '<div class="detay-section-title" style="margin-top:14px;">Geçmiş Dönem Tahsilatları</div>';
+    html += '<div class="detay-formula">' + (eskiHtml || '<div class="f-line op">Geçmiş dönem tahsilatı yok</div>');
+    html += `<div class="f-line sum"><span>ARA TOPLAM</span><span class="success">${fmtTL(eskiBugun)}</span></div></div>`;
+    
+    html += '<div class="detay-section-title" style="margin-top:14px;">Peşin Ödemeler (Gelecek Dönem)</div>';
+    html += '<div class="detay-formula">' + (pesinHtml || '<div class="f-line op">Peşin ödeme yok</div>');
+    html += `<div class="f-line sum"><span>ARA TOPLAM</span><span class="success">${fmtTL(pesinBugun)}</span></div></div>`;
+    
+    html += `<div class="detay-formula" style="margin-top:10px;"><div class="f-line sum"><span>GENEL TOPLAM</span><span class="success">${fmtTL(bugun + eskiBugun + pesinBugun)}</span></div></div>`;
+    content = html;
+  }
+  else if (tip === 'odeme') {
+    title = 'Ödeme (Masraf) Detayı';
+    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">' + donemAd(donem) + ' dönemine ait tüm masraflar.</p>';
+    html += '<div class="detay-formula">';
+    let toplam = 0;
+    const list = state.masraflar.filter(m => m.donem === donem)
+      .sort((a,b) => (b.tarih || '').localeCompare(a.tarih || ''));
+    if (list.length === 0) {
+      html += '<div class="f-line op">Bu dönem masraf kaydı yok</div>';
+    } else {
+      list.forEach(m => {
+        toplam += Number(m.tutar);
+        html += `<div class="f-line"><span>${m.tur}${m.firma ? ' · ' + m.firma : ''} · ${fmtTarih(m.tarih)}</span><span class="danger">${fmtTL(m.tutar)}</span></div>`;
+      });
+    }
+    html += `<div class="f-line sum"><span>TOPLAM ÖDEME</span><span class="danger">${fmtTL(toplam)}</span></div></div>`;
+    content = html;
+  }
+  else if (tip === 'nakit') {
+    title = 'Güncel Nakit Hesabı';
+    
+    // TÜM dönemlerin tahsilatları ve masrafları kümülatif olarak topla
+    // (dönem etiketine göre filtreleme YAPMA - kasa kümülatif)
+    let toplamTahsil = 0;
+    Object.keys(state.borclar).forEach(dk => {
+      const bb = state.borclar[dk] || {};
+      state.daireler.forEach(d => {
+        const x = bb[d.id]; if (!x) return;
+        if (x.odendi) toplamTahsil += getEffectiveOdeme(d, x, dk);
+      });
+    });
+    const toplamMasraf = state.masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+    const nakit = state.devirAlacak + toplamTahsil - toplamMasraf;
+    
+    // Bilgilendirme için dönem bazlı detay listesi
+    const donemTahsilDetay = {};
+    Object.keys(state.borclar).forEach(dk => {
+      const bb = state.borclar[dk] || {};
+      let dt = 0;
+      state.daireler.forEach(d => {
+        const x = bb[d.id]; if (!x) return;
+        if (x.odendi) dt += getEffectiveOdeme(d, x, dk);
+      });
+      if (dt > 0) donemTahsilDetay[dk] = dt;
+    });
+    const donemMasrafDetay = {};
+    state.masraflar.forEach(m => {
+      donemMasrafDetay[m.donem] = (donemMasrafDetay[m.donem] || 0) + Number(m.tutar);
+    });
+    
+    let html = '<p style="font-size:13px;color:var(--text-dim);margin-bottom:12px;">Tüm dönemlerin kümülatif nakit durumu. Hangi dönemde tahsilat veya masraf yapıldığı önemli değil, hepsi aynı kasaya gider.</p>';
+    html += '<div class="detay-formula">';
+    html += `<div class="f-line"><span>Başlangıç devri</span><span>${fmtTL(state.devirAlacak)}</span></div>`;
+    
+    // Tahsilatları dönem bazlı listele
+    if (Object.keys(donemTahsilDetay).length > 0) {
+      html += `<div class="f-line op">+ Tahsilatlar (dönem bazlı)</div>`;
+      donemSort(Object.keys(donemTahsilDetay)).reverse().forEach(dk => {
+        html += `<div class="f-line"><span>${donemAd(dk)} tahsilat</span><span class="success">+${fmtTL(donemTahsilDetay[dk])}</span></div>`;
+      });
+    }
+    
+    // Masrafları dönem bazlı listele
+    if (Object.keys(donemMasrafDetay).length > 0) {
+      html += `<div class="f-line op">− Masraflar (dönem bazlı)</div>`;
+      donemSort(Object.keys(donemMasrafDetay)).reverse().forEach(dk => {
+        html += `<div class="f-line"><span>${donemAd(dk)} masraf</span><span class="danger">−${fmtTL(donemMasrafDetay[dk])}</span></div>`;
+      });
+    }
+    
+    html += `<div class="f-line sum"><span>GÜNCEL NAKİT</span><span class="accent">${fmtTL(nakit)}</span></div></div>`;
+    content = html;
+  }
+  
+  document.getElementById('detay-title').textContent = title;
+  document.getElementById('detay-content').innerHTML = content;
+  openModal('modal-detay');
+}
+
+// ============= VERİ YÖNETİMİ =============
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'apartman-data-' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Veri indirildi');
+}
+
+function importData(ev) {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const yeni = JSON.parse(e.target.result);
+      if (!yeni.daireler || !yeni.donemler) throw new Error('Geçersiz format');
+      if (!confirm('Mevcut veri üzerine yazılacak. Devam edilsin mi?')) return;
+      state = yeni;
+      save();
+      render();
+      toast('Veri yüklendi ✓');
+    } catch (err) {
+      toast('Hata: ' + err.message);
+    }
+  };
+  reader.readAsText(f);
+  ev.target.value = '';
+}
+
+function resetData() {
+  if (!confirm('TÜM VERİ SİLİNECEK. Bu işlem geri alınamaz. Emin misiniz?')) return;
+  if (!confirm('Son uyarı: Tüm aidat, masraf ve daire verileri silinecek.')) return;
+  state = defaultState();
+  save();
+  render();
+  toast('Veriler sıfırlandı');
+}
+
+// ============= BAŞLAT =============
+setOzetView('guncel');
+render();
+// Firebase senkronizasyonunu başlat
+firebaseBaslat();
+</script>
+
+</body>
+</html>
