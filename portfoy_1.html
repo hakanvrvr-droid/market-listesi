@@ -1774,8 +1774,14 @@ function calc(entry) {
     case 'fon': {
       const qty = num(e.qty);
       r.cost = qty * num(e.unitCost);
-      // Kullanıcı toplam fon değerini doğrudan girer
-      r.current = num(e.currentTotal);
+      // Canlı altın fiyatı varsa formülle hesapla: truncgilAltın × adet × birimMaliyet / 6554
+      const rawGold = num((state.marketPrices || {}).rawGold);
+      if (rawGold > 0 && qty > 0 && num(e.unitCost) > 0) {
+        const truncgilAltin = rawGold * 0.97;
+        r.current = Math.round(truncgilAltin * qty * num(e.unitCost) / 6554 * 100) / 100;
+      } else {
+        r.current = num(e.currentTotal);
+      }
       if (r.current === 0) r.current = r.cost;
       r.profit = r.current - r.cost;
       break;
@@ -1910,11 +1916,11 @@ function saveMarketPrices() {
     silver: num(silverEl.value),
     usd: num(usdEl.value),
     eur: num(eurEl.value),
+    rawGold: lastFetchedPrices ? lastFetchedPrices.gold : 0,
     updatedAt: new Date().toISOString()
   };
   save();
   refreshAll();
-  toast('Fiyatlar uygulandı');
 }
 
 /* ==================================================================
