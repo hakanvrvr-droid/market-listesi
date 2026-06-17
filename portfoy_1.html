@@ -1241,7 +1241,7 @@
   <!-- ============ TAB 3: PİYASA FİYATLARI ============ -->
   <section class="panel" id="panel-market">
     <h2 class="section-title">Piyasa fiyatları</h2>
-    <p class="section-sub">Buradaki fiyatlar tüm altın, gümüş, USD, EUR ve metal fonu kayıtlarına otomatik uygulanır. Vadeli mevduat ve yatırım fonu kayıtları kendi içlerinde manuel kalır.</p>
+    <p class="section-sub">Fiyatlar Truncgil Finans API'den otomatik çekilir. Altın, gümüş, USD ve EUR kayıtlarına otomatik uygulanır.</p>
 
     <div class="market-grid">
       <div class="market-card">
@@ -1409,13 +1409,11 @@ const INSTRUMENTS = {
   fon:       { label: 'Yatırım Fonu',   icon: '▲', color: '#9b87d4' },
   altin:     { label: 'Altın',          icon: '●', color: '#d4a574' },
   gumus:     { label: 'Gümüş',          icon: '○', color: '#b8b8b8' },
-  altinFon:  { label: 'Altın Fonu',     icon: '◉', color: '#d4a574' },
-  gumusFon:  { label: 'Gümüş Fonu',     icon: '◎', color: '#b8b8b8' },
   euro:      { label: 'Euro',           icon: '€', color: '#7fc99a' },
   usd:       { label: 'USD',            icon: '$', color: '#7fc99a' }
 };
 
-const TYPE_ORDER = ['vadeli','fon','altin','gumus','altinFon','gumusFon','euro','usd'];
+const TYPE_ORDER = ['vadeli','fon','altin','gumus','euro','usd'];
 
 const SCHEMAS = {
   vadeli: [
@@ -1449,24 +1447,6 @@ const SCHEMAS = {
     { key: 'buyDate',     label: 'Alım Tarihi',            type: 'date' },
     { key: 'qty',         label: 'Miktar (gr)',            type: 'number' },
     { key: 'unitCost',    label: 'Alış Fiyatı (TL/gr)',    type: 'number' }
-  ],
-  altinFon: [
-    { key: 'owner',          label: 'Sahip',                       type: 'select', options: OWNERS, required: true },
-    { key: 'bank',           label: 'Fon Bankası',                 type: 'bank',   required: true },
-    { key: 'fundName',       label: 'Fon Adı',                     type: 'text' },
-    { key: 'qty',            label: 'Alım Adedi',                  type: 'number' },
-    { key: 'unitCost',       label: 'Birim Maliyet (TL)',          type: 'number' },
-    { key: 'buyGoldPrice',   label: 'Alım Günü Altın Fiyatı (TL/gr)', type: 'number' },
-    { key: 'buyDate',        label: 'Alım Tarihi',                 type: 'date' }
-  ],
-  gumusFon: [
-    { key: 'owner',            label: 'Sahip',                       type: 'select', options: OWNERS, required: true },
-    { key: 'bank',             label: 'Fon Bankası',                 type: 'bank',   required: true },
-    { key: 'fundName',         label: 'Fon Adı',                     type: 'text' },
-    { key: 'qty',              label: 'Alım Adedi',                  type: 'number' },
-    { key: 'unitCost',         label: 'Birim Maliyet (TL)',          type: 'number' },
-    { key: 'buySilverPrice',   label: 'Alım Günü Gümüş Fiyatı (TL/gr)', type: 'number' },
-    { key: 'buyDate',          label: 'Alım Tarihi',                 type: 'date' }
   ],
   euro: [
     { key: 'owner',       label: 'Sahip',                  type: 'select', options: OWNERS, required: true },
@@ -1627,50 +1607,89 @@ function attachNumberFormatting(input) {
 }
 
 // ============================================
-// ALTIN FİYATI ÇEKME (Truncgil Finans API)
+// PİYASA FİYATLARI ÇEKME (Truncgil Finans API)
 // ============================================
-async function fetchGramGoldPrice() {
-  // Truncgil Finans API — ücretsiz, API key yok, CORS destekli
-  const apis = [
-    {
-      url: 'https://finans.truncgil.com/today.json',
-      parse: function(data) {
-        // data["Gram Altın"]["Alış"] = "6.494,9800"
-        var ga = data["Gram Altın"] || data["gram-altin"];
-        if (!ga) return null;
-        var raw = ga["Alış"] || ga["Alis"] || ga["alis"];
-        if (!raw) return null;
-        return parseFloat(String(raw).replace(/\./g, '').replace(',', '.'));
-      }
-    },
-    {
-      url: 'https://finans.truncgil.com/v4/today.json',
-      parse: function(data) {
-        var ga = data["gram-altin"];
-        if (!ga) return null;
-        var raw = ga["Alış"] || ga["alis"];
-        if (!raw) return null;
-        return parseFloat(String(raw).replace(/\./g, '').replace(',', '.'));
-      }
-    }
+function parseTrNumber(raw) {
+  if (!raw) return 0;
+  return parseFloat(String(raw).replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+async function fetchAllMarketPrices() {
+  // Truncgil Finans API — ücretsiz, API key yok
+  var urls = [
+    'https://finans.truncgil.com/today.json',
+    'https://finans.truncgil.com/v4/today.json'
   ];
 
-  for (var i = 0; i < apis.length; i++) {
+  for (var i = 0; i < urls.length; i++) {
     try {
-      var response = await fetch(apis[i].url, {
+      var response = await fetch(urls[i], {
         method: 'GET',
         signal: AbortSignal.timeout(8000)
       });
       if (!response.ok) continue;
       var data = await response.json();
-      var price = apis[i].parse(data);
-      if (price && price > 0) return price;
+
+      // Altın
+      var ga = data["Gram Altın"] || data["gram-altin"];
+      var gold = ga ? parseTrNumber(ga["Alış"] || ga["alis"]) : 0;
+
+      // Gümüş
+      var gs = data["Gümüş"] || data["gumus"] || data["Gümüş Gram"] || data["gumus-gram"];
+      var silver = gs ? parseTrNumber(gs["Alış"] || gs["alis"]) : 0;
+
+      // USD
+      var us = data["USD"] || data["usd"] || data["Dolar"] || data["ABD Doları"];
+      var usd = us ? parseTrNumber(us["Alış"] || us["alis"]) : 0;
+
+      // EUR
+      var eu = data["EUR"] || data["eur"] || data["Euro"];
+      var eur = eu ? parseTrNumber(eu["Alış"] || eu["alis"]) : 0;
+
+      if (gold > 0) {
+        return { gold: gold, silver: silver, usd: usd, eur: eur };
+      }
     } catch(e) {
-      console.warn('API deneme ' + (i+1) + ' başarısız:', e.message);
+      console.warn('Truncgil API deneme ' + (i+1) + ' başarısız:', e.message);
       continue;
     }
   }
   return null;
+}
+
+// Yalnızca gram altın fiyatı (fon formu için)
+async function fetchGramGoldPrice() {
+  var prices = await fetchAllMarketPrices();
+  return prices ? prices.gold : null;
+}
+
+// Piyasa sekmesi açıldığında tüm fiyatları otomatik çek
+var marketAutoFetched = false;
+async function autoFetchMarketPrices() {
+  if (marketAutoFetched) return;
+  marketAutoFetched = true;
+
+  var goldEl = document.getElementById('marketGold');
+  var silverEl = document.getElementById('marketSilver');
+  var usdEl = document.getElementById('marketUsd');
+  var eurEl = document.getElementById('marketEur');
+  if (!goldEl) return;
+
+  toast('Piyasa fiyatları çekiliyor...');
+  var prices = await fetchAllMarketPrices();
+
+  if (prices) {
+    if (prices.gold > 0) goldEl.value = formatNumberInput(prices.gold);
+    if (prices.silver > 0) silverEl.value = formatNumberInput(prices.silver);
+    if (prices.usd > 0) usdEl.value = formatNumberInput(prices.usd);
+    if (prices.eur > 0) eurEl.value = formatNumberInput(prices.eur);
+
+    // Otomatik kaydet ve uygula
+    saveMarketPrices();
+    toast('✓ Tüm piyasa fiyatları güncellendi');
+  } else {
+    toast('Fiyatlar çekilemedi — manuel girin');
+  }
 }
 
 // Form açıldığında altın fiyatını çek ve alanları doldur
@@ -1774,26 +1793,6 @@ function calc(entry) {
       r.profit = r.current - r.cost;
       break;
     }
-    case 'altinFon':
-    case 'gumusFon': {
-      const qty = num(e.qty);
-      r.cost = qty * num(e.unitCost);
-      // Formül: A × B × D / C  =  Toplam Maliyet × (Güncel Emtia / Alım Emtia)
-      const buyComm = e.type === 'altinFon' ? num(e.buyGoldPrice) : num(e.buySilverPrice);
-      // Güncel emtia: piyasa fiyatı varsa onu kullan, yoksa kayıttaki manuel değer
-      let curComm;
-      if (e.type === 'altinFon') curComm = mpGold > 0 ? mpGold : num(e.currentGoldPrice);
-      else curComm = mpSilver > 0 ? mpSilver : num(e.currentSilverPrice);
-
-      if (buyComm > 0 && curComm > 0) {
-        r.current = r.cost * (curComm / buyComm);
-      } else {
-        r.current = r.cost;
-      }
-      r.estTotal = r.current;
-      r.profit = r.current - r.cost;
-      break;
-    }
   }
   r.profitPct = r.cost > 0 ? (r.profit / r.cost) * 100 : 0;
   return r;
@@ -1889,7 +1888,7 @@ function renderMarketPanel() {
       });
       updEl.innerHTML = `<strong>Son güncelleme:</strong> ${dateStr}<br><br><strong>Not:</strong> Buradaki değerler tüm altın, gümüş, USD, EUR ve metal fonu kayıtlarındaki "güncel fiyat" alanlarına otomatik uygulanır.`;
     } else {
-      updEl.innerHTML = '<strong>Henüz fiyat girmediniz.</strong> Yukarıdaki alanlara güncel piyasa değerlerini yazın ve <strong>Kaydet</strong>\'e basın. Bu değerler tüm ilgili kayıtlara otomatik uygulanır.';
+      updEl.innerHTML = '<strong>Otomatik Güncelleme:</strong> Piyasa sekmesine her girişinizde Truncgil Finans API\'den güncel fiyatlar otomatik çekilir ve uygulanır.';
     }
   }
 }
@@ -2183,7 +2182,7 @@ function renderEntryCard(e) {
   // Build display name
   let name = '';
   if (e.type === 'vadeli') name = e.bank || 'Vadeli Mevduat';
-  else if (e.type === 'fon' || e.type === 'altinFon' || e.type === 'gumusFon') name = e.fundName || (e.bank || 'Fon');
+  else if (e.type === 'fon') name = e.fundName || (e.bank || 'Fon');
   else name = inst.label;
 
   // Build meta line
@@ -2233,24 +2232,6 @@ function renderEntryCard(e) {
       <div class="field"><div class="field-label">Alış Kuru</div><div class="field-value">${fmtTL(num(e.unitCost))}</div></div>
       <div class="field"><div class="field-label">${priceLabel}</div><div class="field-value">${priceShown > 0 ? fmtTL(priceShown) : '—'}</div></div>
       <div class="field"><div class="field-label">Toplam Maliyet</div><div class="field-value">${fmtTL(r.cost)}</div></div>
-    `;
-  } else if (e.type === 'altinFon' || e.type === 'gumusFon') {
-    const isGold = e.type === 'altinFon';
-    const buyComm = isGold ? e.buyGoldPrice : e.buySilverPrice;
-    const mp = state.marketPrices || {};
-    const livePrice = isGold ? num(mp.gold) : num(mp.silver);
-    const curComm = livePrice > 0 ? livePrice : (isGold ? num(e.currentGoldPrice) : num(e.currentSilverPrice));
-    const commLabel = isGold ? 'Altın' : 'Gümüş';
-    const liveLabel = livePrice > 0 ? ' (canlı)' : '';
-    const commPct = num(buyComm) > 0 && curComm > 0 ? ((curComm - num(buyComm)) / num(buyComm)) * 100 : 0;
-    const commPctStr = (commPct >= 0 ? '+' : '') + fmt(commPct) + '%';
-    details = `
-      <div class="field"><div class="field-label">Adet</div><div class="field-value">${fmt(num(e.qty))}</div></div>
-      <div class="field"><div class="field-label">Birim Maliyet</div><div class="field-value">${fmtTL(num(e.unitCost))}</div></div>
-      <div class="field"><div class="field-label">Toplam Maliyet</div><div class="field-value">${fmtTL(r.cost)}</div></div>
-      <div class="field"><div class="field-label">Alım Günü ${commLabel}</div><div class="field-value">${fmtTL(num(buyComm))}/gr</div></div>
-      <div class="field"><div class="field-label">Güncel ${commLabel}${liveLabel}</div><div class="field-value">${curComm > 0 ? fmtTL(curComm) + '/gr' : '—'}</div></div>
-      <div class="field"><div class="field-label">${commLabel} Değişim</div><div class="field-value" style="color:${commPct>=0?'var(--green)':'var(--red)'}">${commPctStr}</div></div>
     `;
   }
 
@@ -2536,6 +2517,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
     if (tab === 'status') renderStatus();
+    if (tab === 'market') autoFetchMarketPrices();
     window.scrollTo(0, 0);
   });
 });
