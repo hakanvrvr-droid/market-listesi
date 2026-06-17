@@ -1705,21 +1705,23 @@ async function fillBloombergFields() {
   }
 }
 
-// Güncel Toplam = Bloomberg Altın × Alım Adedi
+// Güncel Toplam = Bloomberg Altın × Alım Adedi × Birim Maliyet / 6554
 function autoCalcFonTotal(body) {
   if (!body) body = document.getElementById('formBody');
   if (!body) return;
 
   var bgInput = body.querySelector('input[name="bloombergGold"]');
   var qtyInput = body.querySelector('input[name="qty"]');
+  var ucInput = body.querySelector('input[name="unitCost"]');
   var totalInput = body.querySelector('input[name="currentTotal"]');
-  if (!bgInput || !qtyInput || !totalInput) return;
+  if (!bgInput || !qtyInput || !ucInput || !totalInput) return;
 
   var bgVal = num(bgInput.value);
   var qtyVal = num(qtyInput.value);
+  var ucVal = num(ucInput.value);
 
-  if (bgVal > 0 && qtyVal > 0) {
-    var total = Math.round(bgVal * qtyVal * 100) / 100;
+  if (bgVal > 0 && qtyVal > 0 && ucVal > 0) {
+    var total = Math.round(bgVal * qtyVal * ucVal / 6554 * 100) / 100;
     totalInput.value = formatNumberInput(total, 2);
   }
 }
@@ -2003,11 +2005,13 @@ function openForm(type, editId = null) {
   if (type === 'fon') {
     fillBloombergFields();
 
-    // qty veya bloombergGold değiştiğinde currentTotal'ı otomatik hesapla
+    // qty, bloombergGold veya unitCost değiştiğinde currentTotal'ı otomatik hesapla
     var qtyInp = body.querySelector('input[name="qty"]');
     var bgInp = body.querySelector('input[name="bloombergGold"]');
+    var ucInp = body.querySelector('input[name="unitCost"]');
     if (qtyInp) qtyInp.addEventListener('input', function() { autoCalcFonTotal(body); updatePreview(); });
     if (bgInp) bgInp.addEventListener('input', function() { autoCalcFonTotal(body); updatePreview(); });
+    if (ucInp) ucInp.addEventListener('input', function() { autoCalcFonTotal(body); updatePreview(); });
   }
 }
 
