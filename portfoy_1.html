@@ -1679,10 +1679,10 @@ async function autoFetchMarketPrices() {
   var prices = await fetchAllMarketPrices();
 
   if (prices) {
-    if (prices.gold > 0) goldEl.value = formatNumberInput(prices.gold);
-    if (prices.silver > 0) silverEl.value = formatNumberInput(prices.silver);
-    if (prices.usd > 0) usdEl.value = formatNumberInput(prices.usd);
-    if (prices.eur > 0) eurEl.value = formatNumberInput(prices.eur);
+    if (prices.gold > 0) goldEl.value = formatNumberInput(Math.round(prices.gold * 0.973 * 100) / 100);
+    if (prices.silver > 0) silverEl.value = formatNumberInput(Math.round(prices.silver * 0.973 * 100) / 100);
+    if (prices.usd > 0) usdEl.value = formatNumberInput(Math.round(prices.usd * 0.973 * 10000) / 10000);
+    if (prices.eur > 0) eurEl.value = formatNumberInput(Math.round(prices.eur * 0.973 * 10000) / 10000);
 
     // Otomatik kaydet ve uygula
     saveMarketPrices();
