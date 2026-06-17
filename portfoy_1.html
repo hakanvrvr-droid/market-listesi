@@ -1664,18 +1664,18 @@ async function fetchGramGoldPrice() {
 }
 
 // Piyasa sekmesi açıldığında tüm fiyatları otomatik çek
-var marketAutoFetched = false;
-async function autoFetchMarketPrices() {
-  if (marketAutoFetched) return;
-  marketAutoFetched = true;
+var marketFetchInProgress = false;
+async function autoFetchMarketPrices(silent) {
+  if (marketFetchInProgress) return;
+  marketFetchInProgress = true;
 
   var goldEl = document.getElementById('marketGold');
   var silverEl = document.getElementById('marketSilver');
   var usdEl = document.getElementById('marketUsd');
   var eurEl = document.getElementById('marketEur');
-  if (!goldEl) return;
+  if (!goldEl) { marketFetchInProgress = false; return; }
 
-  toast('Piyasa fiyatları çekiliyor...');
+  if (!silent) toast('Piyasa fiyatları çekiliyor...');
   var prices = await fetchAllMarketPrices();
 
   if (prices) {
@@ -1684,12 +1684,16 @@ async function autoFetchMarketPrices() {
     if (prices.usd > 0) usdEl.value = formatNumberInput(Math.round(prices.usd * 0.973 * 10000) / 10000);
     if (prices.eur > 0) eurEl.value = formatNumberInput(Math.round(prices.eur * 0.973 * 10000) / 10000);
 
-    // Otomatik kaydet ve uygula
+    // Kaydet ve uygula
     saveMarketPrices();
-    toast('✓ Tüm piyasa fiyatları güncellendi');
+    if (!silent) toast('✓ Piyasa fiyatları güncellendi');
+
+    // Fon formu açıksa Bloomberg Altın alanını da güncelle
+    if (formContext.type === 'fon') fillBloombergFields();
   } else {
-    toast('Fiyatlar çekilemedi — manuel girin');
+    if (!silent) toast('Fiyatlar çekilemedi — manuel girin');
   }
+  marketFetchInProgress = false;
 }
 
 // Form açıldığında altın fiyatını çek ve alanları doldur
@@ -2776,6 +2780,19 @@ function loadAppData() {
   try {
     load();
     refreshAll();
+
+    // Uygulama açılır açılmaz piyasa fiyatlarını çek
+    setTimeout(function() { autoFetchMarketPrices(false); }, 500);
+
+    // Her 5 dakikada bir sessizce güncelle
+    setInterval(function() { autoFetchMarketPrices(true); }, 5 * 60 * 1000);
+
+    // Uygulama arka plandan öne geldiğinde güncelle (telefonda app switch)
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden) {
+        autoFetchMarketPrices(true);
+      }
+    });
   } catch (e) {
     document.body.innerHTML = '<div style="padding:30px;color:#fff;font-family:sans-serif;background:#0f1115;min-height:100vh"><h2 style="color:#e07b7b">Yükleme Hatası</h2><p>Uygulama başlatılırken hata oluştu:</p><pre style="background:#1a1f28;padding:14px;border-radius:8px;font-size:11px;overflow:auto;color:#e07b7b">' + (e.stack || e.message) + '</pre></div>';
     console.error('Init hatası:', e);
