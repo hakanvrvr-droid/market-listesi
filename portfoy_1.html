@@ -491,7 +491,41 @@
     padding: 6px 8px;
   }
 
-  /* ============ FULLSCREEN FORM (instead of modal) ============ */
+  /* ============ BLOOMBERG FIELD ============ */
+  .form-field.bloomberg-field input {
+    background: linear-gradient(135deg, rgba(212,165,116,0.12), rgba(212,165,116,0.05));
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .form-field.bloomberg-field .bloomberg-status {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .form-field.bloomberg-field .bloomberg-status.success { color: var(--green); }
+  .form-field.bloomberg-field .bloomberg-status.error { color: var(--red); }
+  .bloomberg-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .bloomberg-dot.loading {
+    background: var(--accent);
+    animation: blink 1s infinite;
+  }
+  .bloomberg-dot.success { background: var(--green); }
+  .bloomberg-dot.error { background: var(--red); }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+    /* ============ FULLSCREEN FORM (instead of modal) ============ */
   .form-screen {
     position: fixed;
     inset: 0;
@@ -1400,6 +1434,7 @@ const SCHEMAS = {
     { key: 'fundName',    label: 'Fon Adı',                type: 'text' },
     { key: 'qty',         label: 'Alım Adedi',             type: 'number' },
     { key: 'unitCost',    label: 'Birim Maliyet (TL)',     type: 'number' },
+    { key: 'bloombergGold', label: 'Bloomberg Altın (TL/gr)', type: 'bloomberg' },
     { key: 'currentTotal',label: 'Güncel Toplam Fon Değeri (TL)', type: 'number', manual: true },
     { key: 'buyDate',     label: 'Alım Tarihi',            type: 'date' }
   ],
@@ -1589,6 +1624,104 @@ function attachNumberFormatting(input) {
     }
   };
   input.addEventListener('input', reformat);
+}
+
+// ============================================
+// ALTIN FİYATI ÇEKME (Truncgil Finans API)
+// ============================================
+async function fetchGramGoldPrice() {
+  // Truncgil Finans API — ücretsiz, API key yok, CORS destekli
+  const apis = [
+    {
+      url: 'https://finans.truncgil.com/today.json',
+      parse: function(data) {
+        // data["Gram Altın"]["Alış"] = "6.494,9800"
+        var ga = data["Gram Altın"] || data["gram-altin"];
+        if (!ga) return null;
+        var raw = ga["Alış"] || ga["Alis"] || ga["alis"];
+        if (!raw) return null;
+        return parseFloat(String(raw).replace(/\./g, '').replace(',', '.'));
+      }
+    },
+    {
+      url: 'https://finans.truncgil.com/v4/today.json',
+      parse: function(data) {
+        var ga = data["gram-altin"];
+        if (!ga) return null;
+        var raw = ga["Alış"] || ga["alis"];
+        if (!raw) return null;
+        return parseFloat(String(raw).replace(/\./g, '').replace(',', '.'));
+      }
+    }
+  ];
+
+  for (var i = 0; i < apis.length; i++) {
+    try {
+      var response = await fetch(apis[i].url, {
+        method: 'GET',
+        signal: AbortSignal.timeout(8000)
+      });
+      if (!response.ok) continue;
+      var data = await response.json();
+      var price = apis[i].parse(data);
+      if (price && price > 0) return price;
+    } catch(e) {
+      console.warn('API deneme ' + (i+1) + ' başarısız:', e.message);
+      continue;
+    }
+  }
+  return null;
+}
+
+// Form açıldığında altın fiyatını çek ve alanları doldur
+async function fillBloombergFields() {
+  var body = document.getElementById('formBody');
+  if (!body) return;
+
+  var bgInput = body.querySelector('input[name="bloombergGold"]');
+  var statusEl = body.querySelector('.bloomberg-status');
+  if (!bgInput || !statusEl) return;
+
+  // Loading
+  statusEl.innerHTML = '<span class="bloomberg-dot loading"></span> Altın fiyatı çekiliyor...';
+  statusEl.className = 'bloomberg-status';
+
+  var price = await fetchGramGoldPrice();
+
+  if (price !== null) {
+    var adjusted = Math.round(price * 0.97 * 100) / 100;
+    bgInput.value = formatNumberInput(adjusted, 2);
+    statusEl.innerHTML = '<span class="bloomberg-dot success"></span> Gram Altın Alış: ' + formatNumberInput(price, 2) + ' × 0,97';
+    statusEl.className = 'bloomberg-status success';
+
+    // Güncel Toplam Fon Değeri'ni otomatik hesapla
+    autoCalcFonTotal(body);
+    updatePreview();
+  } else {
+    statusEl.innerHTML = '<span class="bloomberg-dot error"></span> Çekilemedi — manuel girin';
+    statusEl.className = 'bloomberg-status error';
+    bgInput.readOnly = false;
+    bgInput.placeholder = '0,00';
+  }
+}
+
+// Güncel Toplam = Bloomberg Altın × Alım Adedi
+function autoCalcFonTotal(body) {
+  if (!body) body = document.getElementById('formBody');
+  if (!body) return;
+
+  var bgInput = body.querySelector('input[name="bloombergGold"]');
+  var qtyInput = body.querySelector('input[name="qty"]');
+  var totalInput = body.querySelector('input[name="currentTotal"]');
+  if (!bgInput || !qtyInput || !totalInput) return;
+
+  var bgVal = num(bgInput.value);
+  var qtyVal = num(qtyInput.value);
+
+  if (bgVal > 0 && qtyVal > 0) {
+    var total = Math.round(bgVal * qtyVal * 100) / 100;
+    totalInput.value = formatNumberInput(total, 2);
+  }
 }
 
 function calc(entry) {
@@ -1814,6 +1947,10 @@ function openForm(type, editId = null) {
       `;
     } else if (field.type === 'date') {
       input = `<input type="date" name="${field.key}" value="${value}">`;
+    } else if (field.type === 'bloomberg') {
+      fieldDiv.className = 'form-field bloomberg-field';
+      input = `<input type="text" inputmode="decimal" data-numeric name="${field.key}" placeholder="Yükleniyor..." readonly>
+        <div class="bloomberg-status"><span class="bloomberg-dot loading"></span> Bağlanıyor...</div>`;
     } else if (field.type === 'number') {
       // value JS ile sonradan atanacak (HTML inline'da binlik ayraç sorun yapabiliyor)
       input = `<input type="text" inputmode="decimal" data-numeric name="${field.key}" placeholder="0,00">`;
@@ -1838,7 +1975,7 @@ function openForm(type, editId = null) {
   // Numeric alanlara mevcut değerleri JS ile ata (HTML inline'da binlik ayraç sorun çıkarabiliyor)
   if (existing) {
     schema.forEach(field => {
-      if (field.type === 'number') {
+      if (field.type === 'number' || field.type === 'bloomberg') {
         const v = existing[field.key];
         if (v !== undefined && v !== null && v !== '') {
           const inp = body.querySelector(`input[name="${field.key}"]`);
@@ -1861,6 +1998,17 @@ function openForm(type, editId = null) {
   document.getElementById('formScreen').classList.add('active');
   // Scroll form to top
   document.getElementById('formBody').scrollTop = 0;
+
+  // Fon tipi ise altın fiyatını otomatik çek
+  if (type === 'fon') {
+    fillBloombergFields();
+
+    // qty veya bloombergGold değiştiğinde currentTotal'ı otomatik hesapla
+    var qtyInp = body.querySelector('input[name="qty"]');
+    var bgInp = body.querySelector('input[name="bloombergGold"]');
+    if (qtyInp) qtyInp.addEventListener('input', function() { autoCalcFonTotal(body); updatePreview(); });
+    if (bgInp) bgInp.addEventListener('input', function() { autoCalcFonTotal(body); updatePreview(); });
+  }
 }
 
 function updatePreview() {
@@ -1894,7 +2042,7 @@ function collectFormData() {
       } else {
         data[field.key] = sel ? sel.value : '';
       }
-    } else if (field.type === 'number') {
+    } else if (field.type === 'number' || field.type === 'bloomberg') {
       // Türkçe formatlı stringi parse edip standart sayı olarak sakla
       const el = body.querySelector(`[name="${field.key}"]`);
       const raw = el ? el.value.trim() : '';
