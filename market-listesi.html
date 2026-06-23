@@ -1184,22 +1184,64 @@
     // Alfabetik sırala
     uniqueItems.sort((a, b) => a.canonical.toLocaleLowerCase("tr").localeCompare(b.canonical.toLocaleLowerCase("tr"), "tr"));
 
-    // Rapor HTML — düz liste, market grupları yok
-    let html = '<div style="font-weight: 700; font-size: 16px; margin-bottom: 10px; color: #5856d6;">🛒 Alışveriş Listesi (' + uniqueItems.length + ' ürün)</div>';
-    let waText = "🛒 *Alışveriş Listesi* (" + uniqueItems.length + " ürün)\n\n";
-
-    uniqueItems.forEach(item => {
-      html += '<div style="padding: 5px 0 5px 10px; font-size: 16px; font-weight: 500; border-bottom: 1px solid #f2f2f7;">• ' + item.canonical + '</div>';
-      waText += "• " + item.canonical + "\n";
-    });
-
+    // Rapor render — checkbox'lu, işaretleyince silinen liste
     const resultDiv = document.getElementById("report-result");
     const listDiv = document.getElementById("report-list");
-    listDiv.innerHTML = html;
+    listDiv.innerHTML = "";
     resultDiv.style.display = "block";
 
-    // WhatsApp butonu
+    // Başlık
+    const titleDiv = document.createElement("div");
+    titleDiv.style.cssText = "font-weight: 700; font-size: 16px; margin-bottom: 10px; color: #5856d6;";
+    titleDiv.id = "report-title";
+    titleDiv.textContent = "🛒 Alışveriş Listesi (" + uniqueItems.length + " ürün)";
+    listDiv.appendChild(titleDiv);
+
+    // Her ürün için satır oluştur
+    uniqueItems.forEach(item => {
+      const row = document.createElement("div");
+      row.style.cssText = "display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid #f2f2f7;";
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.style.cssText = "width: 22px; height: 22px; flex-shrink: 0; accent-color: #34c759; cursor: pointer;";
+
+      const label = document.createElement("span");
+      label.style.cssText = "font-size: 16px; font-weight: 500; flex: 1;";
+      label.textContent = item.canonical;
+
+      cb.addEventListener("change", () => {
+        if (cb.checked) {
+          row.style.transition = "opacity 0.2s, max-height 0.3s";
+          row.style.opacity = "0.3";
+          row.style.textDecoration = "line-through";
+          row.style.color = "#c7c7cc";
+          setTimeout(() => {
+            row.remove();
+            // Sayacı güncelle
+            const remaining = listDiv.querySelectorAll("div[data-report-item]").length;
+            titleDiv.textContent = "🛒 Alışveriş Listesi (" + remaining + " ürün)";
+          }, 300);
+        }
+      });
+
+      row.setAttribute("data-report-item", item.canonical);
+      row.appendChild(cb);
+      row.appendChild(label);
+      listDiv.appendChild(row);
+    });
+
+    // WhatsApp butonu — sadece kalan (silinmemiş) ürünleri gönderir
     document.getElementById("report-wa-btn").onclick = () => {
+      const remaining = listDiv.querySelectorAll("div[data-report-item]");
+      if (remaining.length === 0) {
+        alert("Listede ürün kalmadı");
+        return;
+      }
+      let waText = "🛒 *Alışveriş Listesi* (" + remaining.length + " ürün)\n\n";
+      remaining.forEach(row => {
+        waText += "• " + row.getAttribute("data-report-item") + "\n";
+      });
       const encoded = encodeURIComponent(waText.trim());
       window.open("https://wa.me/?text=" + encoded, "_blank");
     };
