@@ -137,10 +137,10 @@
   .list-title { font-weight: 600; font-size: 17px; }
   .count { font-size: 14px; color: #8e8e93; }
 
-  /* Yan yana satır görünümü */
+  /* Yan yana satır görünümü — tarih yok, sadece check + talep + market + sil */
   .item-row {
     display: grid;
-    grid-template-columns: 32px 56px 1fr 1fr 32px;
+    grid-template-columns: 32px 1fr 1fr 32px;
     gap: 6px;
     align-items: center;
     padding: 6px 2px;
@@ -184,12 +184,15 @@
   }
   .cell-text {
     font-size: 17px;
-    font-weight: 500;
+    font-weight: 700;
+    text-transform: uppercase;
     background: #f9f9fb;
     border: 1px dashed transparent;
   }
   .cell-market {
     font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
     color: #636366;
     background: #f9f9fb;
     border: 1px dashed transparent;
@@ -217,7 +220,7 @@
 
   .table-header {
     display: grid;
-    grid-template-columns: 32px 56px 1fr 1fr 32px;
+    grid-template-columns: 32px 1fr 1fr 32px;
     gap: 6px;
     padding: 8px 2px;
     border-bottom: 1px solid #d1d1d6;
@@ -227,8 +230,8 @@
     text-transform: uppercase;
   }
   .table-header > div { text-align: center; }
-  .table-header > div:nth-child(3),
-  .table-header > div:nth-child(4) { text-align: left; }
+  .table-header > div:nth-child(2),
+  .table-header > div:nth-child(3) { text-align: left; }
 
   .empty {
     text-align: center;
@@ -441,7 +444,6 @@
   </div>
   <div class="table-header">
     <div>✓</div>
-    <div>Tarih</div>
     <div>Talep</div>
     <div>Market</div>
     <div></div>
@@ -452,16 +454,27 @@
 <div class="card" id="report-card">
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
     <div style="font-weight: 600; font-size: 17px;">📋 Rapor</div>
-    <button type="button" id="report-btn" style="
-      width: auto;
-      padding: 8px 14px;
-      background: #5856d6;
-      font-size: 14px;
-      font-weight: 600;
-      border-radius: 8px;
-    ">Rapor Oluştur</button>
   </div>
-  <p style="font-size: 13px; color: #8e8e93; margin-bottom: 8px;">Son 2 aydaki tüm listeleri tarar, tekrar edenleri siler, alışveriş listesi oluşturur.</p>
+  <p style="font-size: 13px; color: #8e8e93; margin-bottom: 8px;">Seçtiğin tarih aralığındaki tüm listeleri tarar, benzer ürünleri birleştirir, özet alışveriş listesi oluşturur.</p>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+    <div>
+      <label>Başlangıç</label>
+      <input type="date" id="report-start">
+    </div>
+    <div>
+      <label>Bitiş</label>
+      <input type="date" id="report-end">
+    </div>
+  </div>
+  <button type="button" id="report-btn" style="
+    width: 100%;
+    padding: 12px;
+    background: #5856d6;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 8px;
+    margin-bottom: 8px;
+  ">Rapor Oluştur</button>
   <div id="report-result" style="display: none;">
     <div id="report-list" style="margin-bottom: 10px;"></div>
     <button type="button" id="report-wa-btn" style="
@@ -634,12 +647,6 @@
       });
       checkCell.appendChild(cb);
 
-      // Tarih
-      const dateCell = document.createElement("div");
-      dateCell.className = "cell-date";
-      const d = new Date(item.date);
-      dateCell.textContent = d.getDate() + "/" + (d.getMonth() + 1);
-
       // Talep (düzenlenebilir)
       const textCell = document.createElement("div");
       textCell.className = "cell-text";
@@ -670,7 +677,6 @@
       });
 
       row.appendChild(checkCell);
-      row.appendChild(dateCell);
       row.appendChild(textCell);
       row.appendChild(marketCell);
       row.appendChild(delCell);
@@ -1057,60 +1063,134 @@
   }
 
   // ========== RAPOR ==========
-  document.getElementById("report-btn").addEventListener("click", () => {
-    // Son 2 ay = 60 gün geriye
+
+  // Varsayılan tarihler: son 2 ay — bugün
+  (function setDefaultReportDates() {
     const now = new Date();
     const twoMonthsAgo = new Date(now);
-    twoMonthsAgo.setDate(now.getDate() - 60);
-    const cutoff = twoMonthsAgo.toISOString().slice(0, 10);
+    twoMonthsAgo.setMonth(now.getMonth() - 2);
+    document.getElementById("report-start").value = twoMonthsAgo.toISOString().slice(0, 10);
+    document.getElementById("report-end").value = now.toISOString().slice(0, 10);
+  })();
 
-    // Son 2 aydaki tüm öğeleri filtrele
-    const recentItems = allItems.filter(i => i.date >= cutoff);
+  // Türkçe karakter normalizasyonu — benzer ürünleri eşleştirmek için
+  function normalizeText(text) {
+    return (text || "")
+      .trim()
+      .toLocaleLowerCase("tr")
+      .replace(/ğ/g, "g")
+      .replace(/ü/g, "u")
+      .replace(/ş/g, "s")
+      .replace(/ı/g, "i")
+      .replace(/ö/g, "o")
+      .replace(/ç/g, "c")
+      .replace(/â/g, "a")
+      .replace(/î/g, "i")
+      .replace(/û/g, "u")
+      .replace(/[^a-z0-9\s]/g, "") // noktalama vb. temizle
+      .replace(/\s+/g, " ")        // çoklu boşluk tek boşluk
+      .trim();
+  }
 
-    if (recentItems.length === 0) {
-      alert("Son 2 ayda kayıtlı öğe yok.");
-      return;
-    }
+  // İki metin ne kadar benzer? (0-1 arası, 1 = aynı)
+  function similarity(a, b) {
+    if (a === b) return 1;
+    if (!a || !b) return 0;
 
-    // Benzersiz öğeler — talep adına göre tekrar edenleri sil, markete göre grupla
-    const uniqueMap = new Map(); // key: "talep|market" → {text, market, count}
-    recentItems.forEach(item => {
-      const key = (item.text || "").trim().toLocaleLowerCase("tr") + "|" + (item.market || "").trim().toLocaleLowerCase("tr");
-      if (!uniqueMap.has(key)) {
-        uniqueMap.set(key, {
-          text: item.text,
-          market: item.market || "—",
+    // Kelime bazlı karşılaştırma
+    const wordsA = new Set(a.split(" ").filter(w => w.length > 1));
+    const wordsB = new Set(b.split(" ").filter(w => w.length > 1));
+    if (wordsA.size === 0 || wordsB.size === 0) return 0;
+
+    let commonWords = 0;
+    wordsA.forEach(w => { if (wordsB.has(w)) commonWords++; });
+
+    // Jaccard benzerliği
+    const union = new Set([...wordsA, ...wordsB]).size;
+    const jaccard = commonWords / union;
+
+    // Ek: birisi diğerinin alt kümesiyse yüksek skor
+    const subsetScore = commonWords / Math.min(wordsA.size, wordsB.size);
+
+    return Math.max(jaccard, subsetScore * 0.85);
+  }
+
+  // Akıllı tekilleştirme: benzer ürünleri birleştir
+  function smartDeduplicate(items) {
+    // Her öğeyi normalleştir
+    const entries = items.map(item => ({
+      original: (item.text || "").trim(),
+      normalized: normalizeText(item.text)
+    }));
+
+    // Benzersiz gruplar oluştur
+    const groups = []; // her grup: { canonical: "en uzun isim", normalized: "...", count: N }
+
+    entries.forEach(entry => {
+      if (!entry.normalized) return;
+
+      // Mevcut gruplarda benzer var mı?
+      let found = false;
+      for (let g of groups) {
+        const sim = similarity(entry.normalized, g.normalized);
+        if (sim >= 0.55) {
+          // Benzer bulundu — daha uzun ismi koru (genelde daha açıklayıcı)
+          if (entry.original.length > g.canonical.length) {
+            g.canonical = entry.original;
+            g.normalized = entry.normalized;
+          }
+          g.count++;
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        groups.push({
+          canonical: entry.original,
+          normalized: entry.normalized,
           count: 1
         });
-      } else {
-        uniqueMap.get(key).count++;
       }
     });
 
-    // Markete göre grupla ve sırala
-    const grouped = {};
-    uniqueMap.forEach(item => {
-      if (!grouped[item.market]) grouped[item.market] = [];
-      grouped[item.market].push(item);
-    });
-    const sortedMarkets = Object.keys(grouped).sort((a, b) => a.localeCompare(b, "tr"));
+    return groups;
+  }
 
-    // Rapor HTML'ini oluştur
-    let html = "";
-    let waText = "🛒 *Alışveriş Listesi*\n\n";
-    sortedMarkets.forEach(market => {
-      html += '<div style="margin-bottom: 10px;">';
-      html += '<div style="font-weight: 700; font-size: 15px; color: #007aff; border-bottom: 1px solid #e5e5ea; padding-bottom: 4px; margin-bottom: 6px;">📍 ' + market + '</div>';
-      waText += "📍 *" + market + "*\n";
-      grouped[market]
-        .sort((a, b) => a.text.localeCompare(b.text, "tr"))
-        .forEach(item => {
-          const rep = item.count > 1 ? ' <span style="color: #8e8e93; font-size: 12px;">(' + item.count + 'x tekrar)</span>' : "";
-          html += '<div style="padding: 4px 0 4px 10px; font-size: 16px;">• ' + item.text + rep + '</div>';
-          waText += "  • " + item.text + (item.count > 1 ? " (" + item.count + "x)" : "") + "\n";
-        });
-      html += '</div>';
-      waText += "\n";
+  document.getElementById("report-btn").addEventListener("click", () => {
+    const startDate = document.getElementById("report-start").value;
+    const endDate = document.getElementById("report-end").value;
+
+    if (!startDate || !endDate) {
+      alert("Lütfen başlangıç ve bitiş tarihlerini gir");
+      return;
+    }
+    if (startDate > endDate) {
+      alert("Başlangıç tarihi bitiş tarihinden sonra olamaz");
+      return;
+    }
+
+    // Tarih aralığındaki tüm öğeleri filtrele
+    const filtered = allItems.filter(i => i.date >= startDate && i.date <= endDate);
+
+    if (filtered.length === 0) {
+      alert("Bu tarih aralığında kayıtlı öğe yok.");
+      return;
+    }
+
+    // Akıllı tekilleştirme
+    const uniqueItems = smartDeduplicate(filtered);
+
+    // Alfabetik sırala
+    uniqueItems.sort((a, b) => a.canonical.toLocaleLowerCase("tr").localeCompare(b.canonical.toLocaleLowerCase("tr"), "tr"));
+
+    // Rapor HTML — düz liste, market grupları yok
+    let html = '<div style="font-weight: 700; font-size: 16px; margin-bottom: 10px; color: #5856d6;">🛒 Alışveriş Listesi (' + uniqueItems.length + ' ürün)</div>';
+    let waText = "🛒 *Alışveriş Listesi* (" + uniqueItems.length + " ürün)\n\n";
+
+    uniqueItems.forEach(item => {
+      html += '<div style="padding: 5px 0 5px 10px; font-size: 16px; font-weight: 500; border-bottom: 1px solid #f2f2f7;">• ' + item.canonical + '</div>';
+      waText += "• " + item.canonical + "\n";
     });
 
     const resultDiv = document.getElementById("report-result");
@@ -1121,11 +1201,9 @@
     // WhatsApp butonu
     document.getElementById("report-wa-btn").onclick = () => {
       const encoded = encodeURIComponent(waText.trim());
-      // Kendine mesaj göndermek için numara olmadan wa.me aç
       window.open("https://wa.me/?text=" + encoded, "_blank");
     };
 
-    // Rapor oluşunca görünür yere kaydır
     resultDiv.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 </script>
