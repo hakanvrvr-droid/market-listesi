@@ -1109,9 +1109,19 @@
     const union = new Set([...wordsA, ...wordsB]).size;
     const jaccard = commonWords / union;
 
-    // Ek: birisi diğerinin alt kümesiyse yüksek skor
-    const subsetScore = commonWords / Math.min(wordsA.size, wordsB.size);
+    // Tek kelimelik ürünler (ekmek, süt, peynir vb.) için:
+    // Sadece Jaccard kullan — alt küme eşleşmesi yapma.
+    // Yoksa "ekmek" ile "ekmek kadayıfı" birleşir ve ekmek kaybolur.
+    // "ekmek" vs "ekmek" → Jaccard = 1.0 → eşleşir ✓
+    // "ekmek" vs "ekmek kadayıfı" → Jaccard = 0.5 → eşleşmez ✓
+    const minSize = Math.min(wordsA.size, wordsB.size);
+    if (minSize <= 1) {
+      return jaccard;
+    }
 
+    // 2+ kelimelik ürünler için alt küme skoru da kullan
+    // "kent slim grey" vs "kent slim gri" → Jaccard = 0.5, subset = 0.57 → eşleşir ✓
+    const subsetScore = commonWords / minSize;
     return Math.max(jaccard, subsetScore * 0.85);
   }
 
