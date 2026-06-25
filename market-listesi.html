@@ -67,6 +67,8 @@
     font-weight: 600;
     cursor: pointer;
     font-family: inherit;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 122, 255, 0.2);
   }
   button:active { background: #0051d5; }
   button.secondary {
@@ -161,6 +163,7 @@
     height: 24px;
     cursor: pointer;
     accent-color: #34c759;
+    touch-action: manipulation;
   }
   .cell-date {
     font-size: 13px;
@@ -181,6 +184,7 @@
     transition: background 0.15s;
     user-select: none;
     -webkit-user-select: none;
+    touch-action: manipulation;
   }
   .cell-text {
     font-size: 17px;
@@ -190,10 +194,10 @@
     border: 1px dashed transparent;
   }
   .cell-market {
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 700;
     text-transform: uppercase;
-    color: #636366;
+    color: #1c1c1e;
     background: #f9f9fb;
     border: 1px dashed transparent;
   }
@@ -253,6 +257,7 @@
     text-align: center;
     transition: all 0.15s;
     width: 100%;
+    touch-action: manipulation;
   }
   .market-btn:active { background: #e5e5ea; }
   .market-btn.selected {
