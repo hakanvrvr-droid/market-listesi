@@ -436,6 +436,7 @@
     <button type="button" class="market-btn" data-market="Fırın">Fırın</button>
     <button type="button" class="market-btn" data-market="Gedikler">Gedikler</button>
     <button type="button" class="market-btn" data-market="Kuruyemişçi">Kuruyemişçi</button>
+    <button type="button" class="market-btn" data-market="Tekel">Tekel</button>
     <button type="button" class="market-btn other" data-market="__other__">Diğer ✏️</button>
   </div>
   <input type="text" id="market-input" placeholder="Market adını yaz" style="display: none;">
@@ -521,7 +522,7 @@
   const itemsCol = collection(db, "market-items");
 
   // Önceden tanımlı market listesi (hem yeni ekleme hem düzenleme dropdown'unda kullanılır)
-  const PRESET_MARKETS = ["Amasya Et", "BİM", "Çamlıca", "Çiğ Köfteci", "Fırın", "Gedikler", "Kuruyemişçi"];
+  const PRESET_MARKETS = ["Amasya Et", "BİM", "Çamlıca", "Çiğ Köfteci", "Fırın", "Gedikler", "Kuruyemişçi", "Tekel"];
 
   let allItems = [];
   let selectedDates = []; // Çoklu seçili tarihler (boşsa bugün gösterilir)
