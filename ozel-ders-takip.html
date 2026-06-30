@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Özel Ders Takip">
 <title>Özel Ders Takip</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body {
@@ -1354,27 +1355,76 @@
     render();
   });
 
-  // ========== WHATSAPP PAYLAŞ ==========
-  document.getElementById("whatsapp-share-btn").addEventListener("click", () => {
-    const notDone = lessons
-      .filter(l => !l.done)
-      .sort((a, b) => a.date.localeCompare(b.date) || a.name.localeCompare(b.name, "tr"));
-
+  // ========== WHATSAPP PAYLAŞ (Ekran Görüntüsü) ==========
+  document.getElementById("whatsapp-share-btn").addEventListener("click", async () => {
+    const notDone = lessons.filter(l => !l.done);
     if (notDone.length === 0) {
       alert("Yapılmamış ders yok 🎉");
       return;
     }
 
-    let msg = "📚 *Yapılmayan Dersler*\n\n";
-    notDone.forEach(l => {
-      const num = calculateLessonNumber(l);
-      const feeText = l.fee ? " · " + formatMoney(l.fee) + "₺" : "";
-      msg += `• ${l.name} (${num}. ders) — ${formatDate(l.date)} ${getDayName(l.date)}${feeText}\n`;
-    });
-    msg += `\nToplam: ${notDone.length} ders`;
+    const btn = document.getElementById("whatsapp-share-btn");
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "Hazırlanıyor...";
+    btn.disabled = true;
 
-    const url = "https://wa.me/?text=" + encodeURIComponent(msg);
-    window.open(url, "_blank");
+    // Önce "yapılmadı" filtresine geçici olarak geçelim ki ekran görüntüsünde
+    // sadece yapılmayan dersler görünsün
+    const prevShowHidden = showHidden;
+    const prevFilterMode = filterMode;
+    showHidden = false;
+    filterMode = false;
+    render();
+
+    // Tarayıcının render'ı bitirmesi için kısa bekleme
+    await new Promise(r => setTimeout(r, 150));
+
+    try {
+      const target = document.getElementById("lessons-container");
+      const canvas = await html2canvas(target, {
+        backgroundColor: "#f2f2f7",
+        scale: 2,
+        useCORS: true,
+      });
+
+      canvas.toBlob(async (blob) => {
+        const file = new File([blob], "yapilmayan-dersler.png", { type: "image/png" });
+
+        // iOS Safari: Web Share API ile resmi doğrudan WhatsApp'a gönder
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: "Yapılmayan Dersler",
+              text: "📚 Yapılmayan Dersler",
+            });
+          } catch (err) {
+            // Kullanıcı paylaşımı iptal ettiyse sorun değil
+          }
+        } else {
+          // Fallback: resmi indir, sonra elle WhatsApp'tan gönder
+          const link = document.createElement("a");
+          link.href = canvas.toDataURL("image/png");
+          link.download = "yapilmayan-dersler.png";
+          link.click();
+          alert("Resim indirildi. Galeriden WhatsApp ile paylaşabilirsiniz.");
+        }
+
+        // Görünümü eski haline döndür
+        showHidden = prevShowHidden;
+        filterMode = prevFilterMode;
+        render();
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }, "image/png");
+    } catch (err) {
+      alert("Ekran görüntüsü oluşturulamadı: " + err.message);
+      showHidden = prevShowHidden;
+      filterMode = prevFilterMode;
+      render();
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }
   });
 
   // ========== BAŞLAT ==========
