@@ -440,6 +440,10 @@
     <button type="button" class="market-btn other" data-market="__other__">Diğer ✏️</button>
   </div>
   <input type="text" id="market-input" placeholder="Market adını yaz" style="display: none;">
+  <div style="margin-bottom: 8px;">
+    <label>Hangi gün için?</label>
+    <input type="date" id="add-date">
+  </div>
   <button id="add-btn">Listeye Ekle</button>
 </div>
 
@@ -582,13 +586,19 @@
   let showHidden = false;
 
   function render() {
-    // Hangi tarihler gösterilecek?
-    // - Hiç seçim yoksa: bugün
-    // - Seçim varsa: o tarihler
-    const datesToShow = selectedDates.length > 0 ? selectedDates : [today];
-    let filtered = allItems.filter(i => datesToShow.includes(i.date));
+    // Hangi öğeler gösterilecek?
+    // - Tarih filtresi aktifse: sadece seçilen tarihler
+    // - Filtre yoksa: bugün + gelecek tarihler (geçmiş otomatik gizlenir)
+    let filtered;
+    if (selectedDates.length > 0) {
+      // Kullanıcı belirli tarihler seçmiş
+      filtered = allItems.filter(i => selectedDates.includes(i.date));
+    } else {
+      // Varsayılan: bugün ve gelecek (geçmiş otomatik gizli)
+      filtered = allItems.filter(i => i.date >= today);
+    }
 
-    // Önce tarih, sonra market adına göre sırala (çoklu tarihte aynı günler bir arada)
+    // Önce tarih, sonra market adına göre sırala
     filtered.sort((a, b) => {
       const dateCompare = a.date.localeCompare(b.date);
       if (dateCompare !== 0) return dateCompare;
@@ -606,7 +616,7 @@
 
     // Başlık
     if (selectedDates.length === 0) {
-      listTitle.textContent = "Bugünün listesi";
+      listTitle.textContent = "Aktif liste";
     } else if (selectedDates.length === 1) {
       listTitle.textContent = selectedDates[0] === today
         ? "Bugünün listesi"
@@ -629,7 +639,21 @@
     }
 
     itemsContainer.innerHTML = "";
+    let lastDate = "";
+    const showingMultipleDays = new Set(filtered.map(i => i.date)).size > 1;
+
     filtered.forEach(item => {
+      // Birden fazla gün gösteriliyorsa, tarih değişince ayraç koy
+      if (showingMultipleDays && item.date !== lastDate) {
+        lastDate = item.date;
+        const dateHeader = document.createElement("div");
+        dateHeader.style.cssText = "padding: 6px 8px; margin-top: 4px; font-size: 13px; font-weight: 700; color: #007aff; background: #eef4ff; border-radius: 6px; text-align: center;";
+        const d = new Date(item.date + "T00:00:00");
+        const dayNames = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+        dateHeader.textContent = d.getDate() + "/" + (d.getMonth() + 1) + " " + dayNames[d.getDay()] + (item.date === today ? " (Bugün)" : "");
+        itemsContainer.appendChild(dateHeader);
+      }
+
       const row = document.createElement("div");
       row.className = "item-row" + (item.done ? " done" : "");
 
@@ -918,6 +942,9 @@
   }
 
   // Yeni öğe ekle
+  const addDateInput = document.getElementById("add-date");
+  addDateInput.value = getToday(); // varsayılan bugün
+
   document.getElementById("add-btn").addEventListener("click", async () => {
     const textInput = document.getElementById("item-input");
     const text = textInput.value.trim();
@@ -929,6 +956,9 @@
     } else if (selectedMarket) {
       market = selectedMarket;
     }
+
+    // Seçilen tarih
+    const itemDate = addDateInput.value || getToday();
 
     if (!text) {
       alert("Lütfen ne alınacağını yaz");
@@ -946,11 +976,11 @@
       // Önce formu temizle
       textInput.value = "";
       clearMarketSelection();
-      filterDate.value = currentDay;
+      addDateInput.value = currentDay; // tarihi bugüne geri döndür
 
-      // Yeni eklenen öğeyi görebilmek için bugünü seçili tarihlere ekle
-      if (selectedDates.length > 0 && !selectedDates.includes(currentDay)) {
-        selectedDates.push(currentDay);
+      // Eğer tarih filtresi aktifse ve eklenen tarih görünmüyorsa, ekle
+      if (selectedDates.length > 0 && !selectedDates.includes(itemDate)) {
+        selectedDates.push(itemDate);
         selectedDates.sort();
         renderDateChips();
       }
@@ -959,11 +989,11 @@
       textInput.blur();
       if (document.activeElement) document.activeElement.blur();
 
-      // Sonra Firestore'a yaz
+      // Firestore'a yaz — seçilen tarih ile
       await addDoc(itemsCol, {
         text: text,
         market: market,
-        date: currentDay,
+        date: itemDate,
         done: false,
         createdAt: serverTimestamp()
       });
