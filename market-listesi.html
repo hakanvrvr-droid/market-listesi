@@ -594,8 +594,9 @@
       // Kullanıcı belirli tarihler seçmiş
       filtered = allItems.filter(i => selectedDates.includes(i.date));
     } else {
-      // Varsayılan: bugün ve gelecek (geçmiş otomatik gizli)
-      filtered = allItems.filter(i => i.date >= today);
+      // Varsayılan: sadece bugünün öğeleri
+      // Yarına eklenenler yarın görünür, geçmiş otomatik gizli
+      filtered = allItems.filter(i => i.date === today);
     }
 
     // Önce tarih, sonra market adına göre sırala
@@ -616,7 +617,7 @@
 
     // Başlık
     if (selectedDates.length === 0) {
-      listTitle.textContent = "Aktif liste";
+      listTitle.textContent = "Bugünün listesi";
     } else if (selectedDates.length === 1) {
       listTitle.textContent = selectedDates[0] === today
         ? "Bugünün listesi"
@@ -978,8 +979,20 @@
       clearMarketSelection();
       addDateInput.value = currentDay; // tarihi bugüne geri döndür
 
-      // Eğer tarih filtresi aktifse ve eklenen tarih görünmüyorsa, ekle
-      if (selectedDates.length > 0 && !selectedDates.includes(itemDate)) {
+      // İleri tarihli giriş yapıldıysa, o tarihi geçici olarak göster
+      // (uygulama kapatılınca chip'ler sıfırlanır, sadece bugün kalır)
+      if (itemDate !== currentDay) {
+        // Bugünü ve yeni tarihi chip olarak ekle — ikisi de görünsün
+        if (!selectedDates.includes(currentDay)) {
+          selectedDates.push(currentDay);
+        }
+        if (!selectedDates.includes(itemDate)) {
+          selectedDates.push(itemDate);
+        }
+        selectedDates.sort();
+        renderDateChips();
+      } else if (selectedDates.length > 0 && !selectedDates.includes(itemDate)) {
+        // Zaten chip'ler varsa ve bugün yoksa ekle
         selectedDates.push(itemDate);
         selectedDates.sort();
         renderDateChips();
