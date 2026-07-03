@@ -1124,98 +1124,177 @@
     document.getElementById("report-end").value = now.toISOString().slice(0, 10);
   })();
 
-  // Türkçe karakter normalizasyonu — benzer ürünleri eşleştirmek için
-  function normalizeText(text) {
-    return (text || "")
-      .trim()
-      .toLocaleLowerCase("tr")
-      .replace(/ğ/g, "g")
-      .replace(/ü/g, "u")
-      .replace(/ş/g, "s")
-      .replace(/ı/g, "i")
-      .replace(/ö/g, "o")
-      .replace(/ç/g, "c")
-      .replace(/â/g, "a")
-      .replace(/î/g, "i")
-      .replace(/û/g, "u")
-      .replace(/[^a-z0-9\s]/g, "") // noktalama vb. temizle
-      .replace(/\s+/g, " ")        // çoklu boşluk tek boşluk
-      .trim();
+  // ========== AKILLI TEKİLLEŞTİRME ==========
+
+  // 1. Ürün adından miktar, birim ve gereksiz ön ekleri temizle
+  function cleanProductName(text) {
+    let s = (text || "").trim();
+    // Baştaki sayıları kaldır: "3 Pembe domates" → "Pembe domates", "2. Kilo" → ""
+    s = s.replace(/^\d+\.?\s*/, "");
+    // Sondaki ve aradaki miktar+birim kalıpları: "1 kg", "500 gr", "5 adet"
+    s = s.replace(/\b\d+\s*(kg|gr|g|adet|litre|lt|ml|kilo|paket|kutu|tane)\b\.?/gi, "");
+    // Baştaki gereksiz ön ekler: "Az", "Ucuz", "Küçük", "Büyük"
+    s = s.replace(/^(az|ucuz|küçük|büyük)\s+/i, "");
+    // "Kilo" kelimesini kaldır
+    s = s.replace(/\bkilo\b/gi, "");
+    // Temizle
+    return s.replace(/\s+/g, " ").trim();
   }
 
-  // İki metin ne kadar benzer? (0-1 arası, 1 = aynı)
-  function similarity(a, b) {
-    if (a === b) return 1;
-    if (!a || !b) return 0;
+  // 2. Karşılaştırma için normalize et (Türkçe karakter + küçük harf)
+  function normalize(text) {
+    return cleanProductName(text)
+      .toLocaleLowerCase("tr")
+      .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s")
+      .replace(/ı/g, "i").replace(/ö/g, "o").replace(/ç/g, "c")
+      .replace(/â/g, "a").replace(/î/g, "i").replace(/û/g, "u")
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, " ").trim();
+  }
 
-    // Kelime bazlı karşılaştırma
-    const wordsA = new Set(a.split(" ").filter(w => w.length > 1));
-    const wordsB = new Set(b.split(" ").filter(w => w.length > 1));
-    if (wordsA.size === 0 || wordsB.size === 0) return 0;
+  // 3. Türkçe son ek kaldırma (son kelimenin son harfi sesli ise düşür)
+  // "tereyagi" → "tereyag", "spreyi" → "sprey", "kagidi" → "kagid"
+  function stripEnding(norm) {
+    const words = norm.split(" ");
+    const last = words[words.length - 1];
+    if (last.length >= 4 && /[iuoe]$/.test(last)) {
+      words[words.length - 1] = last.slice(0, -1);
+    }
+    return words.join(" ");
+  }
 
-    let commonWords = 0;
-    wordsA.forEach(w => { if (wordsB.has(w)) commonWords++; });
+  // 4. Damerau-Levenshtein mesafesi (harf değişimi + transpozisyon)
+  function dlDist(a, b) {
+    const la = a.length, lb = b.length;
+    if (la === 0) return lb;
+    if (lb === 0) return la;
+    const d = [];
+    for (let i = 0; i <= la; i++) { d[i] = []; d[i][0] = i; }
+    for (let j = 0; j <= lb; j++) d[0][j] = j;
+    for (let i = 1; i <= la; i++) {
+      for (let j = 1; j <= lb; j++) {
+        const cost = a[i-1] === b[j-1] ? 0 : 1;
+        d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+cost);
+        if (i>1 && j>1 && a[i-1]===b[j-2] && a[i-2]===b[j-1]) {
+          d[i][j] = Math.min(d[i][j], d[i-2][j-2]+cost);
+        }
+      }
+    }
+    return d[la][lb];
+  }
 
-    // Jaccard benzerliği
-    const union = new Set([...wordsA, ...wordsB]).size;
-    const jaccard = commonWords / union;
+  // 5. İki normalize isim benzer mi?
+  function areSimilar(a, b) {
+    if (!a || !b) return false;
+    if (a === b) return true;
 
-    // Tek kelimelik ürünler (ekmek, süt, peynir vb.) için:
-    // Sadece Jaccard kullan — alt küme eşleşmesi yapma.
-    // Yoksa "ekmek" ile "ekmek kadayıfı" birleşir ve ekmek kaybolur.
-    // "ekmek" vs "ekmek" → Jaccard = 1.0 → eşleşir ✓
-    // "ekmek" vs "ekmek kadayıfı" → Jaccard = 0.5 → eşleşmez ✓
-    const minSize = Math.min(wordsA.size, wordsB.size);
-    if (minSize <= 1) {
-      return jaccard;
+    // Son ek kaldırılmış halleri de dene
+    const sa = stripEnding(a), sb = stripEnding(b);
+    if (sa === sb) return true;
+
+    // Edit mesafesi — typo tespiti
+    // "bule"↔"blue", "maydaniz"↔"maydanoz", "tblue"↔"blue"
+    const maxLen = Math.max(a.length, b.length);
+    if (maxLen >= 4) {
+      const threshold = maxLen <= 7 ? 1 : 2;
+      if (dlDist(a, b) <= threshold) return true;
+      if (dlDist(sa, sb) <= threshold) return true;
     }
 
-    // 2+ kelimelik ürünler için alt küme skoru da kullan
-    // "kent slim grey" vs "kent slim gri" → Jaccard = 0.5, subset = 0.57 → eşleşir ✓
-    const subsetScore = commonWords / minSize;
-    return Math.max(jaccard, subsetScore * 0.85);
+    // Kelime bazlı kontroller
+    const wa = a.split(" ").filter(w => w.length > 1);
+    const wb = b.split(" ").filter(w => w.length > 1);
+
+    // Tek kelime vs çok kelime: ilk kelimeyi çıkarıp kalan eşleşiyor mu?
+    // "kuru sogan" → "sogan" eşleşir "sogan" ile ✓
+    // "ekmek kadayifi" → "kadayifi" eşleşmez "ekmek" ile ✓
+    if (wa.length === 1 && wb.length >= 2) {
+      const wbTail = wb.slice(1).join(" ");
+      const wbTailS = stripEnding(wbTail);
+      if (wa[0] === wbTail || sa === wbTailS) return true;
+      if (wbTail.length >= 4 && dlDist(wa[0], wbTail) <= 1) return true;
+    }
+    if (wb.length === 1 && wa.length >= 2) {
+      const waTail = wa.slice(1).join(" ");
+      const waTailS = stripEnding(waTail);
+      if (wb[0] === waTail || sb === waTailS) return true;
+      if (waTail.length >= 4 && dlDist(wb[0], waTail) <= 1) return true;
+    }
+
+    // Çok kelime vs çok kelime: kelime Jaccard
+    if (wa.length >= 2 && wb.length >= 2) {
+      let common = 0;
+      wa.forEach(w => { if (wb.includes(w)) common++; });
+      const union = new Set([...wa, ...wb]).size;
+      if (common / union >= 0.5) return true;
+      // Alt küme skoru
+      const minSize = Math.min(wa.length, wb.length);
+      if (common / minSize >= 0.65) return true;
+
+      // Son ek kaldırılmış kelimelerle tekrar dene
+      const swa = sa.split(" ").filter(w => w.length > 1);
+      const swb = sb.split(" ").filter(w => w.length > 1);
+      let scommon = 0;
+      swa.forEach(w => { if (swb.includes(w)) scommon++; });
+      const sunion = new Set([...swa, ...swb]).size;
+      if (sunion > 0 && scommon / sunion >= 0.5) return true;
+    }
+
+    return false;
   }
 
-  // Akıllı tekilleştirme: benzer ürünleri birleştir
+  // 6. Ana tekilleştirme fonksiyonu
   function smartDeduplicate(items) {
-    // Her öğeyi normalleştir
     const entries = items.map(item => ({
       original: (item.text || "").trim(),
-      normalized: normalizeText(item.text)
+      cleaned: cleanProductName(item.text),
+      normalized: normalize(item.text)
     }));
 
-    // Benzersiz gruplar oluştur
-    const groups = []; // her grup: { canonical: "en uzun isim", normalized: "...", count: N }
+    const groups = [];
 
     entries.forEach(entry => {
       if (!entry.normalized) return;
 
-      // Mevcut gruplarda benzer var mı?
-      let found = false;
+      // Mevcut gruplarda benzer var mı? (gruptaki TÜM üyelere karşı kontrol)
+      let foundGroup = null;
       for (let g of groups) {
-        const sim = similarity(entry.normalized, g.normalized);
-        if (sim >= 0.55) {
-          // Benzer bulundu — daha uzun ismi koru (genelde daha açıklayıcı)
-          if (entry.original.length > g.canonical.length) {
-            g.canonical = entry.original;
-            g.normalized = entry.normalized;
+        for (let member of g.items) {
+          if (areSimilar(entry.normalized, member.normalized)) {
+            foundGroup = g;
+            break;
           }
-          g.count++;
-          found = true;
-          break;
         }
+        if (foundGroup) break;
       }
 
-      if (!found) {
-        groups.push({
-          canonical: entry.original,
-          normalized: entry.normalized,
-          count: 1
-        });
+      if (foundGroup) {
+        foundGroup.items.push(entry);
+      } else {
+        groups.push({ items: [entry] });
       }
     });
 
-    return groups;
+    // Her grup için en uygun ismi seç (en sık kullanılan temizlenmiş isim)
+    return groups.map(g => {
+      const freq = {};
+      g.items.forEach(e => {
+        const key = e.cleaned.toLocaleLowerCase("tr");
+        if (!freq[key]) freq[key] = { count: 0, display: e.cleaned };
+        freq[key].count++;
+      });
+
+      let bestKey = "", bestCount = 0, bestLen = 0;
+      for (const [key, info] of Object.entries(freq)) {
+        if (info.count > bestCount || (info.count === bestCount && key.length > bestLen)) {
+          bestKey = key;
+          bestCount = info.count;
+          bestLen = key.length;
+        }
+      }
+
+      return { canonical: freq[bestKey].display, count: g.items.length };
+    });
   }
 
   document.getElementById("report-btn").addEventListener("click", () => {
