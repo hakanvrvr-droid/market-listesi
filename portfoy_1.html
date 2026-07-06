@@ -1615,50 +1615,87 @@ function parseTrNumber(raw) {
 }
 
 function parseTruncgilData(data) {
+  // Tüm olası anahtar formatlarını dene (v1 Türkçe, v4 slug, v5 İngilizce)
+  var gold = 0, silver = 0, usd = 0, eur = 0;
+
   // Altın
-  var ga = data["Gram Altın"] || data["gram-altin"];
-  var gold = ga ? parseTrNumber(ga["Alış"] || ga["alis"]) : 0;
+  var ga = data["Gram Altın"] || data["gram-altin"] || data["gram-has-altin"];
+  if (ga) gold = parseTrNumber(ga["Alış"] || ga["alis"] || ga["Buying"] || ga["buying"]);
 
   // Gümüş
-  var gs = data["Gümüş"] || data["gumus"] || data["Gümüş Gram"] || data["gumus-gram"];
-  var silver = gs ? parseTrNumber(gs["Alış"] || gs["alis"]) : 0;
+  var gs = data["Gümüş"] || data["gumus"] || data["Gümüş (TL/Gram)"] || data["gumus-tl-gram"];
+  if (gs) silver = parseTrNumber(gs["Alış"] || gs["alis"] || gs["Buying"] || gs["buying"]);
 
   // USD
   var us = data["USD"] || data["usd"] || data["Dolar"] || data["ABD Doları"];
-  var usd = us ? parseTrNumber(us["Alış"] || us["alis"]) : 0;
+  if (us) usd = parseTrNumber(us["Alış"] || us["alis"] || us["Buying"] || us["buying"]);
 
   // EUR
   var eu = data["EUR"] || data["eur"] || data["Euro"];
-  var eur = eu ? parseTrNumber(eu["Alış"] || eu["alis"]) : 0;
+  if (eu) eur = parseTrNumber(eu["Alış"] || eu["alis"] || eu["Buying"] || eu["buying"]);
 
+  // Anahtar ismi bilinmiyorsa tüm anahtarları tara
+  if (gold === 0) {
+    Object.keys(data).forEach(function(k) {
+      var kl = k.toLowerCase();
+      var v = data[k];
+      if (typeof v !== 'object' || !v) return;
+      var alis = parseTrNumber(v["Alış"] || v["alis"] || v["Buying"] || v["buying"]);
+      if (kl.indexOf('gram') >= 0 && kl.indexOf('alt') >= 0 && alis > 1000) gold = alis;
+      if ((kl.indexOf('güm') >= 0 || kl.indexOf('gum') >= 0) && alis > 0 && alis < 1000) silver = alis;
+      if (kl === 'usd' || kl === 'dolar') usd = alis;
+      if (kl === 'eur' || kl === 'euro') eur = alis;
+    });
+  }
+
+  console.log('Parse sonucu — Altın:', gold, 'Gümüş:', silver, 'USD:', usd, 'EUR:', eur);
   if (gold > 0) return { gold: gold, silver: silver, usd: usd, eur: eur };
   return null;
 }
 
 async function fetchAllMarketPrices() {
-  var truncgilUrl = 'https://finans.truncgil.com/today.json';
-  var truncgilV4 = 'https://finans.truncgil.com/v4/today.json';
+  var baseUrl = 'https://finans.truncgil.com/today.json';
+  var v4Url = 'https://finans.truncgil.com/v4/today.json';
 
-  // Tüm deneme URL'leri: doğrudan + CORS proxy'ler
+  // Yöntem 1: Doğrudan API (CORS izin veriyorsa çalışır)
+  // Yöntem 2-5: Farklı CORS proxy servisleri
   var attempts = [
-    truncgilUrl,
-    truncgilV4,
-    'https://api.allorigins.win/raw?url=' + encodeURIComponent(truncgilUrl),
-    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(truncgilUrl),
-    'https://corsproxy.io/?' + encodeURIComponent(truncgilUrl)
+    { url: baseUrl, type: 'direct' },
+    { url: v4Url, type: 'direct' },
+    { url: 'https://api.allorigins.win/get?url=' + encodeURIComponent(baseUrl), type: 'allorigins' },
+    { url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(baseUrl), type: 'direct' },
+    { url: 'https://corsproxy.io/?' + encodeURIComponent(baseUrl), type: 'direct' },
+    { url: 'https://api.allorigins.win/get?url=' + encodeURIComponent(v4Url), type: 'allorigins' }
   ];
 
   for (var i = 0; i < attempts.length; i++) {
     try {
-      var response = await fetch(attempts[i], {
+      console.log('Deneme ' + (i+1) + ': ' + attempts[i].url.substring(0, 60) + '...');
+      var response = await fetch(attempts[i].url, {
         method: 'GET',
-        signal: AbortSignal.timeout(6000)
+        signal: AbortSignal.timeout(8000)
       });
-      if (!response.ok) continue;
-      var data = await response.json();
+      if (!response.ok) {
+        console.warn('Deneme ' + (i+1) + ': HTTP ' + response.status);
+        continue;
+      }
+
+      var data;
+      if (attempts[i].type === 'allorigins') {
+        // allorigins /get endpoint wraps in {"contents": "..."} envelope
+        var envelope = await response.json();
+        if (envelope && envelope.contents) {
+          data = JSON.parse(envelope.contents);
+        } else {
+          continue;
+        }
+      } else {
+        data = await response.json();
+      }
+
       var result = parseTruncgilData(data);
       if (result) {
-        console.log('Fiyatlar çekildi (deneme ' + (i+1) + '):', result);
+        console.log('✓ Fiyatlar başarıyla çekildi (deneme ' + (i+1) + ')');
         return result;
       }
     } catch(e) {
@@ -1666,6 +1703,7 @@ async function fetchAllMarketPrices() {
       continue;
     }
   }
+  console.error('Tüm denemeler başarısız — fiyatlar çekilemedi');
   return null;
 }
 
@@ -1700,12 +1738,19 @@ async function autoFetchMarketPrices(silent) {
 
     // Kaydet ve uygula
     saveMarketPrices();
-    if (!silent) toast('✓ Piyasa fiyatları güncellendi');
+    var now = new Date().toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
+    if (!silent) toast('✓ Fiyatlar güncellendi · ' + now);
+
+    // Güncelleme bilgisini Piyasa sekmesinde göster
+    var updEl = document.getElementById('marketLastUpdate');
+    if (updEl) updEl.innerHTML = '<strong>✓ Son güncelleme:</strong> ' + now + '<br>Altın: ' + formatNumberInput(prices.gold) + ' → ×0,973 = ' + goldEl.value + '<br>Gümüş: ' + formatNumberInput(prices.silver) + ' → ×0,973 = ' + silverEl.value + '<br>USD: ' + formatNumberInput(prices.usd, 4) + ' → ×0,973 = ' + usdEl.value + '<br>EUR: ' + formatNumberInput(prices.eur, 4) + ' → ×0,973 = ' + eurEl.value;
 
     // Fon formu açıksa Truncgil Altın alanını da güncelle
     if (formContext.type === 'fon') fillTruncgilFields();
   } else {
-    if (!silent) toast('Fiyatlar çekilemedi — manuel girin');
+    if (!silent) toast('⚠ Fiyatlar çekilemedi — tarayıcı konsolunu kontrol edin');
+    var updEl = document.getElementById('marketLastUpdate');
+    if (updEl) updEl.innerHTML = '<strong style="color:var(--red)">⚠ Fiyat çekme başarısız</strong><br>Truncgil API ve CORS proxy\'ler yanıt vermedi.<br>Manuel olarak fiyatları girebilirsiniz.';
   }
   marketFetchInProgress = false;
 }
