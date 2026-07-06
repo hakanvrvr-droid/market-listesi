@@ -1607,50 +1607,62 @@ function attachNumberFormatting(input) {
 }
 
 // ============================================
-// PİYASA FİYATLARI ÇEKME (Truncgil Finans API)
+// PİYASA FİYATLARI ÇEKME (Truncgil Finans API + CORS Proxy)
 // ============================================
 function parseTrNumber(raw) {
   if (!raw) return 0;
   return parseFloat(String(raw).replace(/\./g, '').replace(',', '.')) || 0;
 }
 
+function parseTruncgilData(data) {
+  // Altın
+  var ga = data["Gram Altın"] || data["gram-altin"];
+  var gold = ga ? parseTrNumber(ga["Alış"] || ga["alis"]) : 0;
+
+  // Gümüş
+  var gs = data["Gümüş"] || data["gumus"] || data["Gümüş Gram"] || data["gumus-gram"];
+  var silver = gs ? parseTrNumber(gs["Alış"] || gs["alis"]) : 0;
+
+  // USD
+  var us = data["USD"] || data["usd"] || data["Dolar"] || data["ABD Doları"];
+  var usd = us ? parseTrNumber(us["Alış"] || us["alis"]) : 0;
+
+  // EUR
+  var eu = data["EUR"] || data["eur"] || data["Euro"];
+  var eur = eu ? parseTrNumber(eu["Alış"] || eu["alis"]) : 0;
+
+  if (gold > 0) return { gold: gold, silver: silver, usd: usd, eur: eur };
+  return null;
+}
+
 async function fetchAllMarketPrices() {
-  // Truncgil Finans API — ücretsiz, API key yok
-  var urls = [
-    'https://finans.truncgil.com/today.json',
-    'https://finans.truncgil.com/v4/today.json'
+  var truncgilUrl = 'https://finans.truncgil.com/today.json';
+  var truncgilV4 = 'https://finans.truncgil.com/v4/today.json';
+
+  // Tüm deneme URL'leri: doğrudan + CORS proxy'ler
+  var attempts = [
+    truncgilUrl,
+    truncgilV4,
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(truncgilUrl),
+    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(truncgilUrl),
+    'https://corsproxy.io/?' + encodeURIComponent(truncgilUrl)
   ];
 
-  for (var i = 0; i < urls.length; i++) {
+  for (var i = 0; i < attempts.length; i++) {
     try {
-      var response = await fetch(urls[i], {
+      var response = await fetch(attempts[i], {
         method: 'GET',
-        signal: AbortSignal.timeout(8000)
+        signal: AbortSignal.timeout(6000)
       });
       if (!response.ok) continue;
       var data = await response.json();
-
-      // Altın
-      var ga = data["Gram Altın"] || data["gram-altin"];
-      var gold = ga ? parseTrNumber(ga["Alış"] || ga["alis"]) : 0;
-
-      // Gümüş
-      var gs = data["Gümüş"] || data["gumus"] || data["Gümüş Gram"] || data["gumus-gram"];
-      var silver = gs ? parseTrNumber(gs["Alış"] || gs["alis"]) : 0;
-
-      // USD
-      var us = data["USD"] || data["usd"] || data["Dolar"] || data["ABD Doları"];
-      var usd = us ? parseTrNumber(us["Alış"] || us["alis"]) : 0;
-
-      // EUR
-      var eu = data["EUR"] || data["eur"] || data["Euro"];
-      var eur = eu ? parseTrNumber(eu["Alış"] || eu["alis"]) : 0;
-
-      if (gold > 0) {
-        return { gold: gold, silver: silver, usd: usd, eur: eur };
+      var result = parseTruncgilData(data);
+      if (result) {
+        console.log('Fiyatlar çekildi (deneme ' + (i+1) + '):', result);
+        return result;
       }
     } catch(e) {
-      console.warn('Truncgil API deneme ' + (i+1) + ' başarısız:', e.message);
+      console.warn('Deneme ' + (i+1) + ' başarısız:', e.message);
       continue;
     }
   }
