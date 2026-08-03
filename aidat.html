@@ -1770,6 +1770,20 @@ if (!state.sahipler || state.sahipler.length === 0) {
   try { localStorage.setItem('apartmanData', JSON.stringify(state)); } catch(e) {}
 }
 
+// Migration: eski "Temizlik" masraf türü kayıtları "Temizlik Malzemesi" olarak güncelle
+(function migrationTemizlikTuru() {
+  let degisti = false;
+  (state.masraflar || []).forEach(m => {
+    if (m.tur === 'Temizlik') {
+      m.tur = 'Temizlik Malzemesi';
+      degisti = true;
+    }
+  });
+  if (degisti) {
+    try { localStorage.setItem('apartmanData', JSON.stringify(state)); } catch(e) {}
+  }
+})();
+
 // Migration: elektrik ödeyen daire ödediği halde otomatik elektrik masrafı eksikse oluştur
 (function migrationElektrikMasraflari() {
   let degisti = false;
@@ -1951,8 +1965,22 @@ function firebaseBaslat() {
     if (!cloudData.donemAyarlari) cloudData.donemAyarlari = {};
     if (cloudData.devirAlacak === undefined) cloudData.devirAlacak = 0;
     
+    // Migration: eski "Temizlik" tür kayıtlarını güncelle
+    let temizlikMigrationOldu = false;
+    cloudData.masraflar.forEach(m => {
+      if (m.tur === 'Temizlik') { m.tur = 'Temizlik Malzemesi'; temizlikMigrationOldu = true; }
+    });
+    
     // State'i güncelle
     state = cloudData;
+    
+    // Migration olduysa buluta geri yaz (bir kereye mahsus)
+    if (temizlikMigrationOldu && fbRef) {
+      kendiYazimiz = true;
+      fbRef.set(state).then(() => {
+        setTimeout(() => { kendiYazimiz = false; }, 500);
+      }).catch(() => { kendiYazimiz = false; });
+    }
     
     // localStorage'a da yaz (offline yedek)
     try {
