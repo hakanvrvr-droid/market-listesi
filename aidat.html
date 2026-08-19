@@ -1199,6 +1199,61 @@
     </div>
   </div>
 
+  <!-- AVANS -->
+  <div class="page" id="page-avans">
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title">💵 Mal Sahibi Avansı</div>
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">
+        <span id="avans-donem-adi">Ağustos 2026</span> döneminde daire sahiplerinden 
+        <strong id="avans-kisibasi-lbl">₺2.000</strong> toplandı. 
+        Bu havuz aidat kasasından ayrıdır; yıl sonu kalan tutar sahiplere iade edilir.
+      </p>
+      <button class="btn secondary small" onclick="openAvansAyar()" style="width:auto;">⚙ Avans Ayarları</button>
+    </div>
+
+    <!-- Havuz Durumu -->
+    <div class="stats-grid">
+      <div class="stat-card highlight">
+        <div class="stat-label">💰 Avans Bakiyesi</div>
+        <div class="stat-value" id="avans-bakiye">₺0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Toplanan</div>
+        <div class="stat-value success" id="avans-toplanan">₺0</div>
+        <div class="stat-sub" id="avans-toplanan-sub">0 / 15 sahip</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Harcanan</div>
+        <div class="stat-value danger" id="avans-harcanan">₺0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Bekleyen</div>
+        <div class="stat-value danger" id="avans-bekleyen">₺0</div>
+      </div>
+    </div>
+
+    <!-- Sahip Ödemeleri -->
+    <details class="section" open>
+      <summary>👥 Sahip Ödemeleri</summary>
+      <div class="content">
+        <div class="filter-row" style="margin-bottom:8px;">
+          <button class="filter-chip active" onclick="setAvansFiltre('all', this)">Tümü</button>
+          <button class="filter-chip" onclick="setAvansFiltre('unpaid', this)">Ödemeyenler</button>
+          <button class="filter-chip" onclick="setAvansFiltre('paid', this)">Ödeyenler</button>
+        </div>
+        <div id="avans-sahip-listesi"></div>
+      </div>
+    </details>
+
+    <!-- Bu havuzdan yapılan masraflar -->
+    <details class="section">
+      <summary>🧾 Avanstan Yapılan Masraflar</summary>
+      <div class="content">
+        <div id="avans-masraf-listesi"></div>
+      </div>
+    </details>
+  </div>
+
   <!-- AYARLAR -->
   <div class="page" id="page-ayar">
     
@@ -1323,6 +1378,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     Rapor
   </button>
+  <button class="tab" onclick="showPage('avans', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
+    Avans
+  </button>
   <button class="tab" onclick="showPage('ayar', this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     Ayarlar
@@ -1433,6 +1492,50 @@
   </div>
 </div>
 
+<!-- Avans Ödemesi Modal -->
+<div class="modal-overlay" id="modal-avans-odeme">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-avans-odeme-title">Avans Ödemesi</div>
+      <button class="modal-close" onclick="closeModal('modal-avans-odeme')">×</button>
+    </div>
+    <input type="hidden" id="avans-odeme-sahip-id">
+    <div class="form-group">
+      <label>Sahip</label>
+      <input type="text" id="avans-odeme-sahip-adi" readonly>
+    </div>
+    <div class="form-group">
+      <label>Ödeme Tutarı (₺)</label>
+      <input type="number" id="avans-odeme-tutar" step="0.01">
+    </div>
+    <div class="form-group">
+      <label>Ödeme Tarihi</label>
+      <input type="date" id="avans-odeme-tarih">
+    </div>
+    <button class="btn" onclick="saveAvansOdeme()">Kaydet</button>
+    <button class="btn danger" id="avans-odeme-sil-btn" onclick="deleteAvansOdeme()" style="margin-top:8px;display:none;">Ödemeyi Geri Al</button>
+  </div>
+</div>
+
+<!-- Avans Ayarları Modal -->
+<div class="modal-overlay" id="modal-avans-ayar">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Avans Ayarları</div>
+      <button class="modal-close" onclick="closeModal('modal-avans-ayar')">×</button>
+    </div>
+    <div class="form-group">
+      <label>Toplama Dönemi (Yıl-Ay)</label>
+      <input type="month" id="avans-ayar-donem">
+    </div>
+    <div class="form-group">
+      <label>Kişi Başı Tutar (₺)</label>
+      <input type="number" id="avans-ayar-kisibasi" step="0.01">
+    </div>
+    <button class="btn" onclick="saveAvansAyar()">Kaydet</button>
+  </div>
+</div>
+
 <!-- Ödeme Modal -->
 <div class="modal-overlay" id="modal-odeme">
   <div class="modal">
@@ -1490,6 +1593,16 @@
       <input type="file" id="masraf-foto-input" accept="image/*" style="display:none;" onchange="handleMasrafFotoSecim(event)">
     </div>
     
+    <div class="form-group">
+      <label>💵 Para Kaynağı</label>
+      <select id="masraf-kaynak" onchange="masrafKaynakDegisti()">
+        <option value="aidat">Aidat Kasası (varsayılan)</option>
+        <option value="avans">Mal Sahibi Avansı</option>
+      </select>
+      <p id="masraf-kaynak-bilgi" style="font-size:11px;color:var(--text-dim);margin-top:4px;">
+        Bu masraf aidat gelirlerinden düşülür.
+      </p>
+    </div>
     <div class="form-group">
       <label>Masraf Türü</label>
       <select id="masraf-tur">
@@ -1756,9 +1869,16 @@ function defaultState() {
     },
     // borclar: { 'donem-key': { 'daireId': { tutar, odendi, odemeTarih, odemeTutar, otomatik } } }
     borclar: { '2026-05': {} },
-    masraflar: [], // { id, tur, firma, tarih, tutar, aciklama, donem }
+    masraflar: [], // { id, tur, firma, tarih, tutar, aciklama, donem, foto, kaynak: 'aidat'|'avans' }
     devirAlacak: 0, // Başlangıç devri
-    zamlar: [], // [{ id, donem: 'YYYY-MM', tutar: number }] - bu dönem ve sonrası bu tutarı kullanır
+    zamlar: [], // [{ id, donem: 'YYYY-MM', tutar: number }]
+    // Mal Sahibi Avansı — tek seferlik toplama
+    avans: {
+      aktif: true,
+      donem: '2026-08', // Ağustos 2026
+      kisiBasi: 2000, // Her sahipten ne kadar
+      odemeler: {}, // { sahipId: { odendi: bool, tarih, tutar } }
+    },
   };
 }
 
@@ -1769,6 +1889,11 @@ if (!state.sahipler || state.sahipler.length === 0) {
   state.sahipler = VARSAYILAN_SAHIPLER.slice();
   try { localStorage.setItem('apartmanData', JSON.stringify(state)); } catch(e) {}
 }
+if (!state.avans) {
+  state.avans = { aktif: true, donem: '2026-08', kisiBasi: 2000, odemeler: {} };
+  try { localStorage.setItem('apartmanData', JSON.stringify(state)); } catch(e) {}
+}
+if (!state.avans.odemeler) state.avans.odemeler = {};
 
 // Migration: eski "Temizlik" masraf türü kayıtları "Temizlik Malzemesi" olarak güncelle
 (function migrationTemizlikTuru() {
@@ -1964,6 +2089,8 @@ function firebaseBaslat() {
     if (!cloudData.masraflar) cloudData.masraflar = [];
     if (!cloudData.donemAyarlari) cloudData.donemAyarlari = {};
     if (cloudData.devirAlacak === undefined) cloudData.devirAlacak = 0;
+    if (!cloudData.avans) cloudData.avans = { aktif: true, donem: '2026-08', kisiBasi: 2000, odemeler: {} };
+    if (!cloudData.avans.odemeler) cloudData.avans.odemeler = {};
     
     // Migration: eski "Temizlik" tür kayıtlarını güncelle
     let temizlikMigrationOldu = false;
@@ -2080,6 +2207,30 @@ function getEffectiveOdeme(daire, borc, donem) {
     return odenen + elektrikTutar;
   }
   return odenen;
+}
+
+// Bir masrafın aidat kasasından mı düşüldüğünü kontrol eder.
+// kaynak alanı yoksa varsayılan 'aidat' (eski masraflar için geriye dönük uyumluluk).
+function isAidatMasrafi(m) {
+  return (m.kaynak || 'aidat') === 'aidat';
+}
+
+function isAvansMasrafi(m) {
+  return m.kaynak === 'avans';
+}
+
+// Avans havuzu bakiyesi = toplanan − avanstan harcanan
+function avansBakiyeHesapla() {
+  const toplanan = avansToplananHesapla();
+  const harcanan = state.masraflar.filter(isAvansMasrafi).reduce((s,m) => s + Number(m.tutar), 0);
+  return toplanan - harcanan;
+}
+
+function avansToplananHesapla() {
+  if (!state.avans || !state.avans.odemeler) return 0;
+  return Object.values(state.avans.odemeler)
+    .filter(o => o && o.odendi)
+    .reduce((s,o) => s + Number(o.tutar || 0), 0);
 }
 
 // Bir sakin için görüntülenecek telefon numarasını döndürür.
@@ -2199,6 +2350,7 @@ function render() {
   renderAyarFormlari();
   initRaporFiltreleri();
   renderRapor();
+  renderAvans();
 }
 
 // Rapor filtre dropdown'larını hazırla (sadece ilk kez)
@@ -2285,7 +2437,7 @@ function renderOzet() {
       if (x.odendi) toplamTahsilTumDonem += getEffectiveOdeme(d, x, dk);
     });
   });
-  const toplamMasrafTumDonem = state.masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+  const toplamMasrafTumDonem = state.masraflar.filter(isAidatMasrafi).reduce((s,m) => s + Number(m.tutar), 0);
   const guncelNakit = state.devirAlacak + toplamTahsilTumDonem - toplamMasrafTumDonem;
   const bekleyenBorc = toplamAlacak - toplamTahsil;
   
@@ -2639,7 +2791,7 @@ function renderMasrafAll() {
   });
   
   const donemler = Object.keys(gruplar).sort((a,b) => b.localeCompare(a)); // en yeni üstte
-  const genelToplam = state.masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+  const genelToplam = state.masraflar.filter(isAidatMasrafi).reduce((s,m) => s + Number(m.tutar), 0);
   
   let html = `<div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;">
     <strong style="color:var(--text);">Tüm Dönemler</strong> · 
@@ -2679,6 +2831,9 @@ function masrafItemHtml(m, compact) {
   const autoBadge = m.auto === 'elektrik' 
     ? ' <span class="badge future" style="font-size:9px;padding:2px 5px;vertical-align:middle;">Otomatik</span>' 
     : '';
+  const kaynakBadge = m.kaynak === 'avans'
+    ? ' <span class="badge" style="background:#e8dcf0;color:#6a3a9a;font-size:9px;padding:2px 5px;vertical-align:middle;">💵 Avans</span>'
+    : '';
   const fotoBadge = m.foto
     ? ' <span class="masraf-foto-ikon">📎 Makbuz</span>'
     : '';
@@ -2692,7 +2847,7 @@ function masrafItemHtml(m, compact) {
     <div class="tx-item">
       <div class="tx-row">
         <div class="tx-info">
-          <div class="tx-title">${m.tur}${m.firma ? ' · ' + m.firma : ''}${autoBadge}${fotoBadge}</div>
+          <div class="tx-title">${m.tur}${m.firma ? ' · ' + m.firma : ''}${autoBadge}${kaynakBadge}${fotoBadge}</div>
           <div class="tx-meta">${subMeta}</div>
         </div>
         <div class="tx-amount out">${fmtTL(m.tutar)}</div>
@@ -2723,7 +2878,7 @@ function renderNakit() {
       if (d.durum === 'manager') return;
       alacak += d.durum === 'electric' ? x.tutar + elkTutar : x.tutar;
     });
-    state.masraflar.filter(m => m.donem === dk).forEach(m => masraf += Number(m.tutar));
+    state.masraflar.filter(m => m.donem === dk && isAidatMasrafi(m)).forEach(m => masraf += Number(m.tutar));
     devir += alacak - masraf;
   });
   
@@ -2757,7 +2912,7 @@ function renderNakit() {
     });
   });
   
-  const odemeler = state.masraflar.filter(m => m.donem === donem).reduce((s,m) => s + Number(m.tutar), 0);
+  const odemeler = state.masraflar.filter(m => m.donem === donem && isAidatMasrafi(m)).reduce((s,m) => s + Number(m.tutar), 0);
   
   // GÜNCEL NAKİT = Başlangıç devri + (TÜM dönemlerin tahsil edilen aidatları) − (TÜM dönemlerin masrafları)
   // Tahsil edilen aidat hangi dönem etiketinde olursa olsun aynı kasaya gider.
@@ -2770,7 +2925,7 @@ function renderNakit() {
       if (x.odendi) toplamTahsilTumDonem += getEffectiveOdeme(d, x, dk);
     });
   });
-  const toplamMasrafTumDonem = state.masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+  const toplamMasrafTumDonem = state.masraflar.filter(isAidatMasrafi).reduce((s,m) => s + Number(m.tutar), 0);
   const guncelNakit = state.devirAlacak + toplamTahsilTumDonem - toplamMasrafTumDonem;
   
   document.getElementById('n-devir').textContent = fmtTL(devir);
@@ -2819,7 +2974,7 @@ function renderNakit() {
       da += x.tutar;
       if (x.odendi) dt += (x.odemeTutar || x.tutar);
     });
-    const od = state.masraflar.filter(m => m.donem === dk).reduce((s,m) => s + Number(m.tutar), 0);
+    const od = state.masraflar.filter(m => m.donem === dk && isAidatMasrafi(m)).reduce((s,m) => s + Number(m.tutar), 0);
     detayHtml += `
       <div class="summary-line"><span class="label">${donemAd(dk)} Alacak</span><span class="val">${fmtTL(da)}</span></div>
       <div class="summary-line"><span class="label">${donemAd(dk)} Tahsil</span><span class="val success">${fmtTL(dt)}</span></div>
@@ -2860,9 +3015,9 @@ function renderRapor() {
       if (b.odendi) tahsilat += getEffectiveOdeme(d, b, dk);
     });
     
-    // Masrafları türlerine göre grupla
+    // Masrafları türlerine göre grupla (sadece aidat kasasından - avans hariç)
     const masrafGruplari = {};
-    state.masraflar.filter(m => m.donem === dk).forEach(m => {
+    state.masraflar.filter(m => m.donem === dk && isAidatMasrafi(m)).forEach(m => {
       const tur = m.tur || 'Diğer';
       masrafGruplari[tur] = (masrafGruplari[tur] || 0) + Number(m.tutar);
     });
@@ -2883,7 +3038,7 @@ function renderRapor() {
     });
   });
   state.masraflar.forEach(m => {
-    if (m.donem < ilkDonem) devredenNakit -= Number(m.tutar);
+    if (m.donem < ilkDonem && isAidatMasrafi(m)) devredenNakit -= Number(m.tutar);
   });
   
   // Devreden satırı için etiket — önceki ayın adı
@@ -3053,6 +3208,186 @@ function fmtTLKisa(n) {
   n = Number(n) || 0;
   if (n === 0) return '-';
   return '₺' + Math.round(n).toLocaleString('tr-TR');
+}
+
+// ============= AVANS =============
+let avansFiltre = 'all';
+
+function setAvansFiltre(f, btn) {
+  avansFiltre = f;
+  document.querySelectorAll('#page-avans .filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderAvansSahipListesi();
+}
+
+function renderAvans() {
+  if (!state.avans) return;
+  const kisiBasi = Number(state.avans.kisiBasi) || 0;
+  const donem = state.avans.donem || '2026-08';
+  
+  document.getElementById('avans-donem-adi').textContent = donemAd(donem);
+  document.getElementById('avans-kisibasi-lbl').textContent = fmtTL(kisiBasi);
+  
+  const toplanan = avansToplananHesapla();
+  const harcanan = state.masraflar.filter(isAvansMasrafi).reduce((s,m) => s + Number(m.tutar), 0);
+  const bakiye = toplanan - harcanan;
+  
+  const sahipler = state.sahipler || [];
+  const odenenSayisi = sahipler.filter(s => {
+    const o = state.avans.odemeler[s.id];
+    return o && o.odendi;
+  }).length;
+  const beklenen = sahipler.length * kisiBasi;
+  const bekleyen = beklenen - toplanan;
+  
+  document.getElementById('avans-bakiye').textContent = fmtTL(bakiye);
+  document.getElementById('avans-toplanan').textContent = fmtTL(toplanan);
+  document.getElementById('avans-toplanan-sub').textContent = `${odenenSayisi} / ${sahipler.length} sahip`;
+  document.getElementById('avans-harcanan').textContent = fmtTL(harcanan);
+  document.getElementById('avans-bekleyen').textContent = fmtTL(bekleyen);
+  
+  renderAvansSahipListesi();
+  renderAvansMasrafListesi();
+}
+
+function renderAvansSahipListesi() {
+  const sahipler = state.sahipler || [];
+  if (sahipler.length === 0) {
+    document.getElementById('avans-sahip-listesi').innerHTML = '<div class="empty">Sahip yok. Ayarlardan ekleyin.</div>';
+    return;
+  }
+  
+  const kisiBasi = Number(state.avans.kisiBasi) || 0;
+  const odemeler = state.avans.odemeler || {};
+  
+  // Sırala + filtrele
+  let liste = sahipler.slice().sort((a, b) => {
+    const sa = parseInt((a.daireNo || '').replace(/\D/g, '')) || 0;
+    const sb = parseInt((b.daireNo || '').replace(/\D/g, '')) || 0;
+    return sa - sb;
+  });
+  if (avansFiltre === 'paid') {
+    liste = liste.filter(s => odemeler[s.id] && odemeler[s.id].odendi);
+  } else if (avansFiltre === 'unpaid') {
+    liste = liste.filter(s => !odemeler[s.id] || !odemeler[s.id].odendi);
+  }
+  
+  if (liste.length === 0) {
+    document.getElementById('avans-sahip-listesi').innerHTML = '<div class="empty">Bu filtreye uygun kayıt yok.</div>';
+    return;
+  }
+  
+  document.getElementById('avans-sahip-listesi').innerHTML = liste.map(s => {
+    const o = odemeler[s.id];
+    const odendi = o && o.odendi;
+    const fotoStyle = s.foto ? `background-image:url('${s.foto}');` : '';
+    const fotoIcerik = s.foto ? '' : '👤';
+    let durum, durumClass;
+    if (odendi) {
+      durum = `<span class="badge exempt" style="background:#d6f0de;color:#1f8a4c;">✓ ÖDENDİ</span>`;
+      durumClass = 'exempt';
+    } else {
+      durum = `<span class="badge" style="background:#fadcdc;color:#c43e3e;">BEKLİYOR</span>`;
+      durumClass = 'partial';
+    }
+    const detay = odendi 
+      ? `<div class="daire-meta">${fmtTL(o.tutar)} · ${fmtTarih(o.tarih)}</div>`
+      : `<div class="daire-meta">Beklenen: ${fmtTL(kisiBasi)}</div>`;
+    return `
+      <div class="daire-item ${durumClass}" onclick="openAvansOdemeModal('${s.id}')">
+        <div class="daire-foto-mini" style="${fotoStyle}">${fotoIcerik}</div>
+        <div class="daire-info">
+          <div class="daire-name">${s.daireNo || '-'} · ${s.isim}</div>
+          ${detay}
+        </div>
+        ${durum}
+      </div>`;
+  }).join('');
+}
+
+function renderAvansMasrafListesi() {
+  const list = state.masraflar.filter(isAvansMasrafi).sort((a,b) => (b.tarih || '').localeCompare(a.tarih || ''));
+  if (list.length === 0) {
+    document.getElementById('avans-masraf-listesi').innerHTML = '<div class="empty">Bu havuzdan henüz masraf yapılmamış.</div>';
+    return;
+  }
+  const toplam = list.reduce((s,m) => s + Number(m.tutar), 0);
+  let html = `<div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;">
+    Toplam avans harcaması: <strong style="color:var(--danger);">${fmtTL(toplam)}</strong> · ${list.length} kayıt
+  </div>`;
+  html += list.map(m => masrafItemHtml(m, false)).join('');
+  document.getElementById('avans-masraf-listesi').innerHTML = html;
+}
+
+function openAvansOdemeModal(sahipId) {
+  const s = state.sahipler.find(x => x.id === sahipId);
+  if (!s) return;
+  const o = (state.avans.odemeler || {})[sahipId];
+  const kisiBasi = Number(state.avans.kisiBasi) || 0;
+  
+  document.getElementById('avans-odeme-sahip-id').value = sahipId;
+  document.getElementById('avans-odeme-sahip-adi').value = `${s.daireNo || '-'} · ${s.isim}`;
+  document.getElementById('avans-odeme-tutar').value = o && o.odendi ? o.tutar : kisiBasi;
+  document.getElementById('avans-odeme-tarih').value = o && o.tarih ? o.tarih : new Date().toISOString().split('T')[0];
+  
+  const silBtn = document.getElementById('avans-odeme-sil-btn');
+  silBtn.style.display = (o && o.odendi) ? 'block' : 'none';
+  
+  document.getElementById('modal-avans-odeme-title').textContent = 
+    (o && o.odendi) ? 'Avans Ödemesi Düzenle' : 'Avans Ödemesi Kaydet';
+  
+  openModal('modal-avans-odeme');
+}
+
+function saveAvansOdeme() {
+  const sahipId = document.getElementById('avans-odeme-sahip-id').value;
+  const tutar = Number(document.getElementById('avans-odeme-tutar').value);
+  const tarih = document.getElementById('avans-odeme-tarih').value;
+  
+  if (!tutar || tutar <= 0) { toast('Geçerli tutar girin'); return; }
+  if (!tarih) { toast('Tarih girin'); return; }
+  
+  if (!state.avans.odemeler) state.avans.odemeler = {};
+  state.avans.odemeler[sahipId] = { odendi: true, tutar, tarih };
+  
+  try { save(); } catch(err) { toast('Hata: ' + err.message); return; }
+  closeModal('modal-avans-odeme');
+  render();
+  toast('Avans ödemesi kaydedildi ✓');
+}
+
+function deleteAvansOdeme() {
+  const sahipId = document.getElementById('avans-odeme-sahip-id').value;
+  if (!confirm('Bu ödemeyi geri almak istediğinizden emin misiniz?')) return;
+  if (state.avans.odemeler && state.avans.odemeler[sahipId]) {
+    delete state.avans.odemeler[sahipId];
+  }
+  save();
+  closeModal('modal-avans-odeme');
+  render();
+  toast('Ödeme geri alındı');
+}
+
+function openAvansAyar() {
+  document.getElementById('avans-ayar-donem').value = state.avans.donem || '2026-08';
+  document.getElementById('avans-ayar-kisibasi').value = state.avans.kisiBasi || 2000;
+  openModal('modal-avans-ayar');
+}
+
+function saveAvansAyar() {
+  const donem = document.getElementById('avans-ayar-donem').value;
+  const kisiBasi = Number(document.getElementById('avans-ayar-kisibasi').value);
+  
+  if (!donem) { toast('Dönem seçin'); return; }
+  if (!kisiBasi || kisiBasi < 0) { toast('Geçerli tutar girin'); return; }
+  
+  state.avans.donem = donem;
+  state.avans.kisiBasi = kisiBasi;
+  
+  save();
+  closeModal('modal-avans-ayar');
+  render();
+  toast('Avans ayarları kaydedildi');
 }
 
 // ============= PAYLAŞIM =============
@@ -3608,6 +3943,7 @@ function openMasrafModal(id) {
       document.getElementById('masraf-tutar').value = m.tutar;
       document.getElementById('masraf-aciklama').value = m.aciklama || '';
       document.getElementById('masraf-donem').value = m.donem;
+      document.getElementById('masraf-kaynak').value = m.kaynak || 'aidat';
       geciciMasrafFoto = m.foto || null;
     }
   } else {
@@ -3616,12 +3952,28 @@ function openMasrafModal(id) {
     document.getElementById('masraf-tutar').value = '';
     document.getElementById('masraf-aciklama').value = '';
     document.getElementById('masraf-donem').value = state.aktifDonem;
+    document.getElementById('masraf-kaynak').value = 'aidat';
     geciciMasrafFoto = null;
   }
   
+  masrafKaynakDegisti();
   updateMasrafFotoPreview();
   document.getElementById('masraf-foto-input').value = '';
   openModal('modal-masraf');
+}
+
+// Para kaynağı değiştiğinde bilgilendirme mesajını güncelle
+function masrafKaynakDegisti() {
+  const kaynak = document.getElementById('masraf-kaynak').value;
+  const bilgi = document.getElementById('masraf-kaynak-bilgi');
+  if (kaynak === 'avans') {
+    const bakiye = avansBakiyeHesapla();
+    bilgi.innerHTML = `Mal Sahibi Avans havuzundan düşülür. <strong>Mevcut bakiye: ${fmtTL(bakiye)}</strong>`;
+    bilgi.style.color = bakiye > 0 ? 'var(--accent)' : '#c43e3e';
+  } else {
+    bilgi.textContent = 'Bu masraf aidat gelirlerinden düşülür.';
+    bilgi.style.color = 'var(--text-dim)';
+  }
 }
 
 function updateMasrafFotoPreview() {
@@ -3708,16 +4060,28 @@ function saveMasraf() {
   const tutar = Number(document.getElementById('masraf-tutar').value);
   const aciklama = document.getElementById('masraf-aciklama').value.trim();
   const donem = document.getElementById('masraf-donem').value;
+  const kaynak = document.getElementById('masraf-kaynak').value || 'aidat';
   
   if (!tutar || !tarih) { toast('Tutar ve tarih zorunlu'); return; }
   
+  // Avans havuzundan düşülecekse bakiye kontrolü — uyarı ver ama engelleme
+  if (kaynak === 'avans') {
+    const mevcutBakiye = avansBakiyeHesapla();
+    const eskiTutar = id ? (state.masraflar.find(x => x.id === id)?.tutar || 0) : 0;
+    const eskiKaynak = id ? (state.masraflar.find(x => x.id === id)?.kaynak || 'aidat') : 'aidat';
+    const netFark = tutar - (eskiKaynak === 'avans' ? eskiTutar : 0);
+    if (netFark > mevcutBakiye) {
+      if (!confirm(`Avans bakiyesi (${fmtTL(mevcutBakiye)}) bu masrafı karşılamıyor. Yine de kaydet?`)) return;
+    }
+  }
+  
   if (id) {
     const m = state.masraflar.find(x => x.id === id);
-    if (m) Object.assign(m, { tur, firma, tarih, tutar, aciklama, donem, foto: geciciMasrafFoto });
+    if (m) Object.assign(m, { tur, firma, tarih, tutar, aciklama, donem, kaynak, foto: geciciMasrafFoto });
   } else {
     state.masraflar.push({
       id: 'm' + Date.now(),
-      tur, firma, tarih, tutar, aciklama, donem,
+      tur, firma, tarih, tutar, aciklama, donem, kaynak,
       foto: geciciMasrafFoto,
     });
   }
@@ -4335,7 +4699,7 @@ function showDetay(tip) {
         if (x.odendi) toplamTahsil += getEffectiveOdeme(d, x, dk);
       });
     });
-    const toplamMasraf = state.masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+    const toplamMasraf = state.masraflar.filter(isAidatMasrafi).reduce((s,m) => s + Number(m.tutar), 0);
     const nakit = state.devirAlacak + toplamTahsil - toplamMasraf;
     
     // Bilgilendirme için dönem bazlı detay listesi
@@ -4350,7 +4714,7 @@ function showDetay(tip) {
       if (dt > 0) donemTahsilDetay[dk] = dt;
     });
     const donemMasrafDetay = {};
-    state.masraflar.forEach(m => {
+    state.masraflar.filter(isAidatMasrafi).forEach(m => {
       donemMasrafDetay[m.donem] = (donemMasrafDetay[m.donem] || 0) + Number(m.tutar);
     });
     
