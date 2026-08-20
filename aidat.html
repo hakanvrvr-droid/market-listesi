@@ -1178,6 +1178,13 @@
           <option value="3">3 Aylık</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>💵 Havuz (Para Kaynağı)</label>
+        <select id="rapor-havuz" onchange="renderRapor()">
+          <option value="aidat" selected>Aidat Kasası</option>
+          <option value="avans">Mal Sahibi Avansı</option>
+        </select>
+      </div>
       
       <!-- Aidatını Ödemeyenler -->
       <div class="form-group" id="kara-liste-filtre">
@@ -2989,11 +2996,13 @@ function renderRapor() {
   const yilSel = document.getElementById('rapor-yil');
   const aySel = document.getElementById('rapor-ay');
   const sayiSel = document.getElementById('rapor-sayi');
+  const havuzSel = document.getElementById('rapor-havuz');
   if (!yilSel || !aySel || !sayiSel) return;
   
   const yil = parseInt(yilSel.value);
   const ay = parseInt(aySel.value);
   const sayi = parseInt(sayiSel.value);
+  const havuz = havuzSel ? havuzSel.value : 'aidat';
   if (isNaN(yil) || isNaN(ay) || isNaN(sayi)) return;
   
   // Dönem listesi oluştur
@@ -3003,6 +3012,15 @@ function renderRapor() {
     donemler.push(curYil + '-' + String(curAy).padStart(2, '0'));
     curAy++;
     if (curAy > 12) { curAy = 1; curYil++; }
+  }
+  
+  // "Aidatını Ödemeyenler" filtresi sadece aidat raporunda anlamlı → avansta gizle
+  const karaListeFiltre = document.getElementById('kara-liste-filtre');
+  if (karaListeFiltre) karaListeFiltre.style.display = havuz === 'aidat' ? '' : 'none';
+  
+  if (havuz === 'avans') {
+    renderRaporAvans(donemler, yil);
+    return;
   }
   
   // Her dönem için: tahsilat, masraf türlerine göre toplam
@@ -3208,6 +3226,200 @@ function fmtTLKisa(n) {
   n = Number(n) || 0;
   if (n === 0) return '-';
   return '₺' + Math.round(n).toLocaleString('tr-TR');
+}
+
+// ============= AVANS RAPORU =============
+// Rapor sekmesinde "Mal Sahibi Avansı" seçilirse çağrılır
+function renderRaporAvans(donemler, yil) {
+  const ilkDonem = donemler[0];
+  const sonDonem = donemler[donemler.length - 1];
+  
+  // Rapor başlangıcından ÖNCEKİ dönemlerin net etkisi (devreden bakiye)
+  // Toplanan ödemelerin hepsi tek dönem olarak state.avans.donem'de tutulur;
+  // burada tarih bazında filtreleyeceğiz: ödeme tarihi ilkDonem'den önceyse "devreden"
+  const ilkAy = ilkDonem + '-01'; // '2026-08-01' gibi
+  
+  const odemeler = state.avans.odemeler || {};
+  const sahipler = state.sahipler || [];
+  
+  // Devreden: rapor öncesi toplanan − rapor öncesi harcanan
+  let devredenToplanan = 0;
+  Object.values(odemeler).forEach(o => {
+    if (o && o.odendi && o.tarih && o.tarih < ilkAy) {
+      devredenToplanan += Number(o.tutar) || 0;
+    }
+  });
+  const devredenHarcanan = state.masraflar
+    .filter(m => isAvansMasrafi(m) && m.donem < ilkDonem)
+    .reduce((s,m) => s + Number(m.tutar), 0);
+  const devredenBakiye = devredenToplanan - devredenHarcanan;
+  
+  // Devreden etiketi: bir önceki ayın adı
+  const [iyl, iay] = ilkDonem.split('-');
+  let prevAy = parseInt(iay) - 1, prevYil = parseInt(iyl);
+  if (prevAy < 1) { prevAy = 12; prevYil--; }
+  const devirEtiket = AYLAR[prevAy - 1] + ' ' + prevYil + ' Devreden';
+  
+  // Her rapor dönemi için: tahsilat (o ay içinde alınan avans) + masraf grupları
+  const raporData = donemler.map(dk => {
+    // O dönem içinde tahsil edilen avans (ödeme tarihi bu ay ise)
+    let tahsilat = 0;
+    Object.values(odemeler).forEach(o => {
+      if (o && o.odendi && o.tarih && o.tarih.startsWith(dk)) {
+        tahsilat += Number(o.tutar) || 0;
+      }
+    });
+    
+    // Bu dönem avanstan yapılan masraflar (türlerine göre)
+    const masrafGruplari = {};
+    state.masraflar
+      .filter(m => isAvansMasrafi(m) && m.donem === dk)
+      .forEach(m => {
+        const tur = m.tur || 'Diğer';
+        masrafGruplari[tur] = (masrafGruplari[tur] || 0) + Number(m.tutar);
+      });
+    const masrafToplam = Object.values(masrafGruplari).reduce((s,v) => s+v, 0);
+    
+    return { donem: dk, tahsilat, masrafGruplari, masrafToplam };
+  });
+  
+  // Tüm dönemlerdeki tüm masraf türlerini topla
+  const tumMasrafTurleri = new Set();
+  raporData.forEach(r => {
+    Object.keys(r.masrafGruplari).forEach(t => tumMasrafTurleri.add(t));
+  });
+  const masrafTurArr = Array.from(tumMasrafTurleri).sort();
+  
+  // Kişi başı beklenen, toplam beklenen
+  const kisiBasi = Number(state.avans.kisiBasi) || 0;
+  const beklenen = sahipler.length * kisiBasi;
+  const genelToplanan = avansToplananHesapla();
+  const genelHarcanan = state.masraflar.filter(isAvansMasrafi).reduce((s,m) => s + Number(m.tutar), 0);
+  const guncelBakiye = genelToplanan - genelHarcanan;
+  
+  // Tablo HTML
+  let html = `
+    <div class="rapor-baslik">
+      <h2>🏢 Sevencan Apartmanı</h2>
+      <div class="alt" style="color:#6a3a9a;font-weight:600;">💵 Mal Sahibi Avansı Raporu</div>
+      <div class="alt" style="margin-top:4px;">${donemAd(donemler[0])} – ${donemAd(donemler[donemler.length-1])}</div>
+    </div>
+    
+    <div style="background:#f4ebfa;padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:12px;color:#4a2270;line-height:1.6;">
+      <strong>Avans Dönemi:</strong> ${donemAd(state.avans.donem || '2026-08')}<br>
+      <strong>Kişi Başı:</strong> ${fmtTL(kisiBasi)} × ${sahipler.length} sahip = <strong>${fmtTL(beklenen)}</strong> beklenen
+    </div>
+    
+    <table class="rapor-table">
+      <thead>
+        <tr>
+          <th style="text-align:left;">Kalem</th>
+          ${donemler.map(dk => `<th>${donemAd(dk).replace(' ' + yil, '').replace(' ' + (yil+1), '')}</th>`).join('')}
+          <th>Toplam</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="devir-row">
+          <td class="label">${devirEtiket} Bakiye</td>
+          <td class="num">${fmtTLKisa(devredenBakiye)}</td>
+          ${donemler.slice(1).map(() => '<td class="num">-</td>').join('')}
+          <td class="num">${fmtTLKisa(devredenBakiye)}</td>
+        </tr>
+        <tr class="tahsilat-row">
+          <td class="label">Toplanan Avans</td>
+          ${raporData.map(r => `<td class="num">${fmtTLKisa(r.tahsilat)}</td>`).join('')}
+          <td class="num">${fmtTLKisa(raporData.reduce((s,r) => s + r.tahsilat, 0))}</td>
+        </tr>
+        <tr class="masraf-row">
+          <td class="label">Harcamalar</td>
+          ${raporData.map(r => `<td class="num">${fmtTLKisa(r.masrafToplam)}</td>`).join('')}
+          <td class="num">${fmtTLKisa(raporData.reduce((s,r) => s + r.masrafToplam, 0))}</td>
+        </tr>`;
+  
+  masrafTurArr.forEach(tur => {
+    html += `<tr>
+      <td class="subitem">${tur}</td>
+      ${raporData.map(r => `<td class="num">${r.masrafGruplari[tur] ? fmtTLKisa(r.masrafGruplari[tur]) : '-'}</td>`).join('')}
+      <td class="num">${fmtTLKisa(raporData.reduce((s,r) => s + (r.masrafGruplari[tur] || 0), 0))}</td>
+    </tr>`;
+  });
+  
+  // Dönem Net = Devreden (sadece ilk sütun) + Tahsilat − Harcama
+  const donemNetler = raporData.map((r, i) => {
+    const dev = i === 0 ? devredenBakiye : 0;
+    return dev + r.tahsilat - r.masrafToplam;
+  });
+  const toplamNet = devredenBakiye + raporData.reduce((s,r) => s + r.tahsilat - r.masrafToplam, 0);
+  
+  html += `<tr class="toplam-row">
+    <td class="label" style="background:#1f2027;color:white;">Dönem Sonu Bakiye</td>
+    ${donemNetler.map(n => `<td class="num">${fmtTLKisa(n)}</td>`).join('')}
+    <td class="num">${fmtTLKisa(toplamNet)}</td>
+  </tr>`;
+  
+  html += `</tbody></table>`;
+  
+  // Genel havuz özeti
+  html += `
+    <div style="margin-top:16px;padding:12px;background:#f4ebfa;border-radius:8px;border-left:4px solid #6a3a9a;">
+      <div style="font-size:13px;font-weight:700;color:#4a2270;margin-bottom:8px;">
+        📊 Genel Havuz Durumu
+      </div>
+      <table style="width:100%;font-size:12px;color:#1f2027;">
+        <tr><td>Toplam Toplanan:</td><td style="text-align:right;font-weight:600;">${fmtTL(genelToplanan)}</td></tr>
+        <tr><td>Toplam Harcanan:</td><td style="text-align:right;font-weight:600;color:#c43e3e;">−${fmtTL(genelHarcanan)}</td></tr>
+        <tr><td style="border-top:1px solid #6a3a9a;padding-top:4px;"><strong>Güncel Bakiye:</strong></td><td style="text-align:right;font-weight:700;color:#6a3a9a;border-top:1px solid #6a3a9a;padding-top:4px;">${fmtTL(guncelBakiye)}</td></tr>
+      </table>
+    </div>`;
+  
+  // Sahip ödemeleri: kim ödedi / ödemedi
+  const odeyenler = sahipler.filter(s => odemeler[s.id] && odemeler[s.id].odendi);
+  const odemeyenler = sahipler.filter(s => !odemeler[s.id] || !odemeler[s.id].odendi);
+  
+  if (odemeyenler.length > 0) {
+    html += `
+      <div style="margin-top:14px;padding:12px;background:#fadcdc;border-radius:8px;border-left:4px solid #c43e3e;">
+        <div style="font-size:13px;font-weight:700;color:#c43e3e;margin-bottom:6px;">
+          🚫 Avans Ödemeyenler (${odemeyenler.length} sahip)
+        </div>
+        <div style="font-size:12px;color:#1f2027;line-height:1.8;">`;
+    odemeyenler
+      .sort((a,b) => {
+        const sa = parseInt((a.daireNo || '').replace(/\D/g,'')) || 0;
+        const sb = parseInt((b.daireNo || '').replace(/\D/g,'')) || 0;
+        return sa - sb;
+      })
+      .forEach(s => {
+        html += `${s.daireNo || '-'} ${s.isim} - ${fmtTLKisa(kisiBasi)}<br>`;
+      });
+    html += `</div></div>`;
+  }
+  
+  if (odeyenler.length > 0) {
+    html += `
+      <div style="margin-top:12px;padding:12px;background:#d6f0de;border-radius:8px;border-left:4px solid #1f8a4c;">
+        <div style="font-size:13px;font-weight:700;color:#1f8a4c;margin-bottom:6px;">
+          ✓ Ödeyen Sahipler (${odeyenler.length})
+        </div>
+        <div style="font-size:12px;color:#1f2027;line-height:1.8;">`;
+    odeyenler
+      .sort((a,b) => {
+        const sa = parseInt((a.daireNo || '').replace(/\D/g,'')) || 0;
+        const sb = parseInt((b.daireNo || '').replace(/\D/g,'')) || 0;
+        return sa - sb;
+      })
+      .forEach(s => {
+        const o = odemeler[s.id];
+        html += `${s.daireNo || '-'} ${s.isim} - ${fmtTLKisa(o.tutar)} · ${fmtTarih(o.tarih)}<br>`;
+      });
+    html += `</div></div>`;
+  }
+  
+  html += `<div style="margin-top:14px;font-size:11px;color:#555868;text-align:center;">
+      Rapor tarihi: ${new Date().toLocaleDateString('tr-TR')}
+    </div>`;
+  
+  document.getElementById('rapor-icerik').innerHTML = html;
 }
 
 // ============= AVANS =============
