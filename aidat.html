@@ -1622,7 +1622,7 @@
         <option>Bina Demirbaş Bakım Onarım</option>
         <option>Asansör Aylık Sabit Bakım</option>
         <option>Uydu Bakım Onarım</option>
-        <option>Apartman Görevli - FİDAN</option>
+        <option>Apartman Görevli - Temizlik + Çöp Toplama</option>
         <option>Diğer</option>
       </select>
     </div>
@@ -1910,6 +1910,7 @@ if (!state.avans.odemeler) state.avans.odemeler = {};
   const donusum = {
     'Temizlik': 'Temizlik Malzemesi',
     'Asansör': 'Asansör Aylık Sabit Bakım',
+    'Apartman Görevli - FİDAN': 'Apartman Görevli - Temizlik + Çöp Toplama',
   };
   let degisti = false;
   (state.masraflar || []).forEach(m => {
@@ -2111,6 +2112,7 @@ function firebaseBaslat() {
     const turDonusum = {
       'Temizlik': 'Temizlik Malzemesi',
       'Asansör': 'Asansör Aylık Sabit Bakım',
+      'Apartman Görevli - FİDAN': 'Apartman Görevli - Temizlik + Çöp Toplama',
     };
     cloudData.masraflar.forEach(m => {
       if (turDonusum[m.tur]) { m.tur = turDonusum[m.tur]; masrafTurMigrationOldu = true; }
