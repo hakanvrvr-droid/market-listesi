@@ -1620,7 +1620,7 @@
         <option>Tesisat Bakım-Onarım</option>
         <option>Elektrik Tesisat Bakım Onarım</option>
         <option>Bina Demirbaş Bakım Onarım</option>
-        <option>Asansör</option>
+        <option>Asansör Aylık Sabit Bakım</option>
         <option>Uydu Bakım Onarım</option>
         <option>Apartman Görevli - FİDAN</option>
         <option>Diğer</option>
@@ -1905,12 +1905,16 @@ if (!state.avans) {
 }
 if (!state.avans.odemeler) state.avans.odemeler = {};
 
-// Migration: eski "Temizlik" masraf türü kayıtları "Temizlik Malzemesi" olarak güncelle
-(function migrationTemizlikTuru() {
+// Migration: eski masraf tür isimlerini yenileriyle değiştir
+(function migrationMasrafTurleri() {
+  const donusum = {
+    'Temizlik': 'Temizlik Malzemesi',
+    'Asansör': 'Asansör Aylık Sabit Bakım',
+  };
   let degisti = false;
   (state.masraflar || []).forEach(m => {
-    if (m.tur === 'Temizlik') {
-      m.tur = 'Temizlik Malzemesi';
+    if (donusum[m.tur]) {
+      m.tur = donusum[m.tur];
       degisti = true;
     }
   });
@@ -2102,17 +2106,21 @@ function firebaseBaslat() {
     if (!cloudData.avans) cloudData.avans = { aktif: true, donem: '2026-08', kisiBasi: 2000, odemeler: {} };
     if (!cloudData.avans.odemeler) cloudData.avans.odemeler = {};
     
-    // Migration: eski "Temizlik" tür kayıtlarını güncelle
-    let temizlikMigrationOldu = false;
+    // Migration: eski masraf tür isimlerini yenile
+    let masrafTurMigrationOldu = false;
+    const turDonusum = {
+      'Temizlik': 'Temizlik Malzemesi',
+      'Asansör': 'Asansör Aylık Sabit Bakım',
+    };
     cloudData.masraflar.forEach(m => {
-      if (m.tur === 'Temizlik') { m.tur = 'Temizlik Malzemesi'; temizlikMigrationOldu = true; }
+      if (turDonusum[m.tur]) { m.tur = turDonusum[m.tur]; masrafTurMigrationOldu = true; }
     });
     
     // State'i güncelle
     state = cloudData;
     
     // Migration olduysa buluta geri yaz (bir kereye mahsus)
-    if (temizlikMigrationOldu && fbRef) {
+    if (masrafTurMigrationOldu && fbRef) {
       kendiYazimiz = true;
       fbRef.set(state).then(() => {
         setTimeout(() => { kendiYazimiz = false; }, 500);
