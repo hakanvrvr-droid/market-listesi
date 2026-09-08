@@ -1613,11 +1613,11 @@
     <div class="form-group">
       <label>Masraf Türü</label>
       <select id="masraf-tur">
-        <option>Elektrik</option>
-        <option>Su</option>
+        <option>Asansör + Bina kat aydınlatma elektrik</option>
+        <option>Bina Önü Musluk Su Kullanım</option>
         <option>Temizlik Malzemesi</option>
         <option>Elektrik Malzemesi</option>
-        <option>Tesisat Bakım-Onarım</option>
+        <option>Su Deposu + Su Tesisatı Bakım Onarım</option>
         <option>Elektrik Tesisat Bakım Onarım</option>
         <option>Bina Demirbaş Bakım Onarım</option>
         <option>Asansör Aylık Sabit Bakım</option>
@@ -1911,6 +1911,9 @@ if (!state.avans.odemeler) state.avans.odemeler = {};
     'Temizlik': 'Temizlik Malzemesi',
     'Asansör': 'Asansör Aylık Sabit Bakım',
     'Apartman Görevli - FİDAN': 'Apartman Görevli - Temizlik + Çöp Toplama',
+    'Elektrik': 'Asansör + Bina kat aydınlatma elektrik',
+    'Su': 'Bina Önü Musluk Su Kullanım',
+    'Tesisat Bakım-Onarım': 'Su Deposu + Su Tesisatı Bakım Onarım',
   };
   let degisti = false;
   (state.masraflar || []).forEach(m => {
@@ -1942,7 +1945,7 @@ if (!state.avans.odemeler) state.avans.odemeler = {};
       if (!varMi) {
         state.masraflar.push({
           id: 'm' + Date.now() + Math.random().toString(36).slice(2,6),
-          tur: 'Elektrik',
+          tur: 'Asansör + Bina kat aydınlatma elektrik',
           firma: 'CK Elektrik',
           tarih: b.odemeTarih,
           tutar: elektrikTutar,
@@ -2113,6 +2116,9 @@ function firebaseBaslat() {
       'Temizlik': 'Temizlik Malzemesi',
       'Asansör': 'Asansör Aylık Sabit Bakım',
       'Apartman Görevli - FİDAN': 'Apartman Görevli - Temizlik + Çöp Toplama',
+      'Elektrik': 'Asansör + Bina kat aydınlatma elektrik',
+      'Su': 'Bina Önü Musluk Su Kullanım',
+      'Tesisat Bakım-Onarım': 'Su Deposu + Su Tesisatı Bakım Onarım',
     };
     cloudData.masraflar.forEach(m => {
       if (turDonusum[m.tur]) { m.tur = turDonusum[m.tur]; masrafTurMigrationOldu = true; }
@@ -4118,7 +4124,7 @@ function syncElektrikMasraf(did, donem, tarih) {
   } else {
     state.masraflar.push({
       id: 'm' + Date.now(),
-      tur: 'Elektrik',
+      tur: 'Asansör + Bina kat aydınlatma elektrik',
       firma: 'CK Elektrik',
       tarih: tarih,
       tutar: elektrikTutar,
