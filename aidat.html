@@ -1163,34 +1163,68 @@
   <div class="page" id="page-rapor">
     <div class="card">
       <div class="card-title">Rapor Filtreleri</div>
+      
+      <!-- Rapor Türü Seçimi -->
       <div class="form-group">
-        <label>Rapor Yılı</label>
-        <select id="rapor-yil" onchange="renderRapor()"></select>
-      </div>
-      <div class="form-group">
-        <label>Başlangıç Ayı</label>
-        <select id="rapor-ay" onchange="renderRapor()"></select>
-      </div>
-      <div class="form-group">
-        <label>Rapor Tipi</label>
-        <select id="rapor-sayi" onchange="renderRapor()">
-          <option value="1" selected>Aylık (Tek Ay)</option>
-          <option value="3">3 Aylık</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>💵 Havuz (Para Kaynağı)</label>
-        <select id="rapor-havuz" onchange="renderRapor()">
-          <option value="aidat" selected>Aidat Kasası</option>
-          <option value="avans">Mal Sahibi Avansı</option>
+        <label>📋 Rapor Türü</label>
+        <select id="rapor-turu" onchange="raporTuruDegisti()">
+          <option value="ozet" selected>Özet Rapor (Tahsilat + Masraf)</option>
+          <option value="masrafDetay">Masraf Detay Raporu</option>
         </select>
       </div>
       
-      <!-- Aidatını Ödemeyenler -->
-      <div class="form-group" id="kara-liste-filtre">
-        <label>🚫 Aidatını Ödemeyenler — Hangi Aylarda Göster?</label>
-        <p style="font-size:11px;color:var(--text-dim);margin:-4px 0 8px 0;">Seçili aylardaki ödemesi olmayan daireler raporun altında listelenir.</p>
-        <div id="kara-liste-checkboxlar" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <!-- ÖZET RAPOR FİLTRELERİ -->
+      <div id="rapor-ozet-filtreleri">
+        <div class="form-group">
+          <label>Rapor Yılı</label>
+          <select id="rapor-yil" onchange="renderRapor()"></select>
+        </div>
+        <div class="form-group">
+          <label>Başlangıç Ayı</label>
+          <select id="rapor-ay" onchange="renderRapor()"></select>
+        </div>
+        <div class="form-group">
+          <label>Rapor Tipi</label>
+          <select id="rapor-sayi" onchange="renderRapor()">
+            <option value="1" selected>Aylık (Tek Ay)</option>
+            <option value="3">3 Aylık</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>💵 Havuz (Para Kaynağı)</label>
+          <select id="rapor-havuz" onchange="renderRapor()">
+            <option value="aidat" selected>Aidat Kasası</option>
+            <option value="avans">Mal Sahibi Avansı</option>
+          </select>
+        </div>
+        
+        <!-- Aidatını Ödemeyenler -->
+        <div class="form-group" id="kara-liste-filtre">
+          <label>🚫 Aidatını Ödemeyenler — Hangi Aylarda Göster?</label>
+          <p style="font-size:11px;color:var(--text-dim);margin:-4px 0 8px 0;">Seçili aylardaki ödemesi olmayan daireler raporun altında listelenir.</p>
+          <div id="kara-liste-checkboxlar" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+      </div>
+      
+      <!-- MASRAF DETAY FİLTRELERİ -->
+      <div id="rapor-masraf-detay-filtreleri" style="display:none;">
+        <div class="form-group">
+          <label>💵 Havuz (Para Kaynağı)</label>
+          <select id="rapor-md-havuz" onchange="renderRapor()">
+            <option value="all" selected>Tümü (Aidat + Avans)</option>
+            <option value="aidat">Sadece Aidat Kasası</option>
+            <option value="avans">Sadece Mal Sahibi Avansı</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>📅 Dönemler</label>
+          <p style="font-size:11px;color:var(--text-dim);margin:-4px 0 8px 0;">Seçili dönemlerin masrafları listelenir.</p>
+          <div style="display:flex;gap:6px;margin-bottom:8px;">
+            <button class="btn secondary small" onclick="selectAllDonemler(true)" type="button">Tümünü Seç</button>
+            <button class="btn secondary small" onclick="selectAllDonemler(false)" type="button">Temizle</button>
+          </div>
+          <div id="rapor-md-donem-checkboxlar" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;padding:4px;border:1px solid var(--border);border-radius:8px;"></div>
+        </div>
       </div>
       
       <button class="btn" onclick="shareRapor()" id="rapor-share-btn">
@@ -2375,6 +2409,11 @@ function render() {
   renderNakit();
   renderAyarFormlari();
   initRaporFiltreleri();
+  // Masraf detay checkbox'ları eğer o panel görünürse yenile
+  const mdPanel = document.getElementById('rapor-masraf-detay-filtreleri');
+  if (mdPanel && mdPanel.style.display !== 'none') {
+    renderRaporMdDonemCheckboxlar();
+  }
   renderRapor();
   renderAvans();
 }
@@ -3012,6 +3051,16 @@ function renderNakit() {
 
 // ============= RAPOR =============
 function renderRapor() {
+  // Rapor türüne göre yönlendir
+  const turSel = document.getElementById('rapor-turu');
+  const tur = turSel ? turSel.value : 'ozet';
+  
+  if (tur === 'masrafDetay') {
+    renderMasrafDetayRaporu();
+    return;
+  }
+  
+  // === ÖZET RAPOR (mevcut) ===
   const yilSel = document.getElementById('rapor-yil');
   const aySel = document.getElementById('rapor-ay');
   const sayiSel = document.getElementById('rapor-sayi');
@@ -3245,6 +3294,195 @@ function fmtTLKisa(n) {
   n = Number(n) || 0;
   if (n === 0) return '-';
   return '₺' + Math.round(n).toLocaleString('tr-TR');
+}
+
+// ============= MASRAF DETAY RAPORU =============
+// Global state: hangi dönemler seçili
+window.raporMdSecili = window.raporMdSecili || {};
+
+// Rapor türü değişince filtreleri göster/gizle
+function raporTuruDegisti() {
+  const tur = document.getElementById('rapor-turu').value;
+  const ozetFiltreleri = document.getElementById('rapor-ozet-filtreleri');
+  const mdFiltreleri = document.getElementById('rapor-masraf-detay-filtreleri');
+  
+  if (tur === 'masrafDetay') {
+    ozetFiltreleri.style.display = 'none';
+    mdFiltreleri.style.display = '';
+    renderRaporMdDonemCheckboxlar();
+  } else {
+    ozetFiltreleri.style.display = '';
+    mdFiltreleri.style.display = 'none';
+  }
+  renderRapor();
+}
+
+// Dönem checkboxlarını dinamik olarak masraflardan üret
+function renderRaporMdDonemCheckboxlar() {
+  const cont = document.getElementById('rapor-md-donem-checkboxlar');
+  if (!cont) return;
+  
+  // Masraflardaki tüm dönemleri topla + state.donemler'i de dahil et
+  const donemSet = new Set(state.donemler || []);
+  (state.masraflar || []).forEach(m => { if (m.donem) donemSet.add(m.donem); });
+  const donemler = donemSort(Array.from(donemSet));
+  
+  if (donemler.length === 0) {
+    cont.innerHTML = '<div style="padding:10px;color:var(--text-dim);font-size:12px;text-align:center;">Henüz dönem yok</div>';
+    return;
+  }
+  
+  // İlk kez çağrılıyorsa hepsini seçili yap
+  donemler.forEach(dk => {
+    if (window.raporMdSecili[dk] === undefined) window.raporMdSecili[dk] = true;
+  });
+  
+  cont.innerHTML = donemler.map(dk => {
+    const isChecked = !!window.raporMdSecili[dk];
+    return `
+      <label class="kara-liste-row ${isChecked ? 'checked' : ''}" onclick="event.preventDefault();toggleRaporMdDonem('${dk}', this)">
+        <input type="checkbox" ${isChecked ? 'checked' : ''} onclick="event.preventDefault();">
+        <span>${donemAd(dk)}</span>
+      </label>`;
+  }).join('');
+}
+
+function toggleRaporMdDonem(donem, rowEl) {
+  window.raporMdSecili[donem] = !window.raporMdSecili[donem];
+  rowEl.classList.toggle('checked', window.raporMdSecili[donem]);
+  const cb = rowEl.querySelector('input[type="checkbox"]');
+  if (cb) cb.checked = window.raporMdSecili[donem];
+  renderRapor();
+}
+
+function selectAllDonemler(deger) {
+  const donemSet = new Set(state.donemler || []);
+  (state.masraflar || []).forEach(m => { if (m.donem) donemSet.add(m.donem); });
+  Array.from(donemSet).forEach(dk => { window.raporMdSecili[dk] = deger; });
+  renderRaporMdDonemCheckboxlar();
+  renderRapor();
+}
+
+// Masraf detay raporunu üret
+function renderMasrafDetayRaporu() {
+  const havuzSel = document.getElementById('rapor-md-havuz');
+  const havuz = havuzSel ? havuzSel.value : 'all';
+  
+  // Seçili dönemleri al
+  const secilenDonemler = Object.keys(window.raporMdSecili || {}).filter(dk => window.raporMdSecili[dk]);
+  
+  // Masrafları filtrele: seçili dönemler + havuz
+  let masraflar = (state.masraflar || []).filter(m => {
+    if (!secilenDonemler.includes(m.donem)) return false;
+    if (havuz === 'aidat' && !isAidatMasrafi(m)) return false;
+    if (havuz === 'avans' && !isAvansMasrafi(m)) return false;
+    return true;
+  });
+  
+  // Sırala: dönem (yeni→eski), sonra tarih (yeni→eski)
+  masraflar.sort((a, b) => {
+    if (a.donem !== b.donem) return b.donem.localeCompare(a.donem);
+    return (b.tarih || '').localeCompare(a.tarih || '');
+  });
+  
+  // Havuz etiketi
+  const havuzEtiket = havuz === 'aidat' ? 'Aidat Kasası' 
+    : havuz === 'avans' ? 'Mal Sahibi Avansı' 
+    : 'Tüm Havuzlar (Aidat + Avans)';
+  
+  // Dönem etiketi
+  const donemEtiket = secilenDonemler.length === 0 ? 'Hiçbir dönem seçili değil' 
+    : secilenDonemler.length === 1 ? donemAd(secilenDonemler[0])
+    : `${secilenDonemler.length} dönem seçili`;
+  
+  const toplam = masraflar.reduce((s,m) => s + Number(m.tutar), 0);
+  
+  // HTML üret
+  let html = `
+    <div class="rapor-baslik">
+      <h2>🏢 Sevencan Apartmanı</h2>
+      <div class="alt" style="color:#8a5a2b;font-weight:600;">📋 Masraf Detay Raporu</div>
+      <div class="alt" style="margin-top:4px;">${donemEtiket}</div>
+    </div>
+    
+    <div style="background:#fdf4e7;padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:12px;color:#8a5a2b;line-height:1.6;">
+      <strong>Havuz:</strong> ${havuzEtiket}<br>
+      <strong>Toplam Masraf:</strong> ${fmtTL(toplam)} · ${masraflar.length} kayıt
+    </div>`;
+  
+  if (masraflar.length === 0) {
+    html += `
+      <div style="padding:24px;text-align:center;background:#faf7f1;border-radius:8px;color:#8a5a2b;font-size:13px;">
+        Bu filtrelere uygun masraf bulunamadı.
+      </div>`;
+    document.getElementById('rapor-icerik').innerHTML = html;
+    return;
+  }
+  
+  // Tablo: Dönem | Firma | Tür | Açıklama | Tutar
+  html += `
+    <table class="rapor-table">
+      <thead>
+        <tr>
+          <th style="text-align:left;">Dönem</th>
+          <th style="text-align:left;">Tür / Firma</th>
+          <th style="text-align:left;">Açıklama</th>
+          <th>Tutar</th>
+        </tr>
+      </thead>
+      <tbody>`;
+  
+  // Dönem grupları — bir dönem değiştikçe alt başlık ekle
+  let sonDonem = null;
+  masraflar.forEach(m => {
+    // Dönem başlığı (grup ayrımı için)
+    if (m.donem !== sonDonem) {
+      const donemMasraflar = masraflar.filter(x => x.donem === m.donem);
+      const donemToplam = donemMasraflar.reduce((s,x) => s + Number(x.tutar), 0);
+      html += `<tr style="background:#faf7f1;">
+        <td colspan="3" style="font-weight:700;color:#8a5a2b;padding:8px;text-align:left;">
+          📅 ${donemAd(m.donem)} <span style="font-weight:400;color:#555;">(${donemMasraflar.length} kayıt)</span>
+        </td>
+        <td class="num" style="font-weight:700;color:#8a5a2b;background:#faf7f1;">${fmtTLKisa(donemToplam)}</td>
+      </tr>`;
+      sonDonem = m.donem;
+    }
+    
+    // Havuz rozeti
+    const havuzBadge = m.kaynak === 'avans' 
+      ? ' <span style="background:#e8dcf0;color:#6a3a9a;font-size:9px;padding:1px 5px;border-radius:3px;">Avans</span>'
+      : '';
+    const autoBadge = m.auto === 'elektrik'
+      ? ' <span style="background:#f6e6cd;color:#8a5a2b;font-size:9px;padding:1px 5px;border-radius:3px;">Oto</span>'
+      : '';
+    
+    const firmaBilgi = m.firma ? `<div style="font-size:11px;color:#555;">${m.firma}</div>` : '';
+    const tarihBilgi = m.tarih ? `<div style="font-size:10px;color:#888;">${fmtTarih(m.tarih)}</div>` : '';
+    
+    html += `<tr>
+      <td style="text-align:left;font-size:11px;color:#555;vertical-align:top;">${tarihBilgi}</td>
+      <td style="text-align:left;vertical-align:top;">
+        <div style="font-weight:600;">${m.tur || 'Diğer'}${havuzBadge}${autoBadge}</div>
+        ${firmaBilgi}
+      </td>
+      <td style="text-align:left;font-size:11px;color:#555;vertical-align:top;">${m.aciklama || '-'}</td>
+      <td class="num" style="vertical-align:top;font-weight:600;">${fmtTLKisa(m.tutar)}</td>
+    </tr>`;
+  });
+  
+  // Toplam satır
+  html += `<tr class="toplam-row">
+    <td colspan="3" class="label" style="background:#1f2027;color:white;">GENEL TOPLAM</td>
+    <td class="num">${fmtTLKisa(toplam)}</td>
+  </tr>`;
+  
+  html += `</tbody></table>`;
+  
+  html += `<div style="margin-top:14px;font-size:11px;color:#555868;text-align:center;">
+      Rapor tarihi: ${new Date().toLocaleDateString('tr-TR')}
+    </div>`;
+  
+  document.getElementById('rapor-icerik').innerHTML = html;
 }
 
 // ============= AVANS RAPORU =============
