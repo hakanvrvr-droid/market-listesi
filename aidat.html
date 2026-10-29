@@ -1244,31 +1244,39 @@
   <div class="page" id="page-avans">
     <div class="card" style="margin-bottom:14px;">
       <div class="card-title">💵 Mal Sahibi Avansı</div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label>Toplama Dönemi</label>
+        <select id="avans-donem-sec" onchange="setAvansDonem(this.value)"></select>
+      </div>
       <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">
         <span id="avans-donem-adi">Ağustos 2026</span> döneminde daire sahiplerinden 
-        <strong id="avans-kisibasi-lbl">₺2.000</strong> toplandı. 
+        <strong id="avans-kisibasi-lbl">₺2.000</strong> toplanıyor. 
         Bu havuz aidat kasasından ayrıdır; yıl sonu kalan tutar sahiplere iade edilir.
       </p>
-      <button class="btn secondary small" onclick="openAvansAyar()" style="width:auto;">⚙ Avans Ayarları</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn secondary small" onclick="openAvansAyar()" style="width:auto;">⚙ Dönem Ayarları</button>
+        <button class="btn secondary small" onclick="openYeniAvansDonem()" style="width:auto;">➕ Yeni Dönem</button>
+      </div>
     </div>
 
     <!-- Havuz Durumu -->
     <div class="stats-grid">
       <div class="stat-card highlight">
-        <div class="stat-label">💰 Avans Bakiyesi</div>
+        <div class="stat-label">💰 Havuz Bakiyesi</div>
         <div class="stat-value" id="avans-bakiye">₺0</div>
+        <div class="stat-sub">Tüm dönemler toplamı</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Toplanan</div>
+        <div class="stat-label">Toplanan (bu dönem)</div>
         <div class="stat-value success" id="avans-toplanan">₺0</div>
         <div class="stat-sub" id="avans-toplanan-sub">0 / 15 sahip</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Harcanan</div>
+        <div class="stat-label">Harcanan (havuz)</div>
         <div class="stat-value danger" id="avans-harcanan">₺0</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Bekleyen</div>
+        <div class="stat-label">Bekleyen (bu dönem)</div>
         <div class="stat-value danger" id="avans-bekleyen">₺0</div>
       </div>
     </div>
@@ -1562,18 +1570,51 @@
 <div class="modal-overlay" id="modal-avans-ayar">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Avans Ayarları</div>
+      <div class="modal-title" id="modal-avans-ayar-title">Dönem Ayarları</div>
       <button class="modal-close" onclick="closeModal('modal-avans-ayar')">×</button>
     </div>
+    <input type="hidden" id="avans-ayar-donem-id">
     <div class="form-group">
       <label>Toplama Dönemi (Yıl-Ay)</label>
       <input type="month" id="avans-ayar-donem">
     </div>
     <div class="form-group">
-      <label>Kişi Başı Tutar (₺)</label>
+      <label>Varsayılan Tutar (₺) — herkes için</label>
       <input type="number" id="avans-ayar-kisibasi" step="0.01">
     </div>
+    <details class="section" style="margin-bottom:12px;">
+      <summary>🎯 Daire Bazlı Özel Tutarlar</summary>
+      <div class="content">
+        <p style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">
+          Boş bırakılan daireler varsayılan tutarı öder. Sadece farklı ödeyen daireler için değer girin.
+        </p>
+        <div id="avans-ayar-ozel-liste"></div>
+      </div>
+    </details>
     <button class="btn" onclick="saveAvansAyar()">Kaydet</button>
+    <button class="btn danger" id="avans-ayar-sil-btn" onclick="deleteAvansDonem()" style="margin-top:8px;">Bu Dönemi Sil</button>
+  </div>
+</div>
+
+<!-- Yeni Avans Dönemi Modal -->
+<div class="modal-overlay" id="modal-avans-yeni">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">➕ Yeni Avans Dönemi</div>
+      <button class="modal-close" onclick="closeModal('modal-avans-yeni')">×</button>
+    </div>
+    <div class="form-group">
+      <label>Toplama Dönemi (Yıl-Ay)</label>
+      <input type="month" id="avans-yeni-donem">
+    </div>
+    <div class="form-group">
+      <label>Varsayılan Tutar (₺) — herkes için</label>
+      <input type="number" id="avans-yeni-kisibasi" step="0.01" placeholder="örn. 5500">
+    </div>
+    <p style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">
+      Dönemi oluşturduktan sonra "⚙ Dönem Ayarları"ndan daire bazlı özel tutarları düzenleyebilirsiniz.
+    </p>
+    <button class="btn" onclick="saveYeniAvansDonem()">Dönemi Oluştur</button>
   </div>
 </div>
 
@@ -1916,12 +1957,14 @@ function defaultState() {
     masraflar: [], // { id, tur, firma, tarih, tutar, aciklama, donem, foto, kaynak: 'aidat'|'avans' }
     devirAlacak: 0, // Başlangıç devri
     zamlar: [], // [{ id, donem: 'YYYY-MM', tutar: number }]
-    // Mal Sahibi Avansı — tek seferlik toplama
+    // Mal Sahibi Avansı — çok dönemli toplama
+    // Her dönem: { id, donem:'YYYY-MM', varsayilanTutar, ozelTutarlar:{sahipId:tutar}, odemeler:{sahipId:{odendi,tarih,tutar}} }
     avans: {
       aktif: true,
-      donem: '2026-08', // Ağustos 2026
-      kisiBasi: 2000, // Her sahipten ne kadar
-      odemeler: {}, // { sahipId: { odendi: bool, tarih, tutar } }
+      aktifDonemId: 'av_2026_08',
+      donemler: [
+        { id: 'av_2026_08', donem: '2026-08', varsayilanTutar: 2000, ozelTutarlar: {}, odemeler: {} },
+      ],
     },
   };
 }
@@ -1934,10 +1977,11 @@ if (!state.sahipler || state.sahipler.length === 0) {
   try { localStorage.setItem('apartmanData', JSON.stringify(state)); } catch(e) {}
 }
 if (!state.avans) {
-  state.avans = { aktif: true, donem: '2026-08', kisiBasi: 2000, odemeler: {} };
-  try { localStorage.setItem('apartmanData', JSON.stringify(state)); } catch(e) {}
+  state.avans = { aktif: true, aktifDonemId: 'av_2026_08',
+    donemler: [{ id: 'av_2026_08', donem: '2026-08', varsayilanTutar: 2000, ozelTutarlar: {}, odemeler: {} }] };
 }
-if (!state.avans.odemeler) state.avans.odemeler = {};
+state.avans = migrateAvans(state.avans, state.sahipler);
+try { localStorage.setItem('apartmanData', JSON.stringify(state)); } catch(e) {}
 
 // Migration: eski masraf tür isimlerini yenileriyle değiştir
 (function migrationMasrafTurleri() {
@@ -2141,8 +2185,9 @@ function firebaseBaslat() {
     if (!cloudData.masraflar) cloudData.masraflar = [];
     if (!cloudData.donemAyarlari) cloudData.donemAyarlari = {};
     if (cloudData.devirAlacak === undefined) cloudData.devirAlacak = 0;
-    if (!cloudData.avans) cloudData.avans = { aktif: true, donem: '2026-08', kisiBasi: 2000, odemeler: {} };
-    if (!cloudData.avans.odemeler) cloudData.avans.odemeler = {};
+    if (!cloudData.avans) cloudData.avans = { aktif: true, aktifDonemId: 'av_2026_08',
+      donemler: [{ id: 'av_2026_08', donem: '2026-08', varsayilanTutar: 2000, ozelTutarlar: {}, odemeler: {} }] };
+    cloudData.avans = migrateAvans(cloudData.avans, cloudData.sahipler || state.sahipler);
     
     // Migration: eski masraf tür isimlerini yenile
     let masrafTurMigrationOldu = false;
@@ -2279,18 +2324,111 @@ function isAvansMasrafi(m) {
   return m.kaynak === 'avans';
 }
 
-// Avans havuzu bakiyesi = toplanan − avanstan harcanan
+// ============= AVANS — ÇOK DÖNEMLİ YARDIMCILAR =============
+// Eski tek-dönem avans yapısını çok dönemli yapıya çevirir ve Ekim 2026'yı tohumlar.
+// Idempotent: zaten çevrilmişse tekrar bozmaz.
+function migrateAvans(av, sahipler) {
+  if (!av || typeof av !== 'object') av = {};
+  // 1) Eski {donem,kisiBasi,odemeler} -> donemler dizisi
+  if (!Array.isArray(av.donemler)) {
+    const eskiDonem = av.donem || '2026-08';
+    const eskiTutar = Number(av.kisiBasi) || 2000;
+    const eskiOdemeler = (av.odemeler && typeof av.odemeler === 'object') ? av.odemeler : {};
+    av.donemler = [{
+      id: 'av_' + eskiDonem.replace(/-/g, '_'),
+      donem: eskiDonem,
+      varsayilanTutar: eskiTutar,
+      ozelTutarlar: {},
+      odemeler: eskiOdemeler,
+    }];
+  }
+  // Her dönemin alanlarını garantiye al
+  av.donemler.forEach(d => {
+    if (!d.id) d.id = 'av_' + String(d.donem || '').replace(/-/g, '_');
+    if (!d.ozelTutarlar) d.ozelTutarlar = {};
+    if (!d.odemeler) d.odemeler = {};
+    if (d.varsayilanTutar == null) d.varsayilanTutar = Number(d.kisiBasi) || 0;
+  });
+  av.aktif = av.aktif !== false;
+  // 2) Ekim 2026 dönemini tek seferlik tohumla (daire 0 ve 1 -> 3.850, diğerleri -> 5.500)
+  if (!av._ekim2026) {
+    const varMi = av.donemler.some(d => d.donem === '2026-10');
+    if (!varMi) {
+      const liste = (sahipler && sahipler.length) ? sahipler : VARSAYILAN_SAHIPLER;
+      const ozel = {};
+      liste.forEach(s => {
+        const no = parseInt(String(s.daireNo || '').replace(/\D/g, ''));
+        if (no === 0 || no === 1) ozel[s.id] = 3850;
+      });
+      av.donemler.push({
+        id: 'av_2026_10',
+        donem: '2026-10',
+        varsayilanTutar: 5500,
+        ozelTutarlar: ozel,
+        odemeler: {},
+      });
+    }
+    av._ekim2026 = true;
+  }
+  // 3) Eski düz alanları temizle (kafa karışmasın)
+  delete av.donem; delete av.kisiBasi; delete av.odemeler;
+  // 4) Aktif dönem geçerli değilse en yeni dönemi seç
+  if (!av.aktifDonemId || !av.donemler.some(d => d.id === av.aktifDonemId)) {
+    const sirali = av.donemler.slice().sort((a, b) => String(a.donem).localeCompare(String(b.donem)));
+    av.aktifDonemId = sirali[sirali.length - 1].id;
+  }
+  return av;
+}
+
+// Aktif (seçili) avans dönemini döndürür
+function aktifAvansDonem() {
+  if (!state.avans || !Array.isArray(state.avans.donemler) || !state.avans.donemler.length) return null;
+  return state.avans.donemler.find(d => d.id === state.avans.aktifDonemId)
+      || state.avans.donemler[state.avans.donemler.length - 1];
+}
+
+// Bir sahip için o dönemde beklenen tutar (özel tutar varsa onu, yoksa varsayılanı)
+function avansSahipBeklenen(donemObj, sahipId) {
+  if (!donemObj) return 0;
+  if (donemObj.ozelTutarlar && donemObj.ozelTutarlar[sahipId] != null) return Number(donemObj.ozelTutarlar[sahipId]) || 0;
+  return Number(donemObj.varsayilanTutar) || 0;
+}
+
+// Bir dönemde gerçekte toplanan (ödenen) tutar
+function avansDonemToplanan(donemObj) {
+  if (!donemObj || !donemObj.odemeler) return 0;
+  return Object.values(donemObj.odemeler).filter(o => o && o.odendi).reduce((s, o) => s + Number(o.tutar || 0), 0);
+}
+
+// Bir dönemde beklenen toplam (tüm sahiplerin beklenen tutarları)
+function avansDonemBeklenen(donemObj) {
+  const sahipler = state.sahipler || [];
+  return sahipler.reduce((s, sh) => s + avansSahipBeklenen(donemObj, sh.id), 0);
+}
+
+// TÜM dönemlerde toplanan toplam
+function avansToplananHesapla() {
+  if (!state.avans || !Array.isArray(state.avans.donemler)) return 0;
+  return state.avans.donemler.reduce((s, d) => s + avansDonemToplanan(d), 0);
+}
+
+// Avans havuzu bakiyesi = tüm dönemlerde toplanan − avanstan harcanan (havuz ortaktır)
 function avansBakiyeHesapla() {
   const toplanan = avansToplananHesapla();
-  const harcanan = state.masraflar.filter(isAvansMasrafi).reduce((s,m) => s + Number(m.tutar), 0);
+  const harcanan = state.masraflar.filter(isAvansMasrafi).reduce((s, m) => s + Number(m.tutar), 0);
   return toplanan - harcanan;
 }
 
-function avansToplananHesapla() {
-  if (!state.avans || !state.avans.odemeler) return 0;
-  return Object.values(state.avans.odemeler)
-    .filter(o => o && o.odendi)
-    .reduce((s,o) => s + Number(o.tutar || 0), 0);
+// Tüm dönemlerdeki ödeme kayıtlarını düz liste olarak döndürür (rapor için)
+function avansTumOdemeler() {
+  const out = [];
+  if (!state.avans || !Array.isArray(state.avans.donemler)) return out;
+  state.avans.donemler.forEach(d => {
+    Object.entries(d.odemeler || {}).forEach(([sahipId, o]) => {
+      if (o && o.odendi) out.push({ sahipId, donemId: d.id, tutar: Number(o.tutar) || 0, tarih: o.tarih || '' });
+    });
+  });
+  return out;
 }
 
 // Bir sakin için görüntülenecek telefon numarasını döndürür.
@@ -3490,44 +3628,34 @@ function renderMasrafDetayRaporu() {
 function renderRaporAvans(donemler, yil) {
   const ilkDonem = donemler[0];
   const sonDonem = donemler[donemler.length - 1];
-  
-  // Rapor başlangıcından ÖNCEKİ dönemlerin net etkisi (devreden bakiye)
-  // Toplanan ödemelerin hepsi tek dönem olarak state.avans.donem'de tutulur;
-  // burada tarih bazında filtreleyeceğiz: ödeme tarihi ilkDonem'den önceyse "devreden"
   const ilkAy = ilkDonem + '-01'; // '2026-08-01' gibi
-  
-  const odemeler = state.avans.odemeler || {};
+
   const sahipler = state.sahipler || [];
-  
+  // Tüm avans dönemlerindeki ödeme kayıtları (düz liste)
+  const tumOdeme = avansTumOdemeler();
+
   // Devreden: rapor öncesi toplanan − rapor öncesi harcanan
   let devredenToplanan = 0;
-  Object.values(odemeler).forEach(o => {
-    if (o && o.odendi && o.tarih && o.tarih < ilkAy) {
-      devredenToplanan += Number(o.tutar) || 0;
-    }
+  tumOdeme.forEach(o => {
+    if (o.tarih && o.tarih < ilkAy) devredenToplanan += Number(o.tutar) || 0;
   });
   const devredenHarcanan = state.masraflar
     .filter(m => isAvansMasrafi(m) && m.donem < ilkDonem)
     .reduce((s,m) => s + Number(m.tutar), 0);
   const devredenBakiye = devredenToplanan - devredenHarcanan;
-  
+
   // Devreden etiketi: bir önceki ayın adı
   const [iyl, iay] = ilkDonem.split('-');
   let prevAy = parseInt(iay) - 1, prevYil = parseInt(iyl);
   if (prevAy < 1) { prevAy = 12; prevYil--; }
   const devirEtiket = AYLAR[prevAy - 1] + ' ' + prevYil + ' Devreden';
-  
-  // Her rapor dönemi için: tahsilat (o ay içinde alınan avans) + masraf grupları
+
+  // Her rapor ayı için: tahsilat (o ay içinde ödeme tarihli avans) + masraf grupları
   const raporData = donemler.map(dk => {
-    // O dönem içinde tahsil edilen avans (ödeme tarihi bu ay ise)
     let tahsilat = 0;
-    Object.values(odemeler).forEach(o => {
-      if (o && o.odendi && o.tarih && o.tarih.startsWith(dk)) {
-        tahsilat += Number(o.tutar) || 0;
-      }
+    tumOdeme.forEach(o => {
+      if (o.tarih && o.tarih.startsWith(dk)) tahsilat += Number(o.tutar) || 0;
     });
-    
-    // Bu dönem avanstan yapılan masraflar (türlerine göre)
     const masrafGruplari = {};
     state.masraflar
       .filter(m => isAvansMasrafi(m) && m.donem === dk)
@@ -3536,24 +3664,45 @@ function renderRaporAvans(donemler, yil) {
         masrafGruplari[tur] = (masrafGruplari[tur] || 0) + Number(m.tutar);
       });
     const masrafToplam = Object.values(masrafGruplari).reduce((s,v) => s+v, 0);
-    
     return { donem: dk, tahsilat, masrafGruplari, masrafToplam };
   });
-  
+
   // Tüm dönemlerdeki tüm masraf türlerini topla
   const tumMasrafTurleri = new Set();
-  raporData.forEach(r => {
-    Object.keys(r.masrafGruplari).forEach(t => tumMasrafTurleri.add(t));
-  });
+  raporData.forEach(r => Object.keys(r.masrafGruplari).forEach(t => tumMasrafTurleri.add(t)));
   const masrafTurArr = Array.from(tumMasrafTurleri).sort();
-  
-  // Kişi başı beklenen, toplam beklenen
-  const kisiBasi = Number(state.avans.kisiBasi) || 0;
-  const beklenen = sahipler.length * kisiBasi;
+
   const genelToplanan = avansToplananHesapla();
   const genelHarcanan = state.masraflar.filter(isAvansMasrafi).reduce((s,m) => s + Number(m.tutar), 0);
   const guncelBakiye = genelToplanan - genelHarcanan;
-  
+
+  // Toplama dönemlerinin özet satırları (varsayılan + özel tutar notu)
+  const donemOzetHtml = state.avans.donemler
+    .slice()
+    .sort((a,b) => String(a.donem).localeCompare(String(b.donem)))
+    .map(d => {
+      const beklenen = avansDonemBeklenen(d);
+      const toplandi = avansDonemToplanan(d);
+      // Özel tutar özeti
+      const ozelAdetli = Object.entries(d.ozelTutarlar || {})
+        .filter(([id, t]) => t != null && Number(t) !== Number(d.varsayilanTutar));
+      let ozelNot = '';
+      if (ozelAdetli.length) {
+        const grup = {};
+        ozelAdetli.forEach(([id, t]) => {
+          const s = sahipler.find(x => x.id === id);
+          const no = s ? String(s.daireNo || '').replace(/\D/g, '') : '?';
+          (grup[t] = grup[t] || []).push(no);
+        });
+        ozelNot = ' · ' + Object.entries(grup)
+          .map(([t, nolar]) => `Daire ${nolar.sort((a,b)=>a-b).join(', ')}: ${fmtTL(t)}`).join(' · ');
+      }
+      return `<div style="margin-bottom:4px;">
+        <strong>${donemAd(d.donem)}:</strong> ${fmtTL(d.varsayilanTutar)}${ozelNot} 
+        → beklenen <strong>${fmtTL(beklenen)}</strong>, toplanan <strong style="color:#1f8a4c;">${fmtTL(toplandi)}</strong>
+      </div>`;
+    }).join('');
+
   // Tablo HTML
   let html = `
     <div class="rapor-baslik">
@@ -3563,8 +3712,8 @@ function renderRaporAvans(donemler, yil) {
     </div>
     
     <div style="background:#f4ebfa;padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:12px;color:#4a2270;line-height:1.6;">
-      <strong>Avans Dönemi:</strong> ${donemAd(state.avans.donem || '2026-08')}<br>
-      <strong>Kişi Başı:</strong> ${fmtTL(kisiBasi)} × ${sahipler.length} sahip = <strong>${fmtTL(beklenen)}</strong> beklenen
+      <strong>Toplama Dönemleri</strong><br>
+      ${donemOzetHtml}
     </div>
     
     <table class="rapor-table">
@@ -3629,15 +3778,18 @@ function renderRaporAvans(donemler, yil) {
       </table>
     </div>`;
   
-  // Sahip ödemeleri: kim ödedi / ödemedi
-  const odeyenler = sahipler.filter(s => odemeler[s.id] && odemeler[s.id].odendi);
-  const odemeyenler = sahipler.filter(s => !odemeler[s.id] || !odemeler[s.id].odendi);
-  
+  // Sahip ödemeleri: kim ödedi / ödemedi — SEÇİLİ (aktif) döneme göre
+  const aktif = aktifAvansDonem();
+  const aktifOdemeler = (aktif && aktif.odemeler) ? aktif.odemeler : {};
+  const odeyenler = sahipler.filter(s => aktifOdemeler[s.id] && aktifOdemeler[s.id].odendi);
+  const odemeyenler = sahipler.filter(s => !aktifOdemeler[s.id] || !aktifOdemeler[s.id].odendi);
+  const aktifAd = aktif ? donemAd(aktif.donem) : '';
+
   if (odemeyenler.length > 0) {
     html += `
       <div style="margin-top:14px;padding:12px;background:#fadcdc;border-radius:8px;border-left:4px solid #c43e3e;">
         <div style="font-size:13px;font-weight:700;color:#c43e3e;margin-bottom:6px;">
-          🚫 Avans Ödemeyenler (${odemeyenler.length} sahip)
+          🚫 ${aktifAd} — Avans Ödemeyenler (${odemeyenler.length} sahip)
         </div>
         <div style="font-size:12px;color:#1f2027;line-height:1.8;">`;
     odemeyenler
@@ -3647,16 +3799,16 @@ function renderRaporAvans(donemler, yil) {
         return sa - sb;
       })
       .forEach(s => {
-        html += `${s.daireNo || '-'} ${s.isim} - ${fmtTLKisa(kisiBasi)}<br>`;
+        html += `${s.daireNo || '-'} ${s.isim} - ${fmtTLKisa(avansSahipBeklenen(aktif, s.id))}<br>`;
       });
     html += `</div></div>`;
   }
-  
+
   if (odeyenler.length > 0) {
     html += `
       <div style="margin-top:12px;padding:12px;background:#d6f0de;border-radius:8px;border-left:4px solid #1f8a4c;">
         <div style="font-size:13px;font-weight:700;color:#1f8a4c;margin-bottom:6px;">
-          ✓ Ödeyen Sahipler (${odeyenler.length})
+          ✓ ${aktifAd} — Ödeyen Sahipler (${odeyenler.length})
         </div>
         <div style="font-size:12px;color:#1f2027;line-height:1.8;">`;
     odeyenler
@@ -3666,7 +3818,7 @@ function renderRaporAvans(donemler, yil) {
         return sa - sb;
       })
       .forEach(s => {
-        const o = odemeler[s.id];
+        const o = aktifOdemeler[s.id];
         html += `${s.daireNo || '-'} ${s.isim} - ${fmtTLKisa(o.tutar)} · ${fmtTarih(o.tarih)}<br>`;
       });
     html += `</div></div>`;
@@ -3691,32 +3843,64 @@ function setAvansFiltre(f, btn) {
 
 function renderAvans() {
   if (!state.avans) return;
-  const kisiBasi = Number(state.avans.kisiBasi) || 0;
-  const donem = state.avans.donem || '2026-08';
-  
-  document.getElementById('avans-donem-adi').textContent = donemAd(donem);
-  document.getElementById('avans-kisibasi-lbl').textContent = fmtTL(kisiBasi);
-  
-  const toplanan = avansToplananHesapla();
-  const harcanan = state.masraflar.filter(isAvansMasrafi).reduce((s,m) => s + Number(m.tutar), 0);
-  const bakiye = toplanan - harcanan;
-  
+  const d = aktifAvansDonem();
+  if (!d) return;
+
+  // Dönem seçici doldur
+  const sec = document.getElementById('avans-donem-sec');
+  if (sec) {
+    const sirali = state.avans.donemler.slice().sort((a, b) => String(b.donem).localeCompare(String(a.donem)));
+    sec.innerHTML = sirali.map(x => {
+      const toplandi = avansDonemToplanan(x);
+      const beklendi = avansDonemBeklenen(x);
+      return `<option value="${x.id}" ${x.id === d.id ? 'selected' : ''}>${donemAd(x.donem)} — ${fmtTLKisa(toplandi)} / ${fmtTLKisa(beklendi)}</option>`;
+    }).join('');
+  }
+
+  // Açıklama metni (varsayılan + varsa özel tutar notu)
+  const ozelAdetli = Object.entries(d.ozelTutarlar || {})
+    .filter(([id, t]) => t != null && Number(t) !== Number(d.varsayilanTutar));
+  document.getElementById('avans-donem-adi').textContent = donemAd(d.donem);
+  let tutarLbl = fmtTL(d.varsayilanTutar);
+  if (ozelAdetli.length) {
+    // Özel tutarları dairelere göre özetle (ör. "Daire 0-1: ₺3.850")
+    const grup = {};
+    ozelAdetli.forEach(([id, t]) => {
+      const s = (state.sahipler || []).find(x => x.id === id);
+      const no = s ? String(s.daireNo || '').replace(/\D/g, '') : '?';
+      (grup[t] = grup[t] || []).push(no);
+    });
+    const parts = Object.entries(grup).map(([t, nolar]) => `Daire ${nolar.sort((a,b)=>a-b).join(', ')}: ${fmtTL(t)}`);
+    tutarLbl += ` (${parts.join(' · ')})`;
+  }
+  document.getElementById('avans-kisibasi-lbl').innerHTML = tutarLbl;
+
+  // İstatistikler
+  const bakiye = avansBakiyeHesapla(); // tüm dönemler havuzu
+  const harcanan = state.masraflar.filter(isAvansMasrafi).reduce((s, m) => s + Number(m.tutar), 0);
   const sahipler = state.sahipler || [];
-  const odenenSayisi = sahipler.filter(s => {
-    const o = state.avans.odemeler[s.id];
-    return o && o.odendi;
-  }).length;
-  const beklenen = sahipler.length * kisiBasi;
-  const bekleyen = beklenen - toplanan;
-  
+  const odemeler = d.odemeler || {};
+  const odenenSayisi = sahipler.filter(s => odemeler[s.id] && odemeler[s.id].odendi).length;
+  const donemToplanan = avansDonemToplanan(d);
+  const donemBeklenen = avansDonemBeklenen(d);
+  const donemBekleyen = donemBeklenen - donemToplanan;
+
   document.getElementById('avans-bakiye').textContent = fmtTL(bakiye);
-  document.getElementById('avans-toplanan').textContent = fmtTL(toplanan);
+  document.getElementById('avans-toplanan').textContent = fmtTL(donemToplanan);
   document.getElementById('avans-toplanan-sub').textContent = `${odenenSayisi} / ${sahipler.length} sahip`;
   document.getElementById('avans-harcanan').textContent = fmtTL(harcanan);
-  document.getElementById('avans-bekleyen').textContent = fmtTL(bekleyen);
-  
+  document.getElementById('avans-bekleyen').textContent = fmtTL(donemBekleyen);
+
   renderAvansSahipListesi();
   renderAvansMasrafListesi();
+}
+
+// Avans sayfasında dönem değiştir
+function setAvansDonem(donemId) {
+  if (!state.avans) return;
+  state.avans.aktifDonemId = donemId;
+  save();
+  renderAvans();
 }
 
 function renderAvansSahipListesi() {
@@ -3725,10 +3909,11 @@ function renderAvansSahipListesi() {
     document.getElementById('avans-sahip-listesi').innerHTML = '<div class="empty">Sahip yok. Ayarlardan ekleyin.</div>';
     return;
   }
-  
-  const kisiBasi = Number(state.avans.kisiBasi) || 0;
-  const odemeler = state.avans.odemeler || {};
-  
+
+  const d = aktifAvansDonem();
+  if (!d) return;
+  const odemeler = d.odemeler || {};
+
   // Sırala + filtrele
   let liste = sahipler.slice().sort((a, b) => {
     const sa = parseInt((a.daireNo || '').replace(/\D/g, '')) || 0;
@@ -3740,15 +3925,16 @@ function renderAvansSahipListesi() {
   } else if (avansFiltre === 'unpaid') {
     liste = liste.filter(s => !odemeler[s.id] || !odemeler[s.id].odendi);
   }
-  
+
   if (liste.length === 0) {
     document.getElementById('avans-sahip-listesi').innerHTML = '<div class="empty">Bu filtreye uygun kayıt yok.</div>';
     return;
   }
-  
+
   document.getElementById('avans-sahip-listesi').innerHTML = liste.map(s => {
     const o = odemeler[s.id];
     const odendi = o && o.odendi;
+    const beklenen = avansSahipBeklenen(d, s.id);
     const fotoStyle = s.foto ? `background-image:url('${s.foto}');` : '';
     const fotoIcerik = s.foto ? '' : '👤';
     let durum, durumClass;
@@ -3759,9 +3945,9 @@ function renderAvansSahipListesi() {
       durum = `<span class="badge" style="background:#fadcdc;color:#c43e3e;">BEKLİYOR</span>`;
       durumClass = 'partial';
     }
-    const detay = odendi 
+    const detay = odendi
       ? `<div class="daire-meta">${fmtTL(o.tutar)} · ${fmtTarih(o.tarih)}</div>`
-      : `<div class="daire-meta">Beklenen: ${fmtTL(kisiBasi)}</div>`;
+      : `<div class="daire-meta">Beklenen: ${fmtTL(beklenen)}</div>`;
     return `
       <div class="daire-item ${durumClass}" onclick="openAvansOdemeModal('${s.id}')">
         <div class="daire-foto-mini" style="${fotoStyle}">${fotoIcerik}</div>
@@ -3791,20 +3977,22 @@ function renderAvansMasrafListesi() {
 function openAvansOdemeModal(sahipId) {
   const s = state.sahipler.find(x => x.id === sahipId);
   if (!s) return;
-  const o = (state.avans.odemeler || {})[sahipId];
-  const kisiBasi = Number(state.avans.kisiBasi) || 0;
-  
+  const d = aktifAvansDonem();
+  if (!d) return;
+  const o = (d.odemeler || {})[sahipId];
+  const beklenen = avansSahipBeklenen(d, sahipId);
+
   document.getElementById('avans-odeme-sahip-id').value = sahipId;
-  document.getElementById('avans-odeme-sahip-adi').value = `${s.daireNo || '-'} · ${s.isim}`;
-  document.getElementById('avans-odeme-tutar').value = o && o.odendi ? o.tutar : kisiBasi;
+  document.getElementById('avans-odeme-sahip-adi').value = `${s.daireNo || '-'} · ${s.isim}  (${donemAd(d.donem)})`;
+  document.getElementById('avans-odeme-tutar').value = o && o.odendi ? o.tutar : beklenen;
   document.getElementById('avans-odeme-tarih').value = o && o.tarih ? o.tarih : new Date().toISOString().split('T')[0];
-  
+
   const silBtn = document.getElementById('avans-odeme-sil-btn');
   silBtn.style.display = (o && o.odendi) ? 'block' : 'none';
-  
-  document.getElementById('modal-avans-odeme-title').textContent = 
+
+  document.getElementById('modal-avans-odeme-title').textContent =
     (o && o.odendi) ? 'Avans Ödemesi Düzenle' : 'Avans Ödemesi Kaydet';
-  
+
   openModal('modal-avans-odeme');
 }
 
@@ -3812,13 +4000,15 @@ function saveAvansOdeme() {
   const sahipId = document.getElementById('avans-odeme-sahip-id').value;
   const tutar = Number(document.getElementById('avans-odeme-tutar').value);
   const tarih = document.getElementById('avans-odeme-tarih').value;
-  
+
   if (!tutar || tutar <= 0) { toast('Geçerli tutar girin'); return; }
   if (!tarih) { toast('Tarih girin'); return; }
-  
-  if (!state.avans.odemeler) state.avans.odemeler = {};
-  state.avans.odemeler[sahipId] = { odendi: true, tutar, tarih };
-  
+
+  const d = aktifAvansDonem();
+  if (!d) { toast('Aktif dönem bulunamadı'); return; }
+  if (!d.odemeler) d.odemeler = {};
+  d.odemeler[sahipId] = { odendi: true, tutar, tarih };
+
   try { save(); } catch(err) { toast('Hata: ' + err.message); return; }
   closeModal('modal-avans-odeme');
   render();
@@ -3828,8 +4018,9 @@ function saveAvansOdeme() {
 function deleteAvansOdeme() {
   const sahipId = document.getElementById('avans-odeme-sahip-id').value;
   if (!confirm('Bu ödemeyi geri almak istediğinizden emin misiniz?')) return;
-  if (state.avans.odemeler && state.avans.odemeler[sahipId]) {
-    delete state.avans.odemeler[sahipId];
+  const d = aktifAvansDonem();
+  if (d && d.odemeler && d.odemeler[sahipId]) {
+    delete d.odemeler[sahipId];
   }
   save();
   closeModal('modal-avans-odeme');
@@ -3837,26 +4028,118 @@ function deleteAvansOdeme() {
   toast('Ödeme geri alındı');
 }
 
+// ---- Dönem Ayarları (aktif dönemi düzenle) ----
 function openAvansAyar() {
-  document.getElementById('avans-ayar-donem').value = state.avans.donem || '2026-08';
-  document.getElementById('avans-ayar-kisibasi').value = state.avans.kisiBasi || 2000;
+  const d = aktifAvansDonem();
+  if (!d) { toast('Önce bir dönem oluşturun'); return; }
+  document.getElementById('avans-ayar-donem-id').value = d.id;
+  document.getElementById('avans-ayar-donem').value = d.donem || '';
+  document.getElementById('avans-ayar-kisibasi').value = d.varsayilanTutar || 0;
+  document.getElementById('modal-avans-ayar-title').textContent = donemAd(d.donem) + ' — Ayarlar';
+  // Birden fazla dönem varsa sil butonunu göster
+  document.getElementById('avans-ayar-sil-btn').style.display =
+    (state.avans.donemler.length > 1) ? 'block' : 'none';
+  renderAvansOzelTutarListesi(d);
   openModal('modal-avans-ayar');
 }
 
+// Ayar modalındaki daire bazlı özel tutar inputlarını çiz
+function renderAvansOzelTutarListesi(d) {
+  const sahipler = (state.sahipler || []).slice().sort((a, b) => {
+    const sa = parseInt((a.daireNo || '').replace(/\D/g, '')) || 0;
+    const sb = parseInt((b.daireNo || '').replace(/\D/g, '')) || 0;
+    return sa - sb;
+  });
+  const varsayilan = Number(d.varsayilanTutar) || 0;
+  document.getElementById('avans-ayar-ozel-liste').innerHTML = sahipler.map(s => {
+    const ozel = (d.ozelTutarlar && d.ozelTutarlar[s.id] != null) ? d.ozelTutarlar[s.id] : '';
+    return `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <div style="flex:1;font-size:12px;">${s.daireNo || '-'} · ${s.isim}</div>
+        <input type="number" step="0.01" data-sahip="${s.id}" class="avans-ozel-input"
+          value="${ozel}" placeholder="${varsayilan}"
+          style="width:110px;padding:6px 8px;font-size:13px;">
+      </div>`;
+  }).join('');
+}
+
 function saveAvansAyar() {
+  const donemId = document.getElementById('avans-ayar-donem-id').value;
   const donem = document.getElementById('avans-ayar-donem').value;
-  const kisiBasi = Number(document.getElementById('avans-ayar-kisibasi').value);
-  
+  const varsayilan = Number(document.getElementById('avans-ayar-kisibasi').value);
+
   if (!donem) { toast('Dönem seçin'); return; }
-  if (!kisiBasi || kisiBasi < 0) { toast('Geçerli tutar girin'); return; }
-  
-  state.avans.donem = donem;
-  state.avans.kisiBasi = kisiBasi;
-  
+  if (!varsayilan || varsayilan < 0) { toast('Geçerli varsayılan tutar girin'); return; }
+
+  const d = state.avans.donemler.find(x => x.id === donemId);
+  if (!d) { toast('Dönem bulunamadı'); return; }
+
+  d.donem = donem;
+  d.varsayilanTutar = varsayilan;
+
+  // Özel tutarları oku: varsayılandan farklı ve >0 olanları kaydet, diğerlerini sil
+  const yeniOzel = {};
+  document.querySelectorAll('#avans-ayar-ozel-liste .avans-ozel-input').forEach(inp => {
+    const sid = inp.getAttribute('data-sahip');
+    const v = inp.value.trim();
+    if (v !== '') {
+      const num = Number(v);
+      if (num >= 0 && num !== varsayilan) yeniOzel[sid] = num;
+    }
+  });
+  d.ozelTutarlar = yeniOzel;
+
   save();
   closeModal('modal-avans-ayar');
   render();
-  toast('Avans ayarları kaydedildi');
+  toast('Dönem ayarları kaydedildi ✓');
+}
+
+function deleteAvansDonem() {
+  const donemId = document.getElementById('avans-ayar-donem-id').value;
+  if (state.avans.donemler.length <= 1) { toast('Son dönem silinemez'); return; }
+  const d = state.avans.donemler.find(x => x.id === donemId);
+  if (!d) return;
+  const odemeSayisi = Object.values(d.odemeler || {}).filter(o => o && o.odendi).length;
+  const uyari = odemeSayisi > 0
+    ? `"${donemAd(d.donem)}" döneminde ${odemeSayisi} ödeme kaydı var. Bu dönemi ve ödemelerini silmek istediğinizden emin misiniz?`
+    : `"${donemAd(d.donem)}" dönemini silmek istediğinizden emin misiniz?`;
+  if (!confirm(uyari)) return;
+
+  state.avans.donemler = state.avans.donemler.filter(x => x.id !== donemId);
+  // Aktif dönem silindiyse en yeniyi seç
+  if (state.avans.aktifDonemId === donemId) {
+    const sirali = state.avans.donemler.slice().sort((a, b) => String(a.donem).localeCompare(String(b.donem)));
+    state.avans.aktifDonemId = sirali[sirali.length - 1].id;
+  }
+  save();
+  closeModal('modal-avans-ayar');
+  render();
+  toast('Dönem silindi');
+}
+
+// ---- Yeni Dönem ----
+function openYeniAvansDonem() {
+  document.getElementById('avans-yeni-donem').value = '';
+  document.getElementById('avans-yeni-kisibasi').value = '';
+  openModal('modal-avans-yeni');
+}
+
+function saveYeniAvansDonem() {
+  const donem = document.getElementById('avans-yeni-donem').value;
+  const varsayilan = Number(document.getElementById('avans-yeni-kisibasi').value);
+  if (!donem) { toast('Dönem seçin'); return; }
+  if (!varsayilan || varsayilan < 0) { toast('Geçerli varsayılan tutar girin'); return; }
+  if (state.avans.donemler.some(x => x.donem === donem)) {
+    toast('Bu dönem zaten var'); return;
+  }
+  const id = 'av_' + donem.replace(/-/g, '_') + '_' + Date.now().toString(36);
+  state.avans.donemler.push({ id, donem, varsayilanTutar: varsayilan, ozelTutarlar: {}, odemeler: {} });
+  state.avans.aktifDonemId = id;
+  save();
+  closeModal('modal-avans-yeni');
+  render();
+  toast('Yeni dönem oluşturuldu ✓');
 }
 
 // ============= PAYLAŞIM =============
