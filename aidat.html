@@ -1366,6 +1366,27 @@
       </div>
     </details>
 
+    <!-- AYARLAR: Depolama & Fotoğraflar -->
+    <details class="section">
+      <summary>📦 Depolama & Fotoğraflar</summary>
+      <div class="content">
+        <p style="font-size:12px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;">
+          Makbuz fotoğrafları verinin içinde saklanır. Tarayıcının yerel depolama sınırı (~5 MB) dolunca
+          "Veri kaydedilemedi" hatası çıkar. Aşağıdaki araçla mevcut fotoğrafları kayıpsıza yakın şekilde
+          küçültüp yer açabilirsiniz.
+        </p>
+        <div id="depolama-durum" style="background:var(--bg-card-2);padding:10px;border-radius:8px;margin-bottom:12px;font-size:13px;line-height:1.7;color:var(--text);">
+          Hesaplanıyor…
+        </div>
+        <button class="btn secondary" onclick="refreshDepolamaDurum()" style="margin-bottom:8px;">🔄 Depolama Durumunu Yenile</button>
+        <button class="btn" onclick="fotograflariKucult()" style="margin-bottom:4px;">🗜️ Tüm Fotoğrafları Küçült (Yer Aç)</button>
+        <p style="font-size:11px;color:var(--text-dim);line-height:1.4;margin-top:6px;">
+          Makbuzlar en fazla 900 piksele indirilir ve yeniden sıkıştırılır; fatura yazıları okunur kalır.
+          İşlem tüm cihazlardaki veriyi de (bulut üzerinden) günceller.
+        </p>
+      </div>
+    </details>
+
     <!-- AYARLAR: Senkronizasyon -->
     <details class="section">
       <summary>☁ Bulut Senkronizasyon</summary>
@@ -2512,6 +2533,7 @@ function showPage(name, btn) {
   }
   
   render();
+  if (name === 'ayar') { try { refreshDepolamaDurum(); } catch(e){} }
   window.scrollTo(0, 0);
 }
 
@@ -4439,7 +4461,7 @@ function saveDaire() {
   try {
     save();
   } catch (err) {
-    toast('Hata: Veri kaydedilemedi (alan dolu olabilir). Fotoğrafları azaltın.');
+    toast('Depolama dolu. Ayarlar → 📦 Depolama & Fotoğraflar → "Fotoğrafları Küçült" ile yer açın.');
     return;
   }
   closeModal('modal-daire');
@@ -4556,7 +4578,7 @@ function saveSahip() {
   try {
     save();
   } catch (err) {
-    toast('Hata: Veri kaydedilemedi (alan dolu olabilir).');
+    toast('Depolama dolu. Ayarlar → 📦 Depolama & Fotoğraflar → "Fotoğrafları Küçült" ile yer açın.');
     return;
   }
   closeModal('modal-sahip');
@@ -4753,8 +4775,8 @@ function handleMasrafFotoSecim(event) {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      // Makbuz için daha büyük max boyut: 1000px (okunabilirlik için)
-      const maxBoyut = 1000;
+      // Makbuz için max boyut 900px — fatura yazıları okunur kalırken depolama dostu
+      const maxBoyut = 900;
       let { width, height } = img;
       if (width > height) {
         if (width > maxBoyut) { height = (height * maxBoyut) / width; width = maxBoyut; }
@@ -4764,8 +4786,8 @@ function handleMasrafFotoSecim(event) {
       canvas.width = width;
       canvas.height = height;
       canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-      // JPEG %78 kaliteyle sıkıştır (yazılar okunabilsin diye dengeli)
-      geciciMasrafFoto = canvas.toDataURL('image/jpeg', 0.78);
+      // JPEG %55 kaliteyle sıkıştır (metin okunur, boyut ~2-3x küçük)
+      geciciMasrafFoto = canvas.toDataURL('image/jpeg', 0.55);
       updateMasrafFotoPreview();
     };
     img.src = e.target.result;
@@ -4840,7 +4862,7 @@ function saveMasraf() {
   try {
     save();
   } catch (err) {
-    toast('Hata: Veri kaydedilemedi (depolama dolu olabilir).');
+    toast('Depolama dolu. Ayarlar → 📦 Depolama & Fotoğraflar → "Fotoğrafları Küçült" ile yer açın.');
     return;
   }
   closeModal('modal-masraf');
@@ -5497,6 +5519,132 @@ function showDetay(tip) {
   document.getElementById('detay-title').textContent = title;
   document.getElementById('detay-content').innerHTML = content;
   openModal('modal-detay');
+}
+
+// ============= DEPOLAMA & FOTOĞRAF YÖNETİMİ =============
+// Byte -> okunur boyut
+function insanBoyut(bytes) {
+  if (!bytes) return '0 KB';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+}
+
+// base64 data URI'nin yaklaşık byte boyutu
+function dataUriByte(s) {
+  if (!s || typeof s !== 'string') return 0;
+  const i = s.indexOf(',');
+  const b64 = i >= 0 ? s.slice(i + 1) : s;
+  return Math.floor(b64.length * 3 / 4); // base64 -> byte
+}
+
+// Tüm fotoğrafların byte dökümü
+function fotoByteDokum() {
+  let masrafN = 0, masrafB = 0, profilN = 0, profilB = 0;
+  (state.masraflar || []).forEach(m => { if (m.foto) { masrafN++; masrafB += dataUriByte(m.foto); } });
+  (state.daireler || []).forEach(d => { if (d.foto) { profilN++; profilB += dataUriByte(d.foto); } });
+  (state.sahipler || []).forEach(s => { if (s.foto) { profilN++; profilB += dataUriByte(s.foto); } });
+  return { masrafN, masrafB, profilN, profilB };
+}
+
+function refreshDepolamaDurum() {
+  const el = document.getElementById('depolama-durum');
+  if (!el) return;
+  const toplamStr = JSON.stringify(state);
+  // localStorage çoğu tarayıcıda UTF-16 sayar (~2 byte/char), ama pratik olarak byte ~ karakter sayısı kabul edelim
+  const toplamByte = toplamStr.length;
+  const d = fotoByteDokum();
+  const fotoByte = d.masrafB + d.profilB;
+  const digerByte = Math.max(0, toplamByte - fotoByte);
+  // ~5 MB sınır varsayımı (karakter bazlı)
+  const limit = 5 * 1024 * 1024;
+  const yuzde = Math.min(100, Math.round(toplamByte / limit * 100));
+  const renk = yuzde >= 85 ? 'var(--danger)' : (yuzde >= 60 ? '#d98a00' : 'var(--accent)');
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;"><span>Toplam kullanım:</span>
+      <strong style="color:${renk};">${insanBoyut(toplamByte)} (~%${yuzde})</strong></div>
+    <div style="height:6px;background:var(--border);border-radius:4px;margin:6px 0;overflow:hidden;">
+      <div style="height:100%;width:${yuzde}%;background:${renk};"></div></div>
+    <div style="display:flex;justify-content:space-between;"><span>📸 Makbuz fotoğrafları:</span>
+      <strong>${d.masrafN} adet · ${insanBoyut(d.masrafB)}</strong></div>
+    <div style="display:flex;justify-content:space-between;"><span>👤 Profil fotoğrafları:</span>
+      <strong>${d.profilN} adet · ${insanBoyut(d.profilB)}</strong></div>
+    <div style="display:flex;justify-content:space-between;"><span>📝 Diğer veriler:</span>
+      <strong>${insanBoyut(digerByte)}</strong></div>`;
+}
+
+// Tek bir data URI'yi yeniden boyutlandırıp sıkıştırır (Promise<dataUrl>)
+function tekFotoKucult(dataUrl, maxBoyut, kalite) {
+  return new Promise((resolve) => {
+    if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image')) {
+      resolve(dataUrl); return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      try {
+        let { width, height } = img;
+        if (width > height) {
+          if (width > maxBoyut) { height = (height * maxBoyut) / width; width = maxBoyut; }
+        } else {
+          if (height > maxBoyut) { width = (width * maxBoyut) / height; height = maxBoyut; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(width);
+        canvas.height = Math.round(height);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const yeni = canvas.toDataURL('image/jpeg', kalite);
+        // Sadece daha küçükse değiştir; büyürse eskisini koru
+        resolve(yeni.length < dataUrl.length ? yeni : dataUrl);
+      } catch (e) { resolve(dataUrl); }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+let _fotoKucultmeCalisiyor = false;
+async function fotograflariKucult() {
+  if (_fotoKucultmeCalisiyor) return;
+  const d0 = fotoByteDokum();
+  if (d0.masrafN + d0.profilN === 0) { toast('Küçültülecek fotoğraf yok'); return; }
+  if (!confirm(`${d0.masrafN + d0.profilN} fotoğraf yeniden sıkıştırılacak ve yer açılacak.\n\nMakbuzlar 900px'e indirilir (yazılar okunur kalır). Devam edilsin mi?`)) return;
+
+  _fotoKucultmeCalisiyor = true;
+  const oncekiByte = JSON.stringify(state).length;
+  toast('Fotoğraflar küçültülüyor…');
+
+  try {
+    // Makbuz makbuzları: 900px / %50
+    for (const m of (state.masraflar || [])) {
+      if (m.foto) m.foto = await tekFotoKucult(m.foto, 900, 0.5);
+    }
+    // Profil fotoğrafları: 400px / %70
+    for (const dd of (state.daireler || [])) {
+      if (dd.foto) dd.foto = await tekFotoKucult(dd.foto, 400, 0.7);
+    }
+    for (const s of (state.sahipler || [])) {
+      if (s.foto) s.foto = await tekFotoKucult(s.foto, 400, 0.7);
+    }
+
+    const sonrakiByte = JSON.stringify(state).length;
+    const kazanc = Math.max(0, oncekiByte - sonrakiByte);
+
+    try {
+      save();
+    } catch (err) {
+      _fotoKucultmeCalisiyor = false;
+      refreshDepolamaDurum();
+      toast('Küçültüldü ama yerel kayıt hâlâ dolu. Bazı makbuzları silmeyi deneyin.');
+      return;
+    }
+
+    _fotoKucultmeCalisiyor = false;
+    refreshDepolamaDurum();
+    render();
+    toast(`✓ ${insanBoyut(kazanc)} yer açıldı`);
+  } catch (e) {
+    _fotoKucultmeCalisiyor = false;
+    toast('Hata: ' + (e.message || 'küçültme başarısız'));
+  }
 }
 
 // ============= VERİ YÖNETİMİ =============
