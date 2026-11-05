@@ -289,20 +289,27 @@ function rateOf(c){if(c==='TRY')return 1;const p=Number(state.settings.prices[c]
 function priceOf(k){const p=Number(state.settings.prices[k]);return p>0?p:null;}
 function assetVal(a){const p=priceOf(a.k);return p?a.qty*p:a.cost;}
 function summarize(owner){
-  const s={depTRY:0,depFX:{},depFXtl:0,gold:0,fx:0,cost:0,val:0,missing:new Set(),nPrice:new Set(),nDep:0};
+  const s={depTRY:0,depFX:{},depFXtl:0,gold:0,fx:0,cost:0,val:0,missing:new Set(),nPrice:new Set(),nDep:0,goldPL:0,fxPL:0,depGain:0,fxBy:{}};
   for(const d of activeDeps()){
     if(owner!=='all'&&d.owner!==owner)continue;
     s.nDep++;
-    if(d.cur==='TRY')s.depTRY+=d.principal;
-    else{s.depFX[d.cur]=(s.depFX[d.cur]||0)+d.principal;const r=rateOf(d.cur);if(r)s.depFXtl+=d.principal*r;else s.missing.add(d.cur);}
+    const gn=d.maturity-d.principal;
+    if(d.cur==='TRY'){s.depTRY+=d.maturity;s.depGain+=gn;}
+    else{
+      s.depFX[d.cur]=(s.depFX[d.cur]||0)+d.maturity;
+      const r=rateOf(d.cur),f=s.fxBy[d.cur]||(s.fxBy[d.cur]={tl:0,native:0});f.native+=d.maturity;
+      if(r){s.depFXtl+=d.maturity*r;f.tl+=d.maturity*r;s.depGain+=gn*r;}else s.missing.add(d.cur);
+    }
   }
   for(const a of state.assets){
     if(owner!=='all'&&a.owner!==owner)continue;
     const v=assetVal(a);if(!priceOf(a.k))s.nPrice.add(a.k);
-    if(IB[a.k]&&IB[a.k].g==='gold')s.gold+=v;else s.fx+=v;
+    const pl0=v-a.cost;
+    if(IB[a.k]&&IB[a.k].g==='gold'){s.gold+=v;s.goldPL+=pl0;}
+    else{s.fx+=v;s.fxPL+=pl0;const f=s.fxBy[a.k]||(s.fxBy[a.k]={tl:0,native:0});f.native+=a.qty;f.tl+=v;}
     s.cost+=a.cost;s.val+=v;
   }
-  s.pl=s.val-s.cost;s.total=s.depTRY+s.depFXtl+s.gold+s.fx;
+  s.pl=s.val-s.cost;s.totalPL=s.pl+s.depGain;s.total=s.depTRY+s.depFXtl+s.gold+s.fx;
   return s;
 }
 
@@ -386,7 +393,7 @@ function viewHome(){
   const sa=T.total>0?A.total/T.total*100:50;
   h+=`<section class="hero"><p class="eyebrow">Toplam tasarruf · ₺ karşılığı</p>
     <p class="hero-n">${fmt0(T.total)}<span>₺</span></p>
-    <p class="hero-s">${T.nDep} vadeli hesap · altın ve döviz kâr/zarar ${signed(T.pl)} ₺</p></section>
+    <p class="hero-s">${T.nDep} vadeli hesap · toplam kâr/zarar ${signed(T.totalPL)} ₺</p></section>
     <section class="people">
       <div class="pcard"><div class="pname"><i class="dot" style="background:var(--pa)"></i><span>${esc(nm('a'))}</span></div><div class="pn">${fmt0(A.total)} ₺</div><div class="psub">Toplamın %${Math.round(sa)}'i</div></div>
       <div class="pcard"><div class="pname"><i class="dot" style="background:var(--pb)"></i><span>${esc(nm('b'))}</span></div><div class="pn">${fmt0(B.total)} ₺</div><div class="psub">Toplamın %${Math.round(100-sa)}'i</div></div>
@@ -397,16 +404,25 @@ function viewHome(){
       <div class="acts"><button class="btn pri" data-act="add-dep">Vadeli hesap ekle</button><button class="btn" data-act="add-asset">Altın / döviz ekle</button></div></section>`;
   const r=(l,a,b,t)=>`<tr><td>${l}</td><td>${a}</td><td>${b}</td><td>${t}</td></tr>`;
   const plc=n=>`<td class="${plCls(n)}">${signed(n)}</td>`;
+  const plt=n=>`<td><span class="${plCls(n)}">${signed(n)}</span></td>`;
+  const fxc=[...new Set([].concat(Object.keys(A.fxBy),Object.keys(B.fxBy)))].sort((x,y)=>FXC.indexOf(x)-FXC.indexOf(y));
+  const fxCell=(s,c)=>{const f=s.fxBy[c];return f?fmt0(f.tl)+`<br><span class="small">${nfq.format(f.native)} ${SYM[c]}</span>`:'—';};
   h+=`<section class="card"><h2>Dağılım</h2><div class="scroll-x"><table class="tbl">
     <thead><tr><th></th><th>${esc(nm('a'))}</th><th>${esc(nm('b'))}</th><th>Toplam</th></tr></thead><tbody>
     ${r('Vadeli TL',fmt0(A.depTRY),fmt0(B.depTRY),fmt0(T.depTRY))}
-    ${r('Vadeli döviz (₺ karşılığı)',fmt0(A.depFXtl),fmt0(B.depFXtl),fmt0(T.depFXtl))}
     ${r('Altın',fmt0(A.gold),fmt0(B.gold),fmt0(T.gold))}
-    ${r('Döviz (elde)',fmt0(A.fx),fmt0(B.fx),fmt0(T.fx))}
+    ${fxc.map(c=>r(IB[c]?IB[c].n:c,fxCell(A,c),fxCell(B,c),fxCell(T,c))).join('')}
     <tr class="tot"><td>Toplam</td><td>${fmt0(A.total)}</td><td>${fmt0(B.total)}</td><td>${fmt0(T.total)}</td></tr>
-    <tr><td>Altın/döviz kâr-zarar</td>${plc(A.pl)}${plc(B.pl)}${plc(T.pl)}</tr>
     </tbody></table></div>
-    <p class="small">Tutarlar ₺ cinsinden. Vadeli hesaplarda bağlı anapara, altın ve dövizde girdiğin güncel fiyatlar esas alınır.</p></section>`;
+    <p class="small">Tutarlar ₺ cinsinden. Döviz satırları vadeli hesaptaki ve elde tutulan dövizi birlikte gösterir; altındaki küçük sayı döviz tutarıdır. Vadeli hesaplarda vade sonu değeri, altın ve dövizde girdiğin güncel fiyatlar esas alınır.</p></section>
+    <section class="card"><h2>Kâr / zarar</h2><div class="scroll-x"><table class="tbl">
+    <thead><tr><th></th><th>${esc(nm('a'))}</th><th>${esc(nm('b'))}</th><th>Toplam</th></tr></thead><tbody>
+    <tr><td>Vadeli kazanç</td>${plc(A.depGain)}${plc(B.depGain)}${plc(T.depGain)}</tr>
+    <tr><td>Altın kâr/zarar</td>${plc(A.goldPL)}${plc(B.goldPL)}${plc(T.goldPL)}</tr>
+    <tr><td>Döviz kâr/zarar</td>${plc(A.fxPL)}${plc(B.fxPL)}${plc(T.fxPL)}</tr>
+    <tr class="tot"><td>Toplam kâr/zarar</td>${plt(A.totalPL)}${plt(B.totalPL)}${plt(T.totalPL)}</tr>
+    </tbody></table></div>
+    <p class="small">Tutarlar ₺ cinsinden. Vadeli kazanç, açık vadeli hesapların vade sonu değeri ile bağlanan tutar farkıdır. Altın ve döviz kâr/zararı güncel fiyat ile alış tutarı farkıdır.</p></section>`;
   const soon=activeDeps().filter(d=>!isDue(d)).sort(byEnd).slice(0,4);
   if(soon.length)h+=`<section class="card"><h2>Yaklaşan vadeler</h2><ul class="up">${soon.map(d=>`<li>
       <div class="l"><b>${esc(d.bank)}</b><span class="small">${who(d.owner)} · ${fmtD(d.endDate)}</span></div>
