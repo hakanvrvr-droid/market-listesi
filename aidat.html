@@ -3682,8 +3682,10 @@ function renderRaporAvans(donemler, yil) {
     state.masraflar
       .filter(m => isAvansMasrafi(m) && m.donem === dk)
       .forEach(m => {
-        const tur = m.tur || 'Diğer';
-        masrafGruplari[tur] = (masrafGruplari[tur] || 0) + Number(m.tutar);
+        // Avans raporunda alt kalemler masraf TÜRÜ yerine AÇIKLAMA metnine göre gruplanır.
+        // Açıklama boşsa yedek olarak masraf türü (yoksa "Diğer") kullanılır.
+        const anahtar = (m.aciklama && m.aciklama.trim()) ? m.aciklama.trim() : (m.tur || 'Diğer');
+        masrafGruplari[anahtar] = (masrafGruplari[anahtar] || 0) + Number(m.tutar);
       });
     const masrafToplam = Object.values(masrafGruplari).reduce((s,v) => s+v, 0);
     return { donem: dk, tahsilat, masrafGruplari, masrafToplam };
