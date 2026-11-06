@@ -7,7 +7,7 @@
 <title>Tasarruf Defteri</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
 <style>
-/* Layout: tek sütun, telefon odaklı. Üstte başlık, ortada ekran, altta üç sekmeli gezinme.
+/* Layout: tek sütun, telefon odaklı. Üstte başlık, ortada ekran, altta dört sekmeli gezinme.
    Özet ekranı: toplam bandı, iki kişilik kartlar, dağılım tablosu. */
 :root{
   --bg:#EDF0F3; --surface:#FFFFFF; --surface2:#F4F6F8; --ink:#14212B; --muted:#586976; --line:#D8DFE5;
@@ -15,6 +15,7 @@
   --hero-bg:#1D3A5F; --hero-ink:#FFFFFF; --hero-muted:#B8C9DC;
   --pa:#0F8B8D; --pb:#C2561F;
   --good:#1B7A4B; --good-soft:#DCF1E5; --warn:#8F5E00; --warn-soft:#FBEBC8; --bad:#B0352D; --bad-soft:#F9DFDC;
+  --wa:#11803F;
   --scrim:rgba(10,20,28,.5);
   --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
   --f-body:'Figtree','Segoe UI',system-ui,-apple-system,sans-serif;
@@ -25,6 +26,7 @@
   --hero-bg:#1B3350; --hero-ink:#F2F6FA; --hero-muted:#A5BBD1;
   --pa:#4FC3C5; --pb:#F0925A;
   --good:#5FD39A; --good-soft:#143328; --warn:#E8B25A; --warn-soft:#3A2C12; --bad:#F08A82; --bad-soft:#3D1D1B;
+  --wa:#1E9E55;
   --scrim:rgba(0,0,0,.6); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0E161C; --surface:#16212A; --surface2:#1C2933; --ink:#E7EDF1; --muted:#94A4B0; --line:#263641;
@@ -32,6 +34,7 @@
   --hero-bg:#1B3350; --hero-ink:#F2F6FA; --hero-muted:#A5BBD1;
   --pa:#4FC3C5; --pb:#F0925A;
   --good:#5FD39A; --good-soft:#143328; --warn:#E8B25A; --warn-soft:#3A2C12; --bad:#F08A82; --bad-soft:#3D1D1B;
+  --wa:#1E9E55;
   --scrim:rgba(0,0,0,.6); color-scheme:dark}
 
 *{box-sizing:border-box}
@@ -54,9 +57,9 @@ main{display:grid;gap:16px;padding-bottom:calc(96px + env(safe-area-inset-bottom
 
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);
   padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px));
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.tabs{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
-.tab{display:grid;justify-items:center;gap:2px;padding:6px 4px;border-radius:10px;text-decoration:none;color:var(--muted);font-size:12px;font-weight:600;min-height:52px;align-content:center}
+  padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
+.tabs{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.tab{display:grid;justify-items:center;gap:2px;padding:6px 2px;border-radius:10px;text-decoration:none;color:var(--muted);font-size:11px;font-weight:600;min-height:52px;align-content:center;white-space:nowrap}
 .tab svg{width:22px;height:22px}
 .tab[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
 
@@ -97,10 +100,14 @@ main{display:grid;gap:16px;padding-bottom:calc(96px + env(safe-area-inset-bottom
 
 .btn{font-weight:600;font-size:14px;padding:10px 14px;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;color:var(--ink)}
 .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.wa{background:var(--wa);border-color:var(--wa);color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.wa svg{width:20px;height:20px;flex:none}
 .btn.bad{color:var(--bad);border-color:var(--bad)}
 .btn.sm{min-height:38px;padding:6px 12px;font-size:13px}
 .btn.ghost{background:transparent}
 .acts{display:flex;flex-wrap:wrap;gap:8px}
+.sendbar{display:grid;margin-top:4px}
+.sendbar .btn{width:100%}
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;background:var(--surface2);padding:4px;border-radius:12px;border:1px solid var(--line)}
 .seg label,.seg button{position:relative;min-width:0}
 .seg input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
@@ -155,6 +162,7 @@ input[type=text],input[type=number],input[type=date],select{font:inherit;font-si
 .prev{border-radius:12px;background:var(--surface2);padding:10px 12px;font-size:13px;min-height:40px}
 .formerr{color:var(--bad);font-size:13px;font-weight:600;min-height:18px}
 .static{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:var(--surface2);border-radius:12px;padding:10px 12px}
+.rep{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.5;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;max-height:48vh;overflow:auto}
 
 .sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheet-bg{position:absolute;inset:0;background:var(--scrim)}
@@ -183,7 +191,8 @@ input[type=text],input[type=number],input[type=date],select{font:inherit;font-si
 <nav class="nav" aria-label="Ana gezinme"><div class="tabs">
   <a class="tab" id="t-ozet" href="#ozet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Özet</a>
   <a class="tab" id="t-vadeli" href="#vadeli"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Vadeli</a>
-  <a class="tab" id="t-altin" href="#altin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/><path d="M15 9.5a6 6 0 1 1-5.5 8.5"/></svg>Altın / Döviz</a>
+  <a class="tab" id="t-nakit" href="#nakit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>Nakit</a>
+  <a class="tab" id="t-altin" href="#altin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/><path d="M15 9.5a6 6 0 1 1-5.5 8.5"/></svg>Altın/Döviz</a>
 </div></nav>
 
 <div id="sheet" class="sheet" hidden>
@@ -211,6 +220,7 @@ const INSTR=[
   {k:'CEYREK',n:'Çeyrek altın',g:'gold',u:'adet'},{k:'YARIM',n:'Yarım altın',g:'gold',u:'adet'},{k:'TAM',n:'Tam altın',g:'gold',u:'adet'}
 ];
 const IB=Object.fromEntries(INSTR.map(i=>[i.k,i]));
+const WA_SVG='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.23 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.23-.16-.48-.29z"/></svg>';
 
 /* ---------- biçim ---------- */
 const nf0=new Intl.NumberFormat('tr-TR',{maximumFractionDigits:0,useGrouping:'always'});
@@ -218,13 +228,13 @@ const nf2=new Intl.NumberFormat('tr-TR',{minimumFractionDigits:2,maximumFraction
 const nfq=new Intl.NumberFormat('tr-TR',{maximumFractionDigits:4,useGrouping:'always'});
 const fmt0=n=>nf0.format(Math.round(n)+0);
 const fmt2=n=>nf2.format(n+0);
-const money=(n,c,dec)=>(dec===0?fmt0(n):fmt2(n))+' '+SYM[c];
+const money=(n,c,dec)=>(dec===0?fmt0(n):fmt2(n))+' '+SYM[c];
 const signed=(n,dec)=>{dec=dec||0;const z=Math.abs(n)<(dec===0?0.5:0.005);const a=Math.abs(n);return (z?'':n>0?'+':'−')+(dec===0?fmt0(a):fmt2(a));};
 const plCls=n=>Math.abs(n)<0.5?'':n>0?'pos':'neg';
 const numStr=n=>(n===''||n==null||isNaN(n))?'':String(n).replace('.',',');
 function parseNum(s){
   if(s==null)return NaN;
-  s=String(s).trim().replace(/[\s ]/g,'').replace(/[₺$€£]|TL|TRY/gi,'');
+  s=String(s).trim().replace(/[\s ]/g,'').replace(/[₺$€£]|TL|TRY/gi,'');
   if(!s)return NaN;
   if(s.indexOf(',')>=0)s=s.replace(/\./g,'').replace(',','.');
   else if(/^[1-9]\d{0,2}(\.\d{3})+$/.test(s))s=s.replace(/\./g,'');
@@ -242,12 +252,12 @@ const diffDays=(a,b)=>Math.round((parseD(b)-parseD(a))/864e5);
 /* ---------- durum ---------- */
 const DEF={names:{a:'Ben',b:'Eşim'},prices:{},pricesAt:null,namesSet:false};
 function mergeSettings(s){s=s||{};const n=s.names||{};return{names:{a:n.a||'Ben',b:n.b||'Eşim'},prices:Object.assign({},s.prices||{}),pricesAt:s.pricesAt||null,namesSet:!!s.namesSet};}
-const state={settings:mergeSettings(null),deposits:[],assets:[],mode:'local',ready:false,note:''};
-const ui={view:'ozet',depOwner:'all',asOwner:'all',showArch:false,hist:new Set(),confirmClose:null,pricesOpen:null,sheet:null,namesPrompted:false};
+const state={settings:mergeSettings(null),deposits:[],assets:[],cash:[],mode:'local',ready:false,note:''};
+const ui={view:'ozet',depOwner:'all',asOwner:'all',cashOwner:'all',showArch:false,hist:new Set(),confirmClose:null,pricesOpen:null,sheet:null,namesPrompted:false};
 let db=null;
 const LS='tasarruf-defteri-v1';
-function lsLoad(){try{const r=localStorage.getItem(LS);if(r){const o=JSON.parse(r);state.deposits=o.deposits||[];state.assets=o.assets||[];state.settings=mergeSettings(o.settings);}}catch(e){}}
-function lsSave(){try{localStorage.setItem(LS,JSON.stringify({deposits:state.deposits,assets:state.assets,settings:state.settings}));}catch(e){}}
+function lsLoad(){try{const r=localStorage.getItem(LS);if(r){const o=JSON.parse(r);state.deposits=o.deposits||[];state.assets=o.assets||[];state.cash=o.cash||[];state.settings=mergeSettings(o.settings);}}catch(e){}}
+function lsSave(){try{localStorage.setItem(LS,JSON.stringify({deposits:state.deposits,assets:state.assets,cash:state.cash,settings:state.settings}));}catch(e){}}
 
 let toastT=null;
 function toast(msg,kind){const t=$('#toast');t.textContent=msg;t.className='toast'+(kind==='bad'?' bad':'');t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true;},4200);}
@@ -258,7 +268,7 @@ function fail(e){
   else toast('Kaydedilemedi. Bağlantını kontrol edip tekrar dene.','bad');
 }
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-const listOf=c=>c==='deposits'?state.deposits:state.assets;
+const listOf=c=>c==='deposits'?state.deposits:c==='cash'?state.cash:state.assets;
 
 async function putDoc(coll,rec){
   const list=listOf(coll),i=list.findIndex(x=>x.id===rec.id);
@@ -288,8 +298,9 @@ const byEnd=(a,b)=>a.endDate<b.endDate?-1:a.endDate>b.endDate?1:0;
 function rateOf(c){if(c==='TRY')return 1;const p=Number(state.settings.prices[c]);return p>0?p:null;}
 function priceOf(k){const p=Number(state.settings.prices[k]);return p>0?p:null;}
 function assetVal(a){const p=priceOf(a.k);return p?a.qty*p:a.cost;}
+function cashTL(c){const r=rateOf(c.cur);return r?c.amount*r:0;}
 function summarize(owner){
-  const s={depTRY:0,depFX:{},depFXtl:0,gold:0,fx:0,cost:0,val:0,missing:new Set(),nPrice:new Set(),nDep:0,goldPL:0,fxPL:0,depGain:0,fxBy:{}};
+  const s={depTRY:0,depFX:{},depFXtl:0,gold:0,fx:0,cash:0,cost:0,val:0,missing:new Set(),nPrice:new Set(),nDep:0,goldPL:0,fxPL:0,depGain:0,fxBy:{}};
   for(const d of activeDeps()){
     if(owner!=='all'&&d.owner!==owner)continue;
     s.nDep++;
@@ -301,6 +312,10 @@ function summarize(owner){
       if(r){s.depFXtl+=d.maturity*r;f.tl+=d.maturity*r;s.depGain+=gn*r;}else s.missing.add(d.cur);
     }
   }
+  for(const c of state.cash){
+    if(owner!=='all'&&c.owner!==owner)continue;
+    if(rateOf(c.cur))s.cash+=cashTL(c);else s.missing.add(c.cur);
+  }
   for(const a of state.assets){
     if(owner!=='all'&&a.owner!==owner)continue;
     const v=assetVal(a);if(!priceOf(a.k))s.nPrice.add(a.k);
@@ -309,7 +324,7 @@ function summarize(owner){
     else{s.fx+=v;s.fxPL+=pl0;const f=s.fxBy[a.k]||(s.fxBy[a.k]={tl:0,native:0});f.native+=a.qty;f.tl+=v;}
     s.cost+=a.cost;s.val+=v;
   }
-  s.pl=s.val-s.cost;s.totalPL=s.pl+s.depGain;s.total=s.depTRY+s.depFXtl+s.gold+s.fx;
+  s.pl=s.val-s.cost;s.totalPL=s.pl+s.depGain;s.total=s.depTRY+s.depFXtl+s.cash+s.gold+s.fx;
   return s;
 }
 
@@ -325,6 +340,12 @@ function dueChip(d){
   if(n<=7)return chip('warn',n+' gün kaldı');
   return chip('',n+' gün kaldı');
 }
+function dueText(d){
+  const n=diffDays(todayStr(),d.endDate);
+  if(n<0)return `vadesi ${-n} gün önce doldu`;
+  if(n===0)return 'vade bugün';
+  return n+' gün kaldı';
+}
 function sumsByCur(list,f){
   const o={};for(const d of list)o[d.cur]=(o[d.cur]||0)+(Number(d[f])||0);
   const keys=['TRY'].concat(FXC).filter(c=>o[c]!=null);
@@ -335,6 +356,11 @@ function sumsLine(list,f){
   return ['TRY'].concat(FXC).filter(c=>o[c]!=null).map(c=>money(o[c],c,0)).join(' · ');
 }
 const bankKey=b=>String(b).trim().toLocaleLowerCase('tr');
+function groupByBank(list){
+  const groups=new Map();
+  for(const d of list){const k=bankKey(d.bank);if(!groups.has(k))groups.set(k,{name:d.bank.trim(),list:[]});groups.get(k).list.push(d);}
+  return [...groups.values()];
+}
 
 function depActions(d){
   if(ui.confirmClose===d.id)
@@ -380,6 +406,7 @@ function dueCard(d){
     <p class="small">Bu bankayla devam edeceksen vadeyi uzat. Devam etmeyeceksen bankayı toplamlardan çıkar.</p>
     ${depActions(d)}</article>`;
 }
+const sendBar=()=>`<div class="sendbar"><button class="btn wa" data-act="share">${WA_SVG}WhatsApp ile gönder</button></div>`;
 
 /* ---------- ÖZET ---------- */
 function viewHome(){
@@ -389,7 +416,7 @@ function viewHome(){
   const due=activeDeps().filter(isDue).sort(byEnd);
   if(due.length)h+=`<section class="stack">${due.map(dueCard).join('')}</section>`;
   const miss=[...T.missing];
-  if(miss.length)h+=`<div class="note warn">${miss.join(', ')} kuru girilmediği için vadeli döviz hesapları toplama dahil edilmedi. <a href="#altin">Fiyatları gir</a></div>`;
+  if(miss.length)h+=`<div class="note warn">${miss.join(', ')} kuru girilmediği için bu dövizdeki vadeli hesaplar ve nakit toplama dahil edilmedi. <a href="#altin">Fiyatları gir</a></div>`;
   const sa=T.total>0?A.total/T.total*100:50;
   h+=`<section class="hero"><p class="eyebrow">Toplam tasarruf · ₺ karşılığı</p>
     <p class="hero-n">${fmt0(T.total)}<span>₺</span></p>
@@ -399,9 +426,9 @@ function viewHome(){
       <div class="pcard"><div class="pname"><i class="dot" style="background:var(--pb)"></i><span>${esc(nm('b'))}</span></div><div class="pn">${fmt0(B.total)} ₺</div><div class="psub">Toplamın %${Math.round(100-sa)}'i</div></div>
     </section>
     <div class="share" aria-hidden="true"><i style="width:${sa}%;background:var(--pa)"></i><i style="flex:1;background:var(--pb)"></i></div>`;
-  if(!state.deposits.length&&!state.assets.length)
-    h+=`<section class="card empty"><h2>Henüz kayıt yok</h2><p>Vadeli hesaplarını ve altın ya da dövizini ekledikçe toplamlar burada oluşur.</p>
-      <div class="acts"><button class="btn pri" data-act="add-dep">Vadeli hesap ekle</button><button class="btn" data-act="add-asset">Altın / döviz ekle</button></div></section>`;
+  if(!state.deposits.length&&!state.assets.length&&!state.cash.length)
+    h+=`<section class="card empty"><h2>Henüz kayıt yok</h2><p>Vadeli hesaplarını, nakdini ve altın ya da dövizini ekledikçe toplamlar burada oluşur.</p>
+      <div class="acts"><button class="btn pri" data-act="add-dep">Vadeli hesap ekle</button><button class="btn" data-act="add-cash">Nakit ekle</button><button class="btn" data-act="add-asset">Altın / döviz ekle</button></div></section>`;
   const r=(l,a,b,t)=>`<tr><td>${l}</td><td>${a}</td><td>${b}</td><td>${t}</td></tr>`;
   const plc=n=>`<td class="${plCls(n)}">${signed(n)}</td>`;
   const plt=n=>`<td><span class="${plCls(n)}">${signed(n)}</span></td>`;
@@ -410,11 +437,12 @@ function viewHome(){
   h+=`<section class="card"><h2>Dağılım</h2><div class="scroll-x"><table class="tbl">
     <thead><tr><th></th><th>${esc(nm('a'))}</th><th>${esc(nm('b'))}</th><th>Toplam</th></tr></thead><tbody>
     ${r('Vadeli TL',fmt0(A.depTRY),fmt0(B.depTRY),fmt0(T.depTRY))}
+    ${r('Nakit',fmt0(A.cash),fmt0(B.cash),fmt0(T.cash))}
     ${r('Altın',fmt0(A.gold),fmt0(B.gold),fmt0(T.gold))}
     ${fxc.map(c=>r(IB[c]?IB[c].n:c,fxCell(A,c),fxCell(B,c),fxCell(T,c))).join('')}
     <tr class="tot"><td>Toplam</td><td>${fmt0(A.total)}</td><td>${fmt0(B.total)}</td><td>${fmt0(T.total)}</td></tr>
     </tbody></table></div>
-    <p class="small">Tutarlar ₺ cinsinden. Döviz satırları vadeli hesaptaki ve elde tutulan dövizi birlikte gösterir; altındaki küçük sayı döviz tutarıdır. Vadeli hesaplarda vade sonu değeri, altın ve dövizde girdiğin güncel fiyatlar esas alınır.</p></section>
+    <p class="small">Tutarlar ₺ cinsinden. Döviz satırları vadeli hesaptaki ve elde tutulan dövizi birlikte gösterir; altındaki küçük sayı döviz tutarıdır. Nakit satırı, Nakit sekmesindeki bakiyelerin ₺ karşılığıdır. Vadeli hesaplarda vade sonu değeri, altın ve dövizde girdiğin güncel fiyatlar esas alınır.</p></section>
     <section class="card"><h2>Kâr / zarar</h2><div class="scroll-x"><table class="tbl">
     <thead><tr><th></th><th>${esc(nm('a'))}</th><th>${esc(nm('b'))}</th><th>Toplam</th></tr></thead><tbody>
     <tr><td>Vadeli kazanç</td>${plc(A.depGain)}${plc(B.depGain)}${plc(T.depGain)}</tr>
@@ -446,9 +474,7 @@ function viewDeposits(){
     h+=`<section class="card empty"><h2>Vadeli hesap yok</h2><p>Bağladığın parayı banka, tutar ve vade bilgileriyle ekle.</p><button class="btn pri" data-act="add-dep">Vadeli hesap ekle</button></section>`;
   }else{
     h+=`<section class="card"><div class="kv"><div><span>Bağlı tutar</span><b class="num">${sumsByCur(act,'principal')}</b></div><div><span>Vade sonunda</span><b class="num">${sumsByCur(act,'maturity')}</b></div></div></section>`;
-    const groups=new Map();
-    for(const d of act.slice().sort(byEnd)){const k=bankKey(d.bank);if(!groups.has(k))groups.set(k,{name:d.bank.trim(),list:[]});groups.get(k).list.push(d);}
-    for(const g of groups.values())
+    for(const g of groupByBank(act.slice().sort(byEnd)))
       h+=`<section class="bank"><div class="bank-h"><h3>${esc(g.name)}</h3><span class="small num">${sumsLine(g.list,'principal')}</span></div>${g.list.map(depRow).join('')}</section>`;
   }
   const arch=state.deposits.filter(d=>isArch(d)&&(ui.depOwner==='all'||d.owner===ui.depOwner)).sort((a,b)=>byEnd(b,a));
@@ -459,6 +485,38 @@ function viewDeposits(){
       <div class="acts"><button class="btn sm" data-act="restore" data-id="${d.id}">Geri al</button><button class="btn ghost sm" data-act="edit-dep" data-id="${d.id}">Düzenle</button></div></li>`).join('')}</ul></section>`;
   }
   return h;
+}
+
+/* ---------- NAKİT ---------- */
+function viewCash(){
+  const list=state.cash.filter(c=>ui.cashOwner==='all'||c.owner===ui.cashOwner);
+  let h=`<div class="sec-h"><h2>Nakit</h2><button class="btn pri sm" data-act="add-cash">+ Ekle</button></div>${ownerSeg('cashOwner')}`;
+  if(state.note)h+=`<div class="note warn">${esc(state.note)}</div>`;
+  if(!list.length){
+    h+=`<section class="card empty"><h2>Nakit kaydı yok</h2><p>Hangi bankada ne kadar nakdin olduğunu banka, tutar ve para birimiyle ekle.</p><button class="btn pri" data-act="add-cash">Nakit ekle</button></section>`;
+    return h;
+  }
+  const hasFX=list.some(c=>c.cur!=='TRY'),miss=[...new Set(list.filter(c=>!rateOf(c.cur)).map(c=>c.cur))];
+  const totTL=list.reduce((s,c)=>s+cashTL(c),0);
+  h+=`<section class="card"><div class="kv"><div><span>Toplam nakit</span><b class="num">${sumsByCur(list,'amount')}</b></div><div><span>₺ karşılığı</span><b class="num">${money(totTL,'TRY',0)}</b></div></div>
+    ${miss.length?`<p class="small">${miss.join(', ')} kuru girilmediği için ₺ karşılığına dahil değil. <a href="#altin">Fiyatları gir</a></p>`:(hasFX?'<p class="small">Döviz bakiyeleri, Altın/Döviz sekmesinde girdiğin güncel kurla çevrilir.</p>':'')}</section>`;
+  const groups=groupByBank(list.slice().sort((a,b)=>b.amount*(rateOf(b.cur)||0)-a.amount*(rateOf(a.cur)||0)));
+  const rows=groups.map(g=>{const f=o=>g.list.filter(c=>c.owner===o).reduce((s,c)=>s+cashTL(c),0);return{name:g.name,a:f('a'),b:f('b'),t:g.list.reduce((s,c)=>s+cashTL(c),0)};}).sort((x,y)=>y.t-x.t);
+  h+=`<section class="card"><h2>Bankalara göre</h2><div class="scroll-x"><table class="tbl"><thead><tr><th>Banka</th><th>${esc(nm('a'))}</th><th>${esc(nm('b'))}</th><th>Toplam</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt0(r.a)}</td><td>${fmt0(r.b)}</td><td>${fmt0(r.t)}</td></tr>`).join('')}
+    <tr class="tot"><td>Toplam</td><td>${fmt0(rows.reduce((s,r)=>s+r.a,0))}</td><td>${fmt0(rows.reduce((s,r)=>s+r.b,0))}</td><td>${fmt0(totTL)}</td></tr></tbody></table></div>
+    <p class="small">Tutarlar ₺ cinsinden.</p></section>`;
+  for(const g of groups)
+    h+=`<section class="bank"><div class="bank-h"><h3>${esc(g.name)}</h3><span class="small num">${sumsLine(g.list,'amount')}</span></div>${g.list.map(cashRow).join('')}</section>`;
+  return h;
+}
+function cashRow(c){
+  return `<article class="dep">
+    <div class="dep-top">${who(c.owner)}${chip('',c.cur==='TRY'?'TL':c.cur)}</div>
+    <div class="dep-amt num">${money(c.amount,c.cur)}<small>nakit</small></div>
+    ${c.note?`<p class="small">${esc(c.note)}</p>`:''}
+    <p class="small">Son güncelleme: ${fmtD(c.updatedAt)}</p>
+    <div class="acts"><button class="btn sm" data-act="edit-cash" data-id="${c.id}">Bakiyeyi güncelle</button></div></article>`;
 }
 
 /* ---------- ALTIN / DÖVİZ ---------- */
@@ -510,6 +568,98 @@ function lotRow(a){
     <div class="acts"><button class="btn ghost sm" data-act="edit-asset" data-id="${a.id}">Düzenle</button></div></article>`;
 }
 
+/* ---------- WhatsApp raporu ---------- */
+const TLs=n=>fmt0(n)+' ₺';
+const sgn=n=>signed(n)+' ₺';
+function repHead(t){return '*Tasarruf Defteri · '+t+'*\n'+fmtD(todayStr())+'\n';}
+function filtName(o){return o==='all'?'':' · '+nm(o);}
+function repMissing(S){
+  let t='';
+  if(S.missing.size)t+='\n_Not: '+[...S.missing].join(', ')+' kuru girilmediği için bu dövizdeki hesaplar toplama dahil değil._\n';
+  return t;
+}
+function repHome(){
+  const A=summarize('a'),B=summarize('b'),T=summarize('all');
+  let t=repHead('Özet')+'\n*Toplam tasarruf:* '+TLs(T.total)+'\n';
+  t+='• '+nm('a')+': '+TLs(A.total)+'\n• '+nm('b')+': '+TLs(B.total)+'\n';
+  t+='\n*Dağılım*\n';
+  const lines=[['Vadeli TL',T.depTRY],['Vadeli döviz (₺ karşılığı)',T.depFXtl],['Nakit',T.cash],['Altın',T.gold],['Elde döviz',T.fx]];
+  for(const l of lines)if(Math.abs(l[1])>=0.5)t+='• '+l[0]+': '+TLs(l[1])+'\n';
+  t+='\n*Kâr / zarar*\n• Vadeli kazanç: '+sgn(T.depGain)+'\n• Altın: '+sgn(T.goldPL)+'\n• Döviz: '+sgn(T.fxPL)+'\n• Toplam: '+sgn(T.totalPL)+'\n';
+  const due=activeDeps().filter(isDue).sort(byEnd);
+  if(due.length){t+='\n*Vadesi dolanlar*\n';for(const d of due)t+='• '+d.bank+' ('+nm(d.owner)+'): '+money(d.maturity,d.cur,0)+' · '+dueText(d)+'\n';}
+  const soon=activeDeps().filter(d=>!isDue(d)).sort(byEnd).slice(0,4);
+  if(soon.length){t+='\n*Yaklaşan vadeler*\n';for(const d of soon)t+='• '+fmtD(d.endDate)+' · '+d.bank+' ('+nm(d.owner)+'): '+money(d.maturity,d.cur,0)+' · '+dueText(d)+'\n';}
+  return (t+repMissing(T)).trim();
+}
+function repDeposits(){
+  const act=activeDeps().filter(d=>ui.depOwner==='all'||d.owner===ui.depOwner).sort(byEnd);
+  let t=repHead('Vadeli hesaplar'+filtName(ui.depOwner));
+  if(!act.length)return t+'\nVadeli hesap yok.';
+  t+='\n*Toplam bağlı:* '+sumsLine(act,'principal')+'\n*Vade sonunda:* '+sumsLine(act,'maturity')+'\n';
+  for(const g of groupByBank(act)){
+    t+='\n*'+g.name+'*\n';
+    for(const d of g.list){
+      const gn=d.maturity-d.principal;
+      t+='• '+nm(d.owner)+': '+money(d.principal,d.cur,0)+' → '+money(d.maturity,d.cur,0)+' (net '+signed(gn,2)+' '+SYM[d.cur]+')\n   '+fmtD(d.startDate)+' – '+fmtD(d.endDate)+' · '+d.termDays+' gün · '+dueText(d)+'\n';
+    }
+  }
+  return t.trim();
+}
+function repCash(){
+  const list=state.cash.filter(c=>ui.cashOwner==='all'||c.owner===ui.cashOwner);
+  let t=repHead('Nakit'+filtName(ui.cashOwner));
+  if(!list.length)return t+'\nNakit kaydı yok.';
+  const totTL=list.reduce((s,c)=>s+cashTL(c),0),miss=[...new Set(list.filter(c=>!rateOf(c.cur)).map(c=>c.cur))];
+  t+='\n*Toplam nakit:* '+sumsLine(list,'amount')+'\n*₺ karşılığı:* '+TLs(totTL)+'\n';
+  for(const g of groupByBank(list)){
+    t+='\n*'+g.name+'* ('+sumsLine(g.list,'amount')+')\n';
+    for(const c of g.list)t+='• '+nm(c.owner)+': '+money(c.amount,c.cur)+(c.note?' ('+c.note+')':'')+'\n';
+  }
+  if(miss.length)t+='\n_Not: '+miss.join(', ')+' kuru girilmediği için ₺ karşılığına dahil değil._\n';
+  return t.trim();
+}
+function repAssets(){
+  const list=state.assets.filter(a=>ui.asOwner==='all'||a.owner===ui.asOwner);
+  let t=repHead('Altın / Döviz'+filtName(ui.asOwner));
+  if(!list.length)return t+'\nKayıt yok.';
+  const S=summarize(ui.asOwner);
+  t+='\n*Maliyet:* '+TLs(S.cost)+'\n*Güncel değer:* '+TLs(S.val)+'\n*Kâr/zarar:* '+sgn(S.pl)+'\n\n*Pozisyonlar*\n';
+  const pos=new Map();
+  for(const a of list){const p=pos.get(a.k)||{k:a.k,qty:0,cost:0,val:0};p.qty+=a.qty;p.cost+=a.cost;p.val+=assetVal(a);pos.set(a.k,p);}
+  for(const p of pos.values()){
+    const i=IB[p.k]||{n:p.k,u:''},pl=p.val-p.cost,pp=p.cost>0?pl/p.cost*100:0;
+    t+='• '+i.n+': '+nfq.format(p.qty)+' '+i.u+' · değer '+TLs(p.val)+' · '+sgn(pl)+' ('+(pl<0?'−':pl>0?'+':'')+'%'+pctStr(Math.abs(pp))+')\n';
+  }
+  const pr=INSTR.filter(i=>priceOf(i.k));
+  if(pr.length){t+='\n*Kullanılan güncel fiyatlar*\n';for(const i of pr)t+='• '+i.n+': '+fmt2(priceOf(i.k))+' ₺\n';}
+  if(S.nPrice.size)t+='\n_Not: '+[...S.nPrice].map(k=>IB[k]?IB[k].n:k).join(', ')+' için güncel fiyat girilmedi, alış tutarıyla hesaplandı._\n';
+  return t.trim();
+}
+function buildReport(v){return v==='vadeli'?repDeposits():v==='nakit'?repCash():v==='altin'?repAssets():repHome();}
+function openReport(){
+  const text=buildReport(ui.view);
+  ui.sheet={type:'report',text};
+  openSheet('Raporu gönder',`<p class="small">Bu sayfanın raporu aşağıda. WhatsApp açılınca göndereceğin kişileri veya grubu seçersin.</p>
+    <div class="rep" id="rep-text">${esc(text)}</div>
+    ${text.length>3500?'<div class="note warn">Rapor uzun. WhatsApp açılırken kısalırsa “Kopyala” ile kopyalayıp sohbete yapıştırabilirsin.</div>':''}
+    <div class="acts"><button class="btn wa" data-act="wa-send">${WA_SVG}WhatsApp ile gönder</button><button class="btn" data-act="wa-copy">Kopyala</button></div>`);
+}
+function waSend(){
+  const sh=ui.sheet;if(!sh||sh.type!=='report')return;
+  const url='https://wa.me/?text='+encodeURIComponent(sh.text);
+  const w=window.open(url,'_blank');
+  if(!w)location.href=url;
+}
+async function waCopy(){
+  const sh=ui.sheet;if(!sh||sh.type!=='report')return;
+  try{await navigator.clipboard.writeText(sh.text);toast('Rapor kopyalandı.');}
+  catch(e){
+    try{const ta=document.createElement('textarea');ta.value=sh.text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('Rapor kopyalandı.');}
+    catch(x){toast('Kopyalanamadı. Metni elle seçip kopyala.','bad');}
+  }
+}
+
 /* ---------- çizim ---------- */
 let pending=false;
 function render(){
@@ -519,9 +669,9 @@ function render(){
   const m=$('#mode');
   if(state.mode==='shared'){m.className='chip good';m.textContent='Ortak kayıt';m.title='Kayıtlar sayfaya erişimi olan herkesle ortak ve canlı';}
   else{m.className='chip warn';m.textContent='Yalnızca bu cihaz';m.title='Kayıtlar bu tarayıcıda tutuluyor';}
-  for(const k of ['ozet','vadeli','altin']){const t=$('#t-'+k);if(ui.view===k)t.setAttribute('aria-current','page');else t.removeAttribute('aria-current');}
+  for(const k of ['ozet','vadeli','nakit','altin']){const t=$('#t-'+k);if(ui.view===k)t.setAttribute('aria-current','page');else t.removeAttribute('aria-current');}
   if(!state.ready){v.innerHTML='<p class="loading">Kayıtlar yükleniyor…</p>';return;}
-  v.innerHTML=ui.view==='vadeli'?viewDeposits():ui.view==='altin'?viewAssets():viewHome();
+  v.innerHTML=(ui.view==='vadeli'?viewDeposits():ui.view==='nakit'?viewCash():ui.view==='altin'?viewAssets():viewHome())+sendBar();
   if(!ui.namesPrompted&&!state.settings.namesSet){
     ui.namesPrompted=true;let skip=false;try{skip=localStorage.getItem(LS+'-skipnames')==='1';}catch(e){}
     if(!skip)openSettings(true);
@@ -534,7 +684,10 @@ function closeSheet(){$('#sheet').hidden=true;$('#sheet-body').innerHTML='';ui.s
 function lastOwner(){try{return localStorage.getItem(LS+'-owner')==='b'?'b':'a';}catch(e){return 'a';}}
 function rememberOwner(o){try{localStorage.setItem(LS+'-owner',o);}catch(e){}}
 function bankOptions(){
-  const s=new Set();for(const d of state.deposits)if(d.bank)s.add(d.bank.trim());for(const a of state.assets)if(a.bank)s.add(a.bank.trim());
+  const s=new Set();
+  for(const d of state.deposits)if(d.bank)s.add(d.bank.trim());
+  for(const a of state.assets)if(a.bank)s.add(a.bank.trim());
+  for(const c of state.cash)if(c.bank)s.add(c.bank.trim());
   return [...s].map(b=>`<option value="${esc(b)}">`).join('');
 }
 const ownerRadios=v=>`<div class="fld"><span class="lbl">Sahibi</span><div class="seg" role="radiogroup" aria-label="Sahibi">
@@ -626,6 +779,45 @@ async function saveDeposit(){
   toast(renew?'Vade uzatıldı, güncel bilgiler kaydedildi.':'Kaydedildi.');
 }
 
+/* --- nakit formu --- */
+function cashCur(){const c=$('input[name=ctype]:checked');return c&&c.value==='FX'?val('f-cur'):'TRY';}
+function updCash(){const cur=cashCur();$('#f-sym').textContent='('+SYM[cur]+')';echo('e-amount','f-amount',cur);}
+function cashInput(id,name){
+  if(name==='ctype')$('#f-curwrap').hidden=$('input[name=ctype]:checked').value!=='FX';
+  updCash();
+}
+function openCash(mode,id){
+  const old=id?state.cash.find(x=>x.id===id):null;
+  if(mode==='edit'&&!old)return;
+  const v=old?Object.assign({},old):{owner:lastOwner(),bank:'',cur:'TRY',amount:'',note:''};
+  ui.sheet={type:'cash',mode,id};
+  const fx=v.cur!=='TRY';
+  const h=ownerRadios(v.owner)+`
+    <div class="fld"><label for="f-bank">Banka adı</label><input type="text" id="f-bank" list="f-banks" value="${esc(v.bank)}" placeholder="Örn. Garanti BBVA" autocomplete="off"><datalist id="f-banks">${bankOptions()}</datalist></div>
+    <div class="fld"><span class="lbl">Para birimi</span><div class="seg" role="radiogroup" aria-label="Para birimi">
+      <label><input type="radio" name="ctype" id="f-ct-try" value="TRY"${fx?'':' checked'}><span>TL</span></label>
+      <label><input type="radio" name="ctype" id="f-ct-fx" value="FX"${fx?' checked':''}><span>Döviz</span></label></div></div>
+    <div class="fld" id="f-curwrap"${fx?'':' hidden'}><label for="f-cur">Döviz cinsi</label><select id="f-cur">${FXC.map(c=>`<option value="${c}"${v.cur===c?' selected':''}>${c} (${IB[c].n})</option>`).join('')}</select></div>
+    <div class="fld"><label for="f-amount">Nakit bakiye <span id="f-sym"></span></label><input type="text" inputmode="decimal" id="f-amount" value="${numStr(v.amount)}" placeholder="0,00" autocomplete="off"><div class="echo" id="e-amount"></div></div>
+    <div class="fld"><label for="f-note">Not (isteğe bağlı)</label><input type="text" id="f-note" value="${esc(v.note||'')}" placeholder="Örn. vadesiz hesap" autocomplete="off"></div>
+    <div class="formerr" id="f-err" role="alert"></div>
+    <div class="acts"><button class="btn pri" data-act="save-cash">Kaydet</button><button class="btn" data-act="sheet-close">Vazgeç</button>${mode==='edit'?'<button class="btn bad ghost" data-act="del-ask" id="f-delask">Sil</button>':''}</div>
+    ${mode==='edit'?'<div id="f-delbox" hidden><div class="note">Bu kayıt kalıcı olarak silinecek.</div><div class="acts" style="margin-top:8px"><button class="btn bad" data-act="del-yes">Evet, sil</button><button class="btn" data-act="del-no">Vazgeç</button></div></div>':''}`;
+  openSheet(mode==='edit'?'Nakit bakiyeyi güncelle':'Nakit ekle',h);
+  updCash();
+}
+async function saveCash(){
+  const sh=ui.sheet,old=sh.id?state.cash.find(x=>x.id===sh.id):null,err=m=>{$('#f-err').textContent=m;};
+  const owner=($('input[name=owner]:checked')||{}).value||'a',bank=val('f-bank').trim(),cur=cashCur(),amount=parseNum(val('f-amount')),note=val('f-note').trim();
+  if(!bank)return err('Banka adını yaz.');
+  if(!(amount>0))return err('Nakit tutarını yaz.');
+  const rec={id:old?old.id:newId(),owner,bank,cur,amount:Math.round(amount*100)/100,note,updatedAt:todayStr()};
+  rememberOwner(owner);
+  closeSheet();
+  await putDoc('cash',rec);
+  toast('Kaydedildi.');
+}
+
 /* --- altın / döviz formu --- */
 function updAsset(){
   const k=val('f-k'),i=IB[k],qty=parseNum(val('f-qty')),tot=parseNum(val('f-total')),pv=$('#f-prev');
@@ -715,12 +907,17 @@ document.addEventListener('click',e=>{
   switch(a){
     case 'settings':openSettings(false);break;
     case 'sheet-close':closeSheet();break;
+    case 'share':openReport();break;
+    case 'wa-send':waSend();break;
+    case 'wa-copy':waCopy();break;
     case 'add-dep':openDeposit('add');break;
     case 'edit-dep':openDeposit('edit',id);break;
     case 'renew':openDeposit('renew',id);break;
+    case 'add-cash':openCash('add');break;
+    case 'edit-cash':openCash('edit',id);break;
     case 'add-asset':openAsset('add');break;
     case 'edit-asset':openAsset('edit',id);break;
-    case 'depOwner':case 'asOwner':ui[a]=b.dataset.v;render();break;
+    case 'depOwner':case 'asOwner':case 'cashOwner':ui[a]=b.dataset.v;render();break;
     case 'hist':if(ui.hist.has(id))ui.hist.delete(id);else ui.hist.add(id);render();break;
     case 'arch':ui.showArch=!ui.showArch;render();break;
     case 'close-ask':ui.confirmClose=id;render();break;
@@ -728,17 +925,19 @@ document.addEventListener('click',e=>{
     case 'close-yes':{const d=state.deposits.find(x=>x.id===id);ui.confirmClose=null;if(d){putDoc('deposits',Object.assign({},d,{status:'closed',closedAt:todayStr()}));toast(d.bank+' toplamlardan çıkarıldı.');}break;}
     case 'restore':{const d=state.deposits.find(x=>x.id===id);if(d){putDoc('deposits',Object.assign({},d,{status:'active',autoClose:false}));toast('Hesap geri alındı.');}break;}
     case 'save-dep':saveDeposit();break;
+    case 'save-cash':saveCash();break;
     case 'save-asset':saveAsset();break;
     case 'save-names':saveNames();break;
     case 'skip-names':try{localStorage.setItem(LS+'-skipnames','1');}catch(x){}closeSheet();break;
     case 'del-ask':$('#f-delbox').hidden=false;b.hidden=true;break;
     case 'del-no':$('#f-delbox').hidden=true;$('#f-delask').hidden=false;break;
-    case 'del-yes':{const sh=ui.sheet;if(sh&&sh.id){const c=sh.type==='dep'?'deposits':'assets',i=sh.id;closeSheet();delDoc(c,i);toast('Silindi.');}break;}
+    case 'del-yes':{const sh=ui.sheet;if(sh&&sh.id){const c=sh.type==='dep'?'deposits':sh.type==='cash'?'cash':'assets',i=sh.id;closeSheet();delDoc(c,i);toast('Silindi.');}break;}
   }
 });
 function onSheetInput(e){
   const sh=ui.sheet;if(!sh||!$('#sheet').contains(e.target))return;
   if(sh.type==='dep')depInput(e.target.id,e.target.name);
+  else if(sh.type==='cash')cashInput(e.target.id,e.target.name);
   else if(sh.type==='asset')assetInput(e.target.id);
 }
 document.addEventListener('input',onSheetInput);
@@ -760,7 +959,7 @@ document.addEventListener('change',e=>{
 document.addEventListener('toggle',e=>{if(e.target.id==='pdet')ui.pricesOpen=e.target.open;},true);
 document.addEventListener('focusout',e=>{if(pending&&$('#view').contains(e.target))setTimeout(render,60);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden)closeSheet();});
-function route(){const h=location.hash.slice(1);ui.view=['ozet','vadeli','altin'].indexOf(h)>=0?h:'ozet';}
+function route(){const h=location.hash.slice(1);ui.view=['ozet','vadeli','nakit','altin'].indexOf(h)>=0?h:'ozet';}
 window.addEventListener('hashchange',()=>{route();render();window.scrollTo(0,0);});
 
 /* ---------- ortak kayıt ---------- */
@@ -769,11 +968,12 @@ async function initDb(){
     if(!(window.claude&&window.claude.use))return;
     const d=await window.claude.use('db');
     if(!d)return;
-    db=d;state.mode='shared';state.deposits=[];state.assets=[];state.settings=mergeSettings(null);render();
+    db=d;state.mode='shared';state.deposits=[];state.assets=[];state.cash=[];state.settings=mergeSettings(null);render();
     const ready=()=>{state.ready=true;};
     const onErr=()=>{state.ready=true;state.note='Ortak kayıtlara ulaşılamadı. Gösterilen bilgiler eski olabilir.';render();};
     db.collection('deposits').onSnapshot(s=>{state.deposits=s.docs.map(x=>Object.assign({},x.data(),{id:x.id}));ready();render();},onErr);
     db.collection('assets').onSnapshot(s=>{state.assets=s.docs.map(x=>Object.assign({},x.data(),{id:x.id}));ready();render();},onErr);
+    db.collection('cash').onSnapshot(s=>{state.cash=s.docs.map(x=>Object.assign({},x.data(),{id:x.id}));ready();render();},onErr);
     db.doc('settings/main').onSnapshot(s=>{state.settings=mergeSettings(s.exists?s.data():null);ready();render();},onErr);
   }catch(e){db=null;state.mode='local';}
 }
