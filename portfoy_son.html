@@ -163,6 +163,7 @@ input[type=text],input[type=number],input[type=date],select{font:inherit;font-si
 .chk{display:flex;gap:10px;align-items:flex-start;font-size:14px}
 .chk input{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--accent)}
 .prev{border-radius:12px;background:var(--surface2);padding:10px 12px;font-size:13px;min-height:40px}
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
 .formerr{color:var(--bad);font-size:13px;font-weight:600;min-height:18px}
 .static{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:var(--surface2);border-radius:12px;padding:10px 12px}
 .rep{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.5;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;max-height:48vh;overflow:auto}
@@ -534,6 +535,10 @@ function viewAssets(){
   const open=ui.pricesOpen==null?needPrice:ui.pricesOpen;
   const pa=state.settings.pricesAt;
   let h=`<div class="sec-h"><h2>Altın ve döviz</h2><button class="btn pri sm" data-act="add-asset">+ Ekle</button></div>`;
+  h+=`<section class="card"><h2>Fiyatları görselden güncelle</h2>
+    <p class="small">Banka uygulamasındaki döviz ve altın ekranının görüntüsünü yükle. Görseldeki satış (Sat) fiyatları okunur; USD, EUR gibi döviz fiyatları kendi alanlarına, altın fiyatı Gram Altın (24 ayar) alanına yazılır. Uygulamadan önce okunan fiyatları görüp düzeltebilirsin.</p>
+    <input type="file" id="img-up" accept="image/*" class="vh" tabindex="-1" aria-hidden="true">
+    <div class="acts"><button class="btn pri" data-act="img-pick">Görsel yükle</button></div></section>`;
   h+=`<details class="card prices"${open?' open':''} id="pdet"><summary>Güncel birim fiyatlar (₺)</summary>
     <p class="small" style="margin-top:8px">Piyasadan baktığın fiyatları gir. Değer ve kâr/zarar bu fiyatlarla hesaplanır.${pa?` Son güncelleme: ${fmtD(pa.slice(0,10))}.`:''}</p>
     <div class="pgrid">${INSTR.map(i=>{const p=state.settings.prices[i.k];return `<div class="fld"><label for="p-${i.k}">${i.n}</label><input type="text" inputmode="decimal" id="p-${i.k}" data-price="${i.k}" value="${numStr(p)}" placeholder="0,00" autocomplete="off"></div>`;}).join('')}</div></details>`;
@@ -893,6 +898,147 @@ async function saveAsset(){
   toast('Kaydedildi.');
 }
 
+/* --- görselden fiyat okuma (OCR) --- */
+const OCR_MAP={USD:'USD',EUR:'EUR',GBP:'GBP',CHF:'CHF',XAU:'GA24'};
+const OCR_LIB='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+const OCR_LANG='https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int';
+function loadOcrLib(){
+  if(window.Tesseract)return Promise.resolve();
+  return new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=OCR_LIB;sc.onload=()=>res();sc.onerror=()=>rej(new Error('lib'));document.head.appendChild(sc);});
+}
+function loadImg(file){
+  return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();
+    im.onload=()=>{URL.revokeObjectURL(u);res(im);};
+    im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('img'));};im.src=u;});
+}
+function prepCanvas(im,mode){
+  const w0=im.naturalWidth,h0=im.naturalHeight;
+  let sc=Math.min(3,Math.max(1,1600/w0));if(w0*sc>2400)sc=2400/w0;
+  if(w0*h0*sc*sc>6e6)sc=Math.sqrt(6e6/(w0*h0));
+  const c=document.createElement('canvas');c.width=Math.round(w0*sc);c.height=Math.round(h0*sc);
+  const x=c.getContext('2d',{willReadFrequently:true});
+  x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);
+  const d=x.getImageData(0,0,c.width,c.height),p=d.data;
+  if(mode==='btn'){
+    /* Mavi butonların içindeki beyaz yazıyı ayır: dıştan ulaşılamayan, mavi olmayan pikseller yazıdır. */
+    const w=c.width,h=c.height,n=w*h,blue=new Uint8Array(n),seen=new Uint8Array(n),st=new Int32Array(n);
+    let sp=0;
+    for(let i=0,j=0;i<n;i++,j+=4){if(p[j]<120&&p[j+2]-p[j]>50)blue[i]=1;}
+    const push=i=>{if(!blue[i]&&!seen[i]){seen[i]=1;st[sp++]=i;}};
+    for(let xx=0;xx<w;xx++){push(xx);push((h-1)*w+xx);}
+    while(sp){const i=st[--sp],xx=i%w;if(xx>0)push(i-1);if(xx<w-1)push(i+1);if(i>=w)push(i-w);if(i<n-w)push(i+w);}
+    for(let i=0,j=0;i<n;i++,j+=4){const v=(!blue[i]&&!seen[i])?0:255;p[j]=p[j+1]=p[j+2]=v;}
+  }else{
+    for(let i=0;i<p.length;i+=4){const g=.299*p[i]+.587*p[i+1]+.114*p[i+2];p[i]=p[i+1]=p[i+2]=g;}
+  }
+  x.putImageData(d,0,0);return c;
+}
+function ocrWords(data){
+  if(data.words&&data.words.length)return data.words;
+  const o=[];
+  for(const b of data.blocks||[])for(const pa of b.paragraphs||[])for(const l of pa.lines||[])for(const w of l.words||[])o.push(w);
+  return o;
+}
+function ocrExtract(words,imgW){
+  const W=words.map(w=>({t:String(w.text||'').trim(),x0:w.bbox.x0,x1:w.bbox.x1,y0:w.bbox.y0,y1:w.bbox.y1})).filter(w=>w.t)
+    .map(w=>Object.assign(w,{cx:(w.x0+w.x1)/2,cy:(w.y0+w.y1)/2,h:Math.max(1,w.y1-w.y0)}));
+  const codes=W.filter(w=>{const l=w.t.replace(/[^A-Za-z]/g,'').toUpperCase();return l.length===3&&OCR_MAP[l];})
+    .map(w=>Object.assign({},w,{code:w.t.replace(/[^A-Za-z]/g,'').toUpperCase()}));
+  const NUM=/(\d{1,3}(?:\.\d{3})+|\d+),(\d{2,6})(?!\d)/;
+  const sameLine=(o,w)=>Math.abs(o.cy-w.cy)<w.h*0.7;
+  const nums=[];
+  for(const w of W){
+    const m=w.t.match(NUM);if(!m||w.t.indexOf('%')>=0)continue;
+    const v=parseNum(m[0]);if(!(v>0))continue;
+    const left=W.filter(o=>o!==w&&o.x1<=w.x0+4&&sameLine(o,w)).sort((a,b)=>b.x1-a.x1)[0];
+    if(left&&/^%$/.test(left.t)&&w.x0-left.x1<w.h*2.5)continue;
+    let lab=w.t.slice(0,m.index).toLowerCase();
+    if(!lab&&left)lab=left.t.toLowerCase();
+    if(nums.some(o=>o.v===v&&Math.abs(o.cy-w.cy)<w.h&&Math.abs(o.cx-w.cx)<w.h*6))continue;
+    nums.push(Object.assign({},w,{v,dec:m[2].length,lab,sat:/^[s5$]?[a@]t\W*$/.test(lab),al:/^a[l1i|!]\W*$/.test(lab)}));
+  }
+  const by=new Map();
+  const offs=imgW*0.068,reach=imgW*0.17;
+  for(const n of nums){
+    let best=null;
+    for(const c of codes){
+      if(c.cy>=n.cy)continue;
+      const dx=Math.abs(n.cx-(c.x0+offs));if(dx>reach)continue;
+      const dy=n.cy-c.cy;if(!best||dy<best.dy)best={c,dy};
+    }
+    if(!best)continue;
+    const k=best.c.code+'@'+Math.round(best.c.x0)+','+Math.round(best.c.y0);
+    if(!by.has(k))by.set(k,{code:best.c.code,nums:[]});
+    by.get(k).nums.push(n);
+  }
+  const out={};
+  for(const g of by.values()){
+    const key=OCR_MAP[g.code];if(out[key])continue;
+    g.nums.sort((a,b)=>a.cy-b.cy);
+    let pick=g.nums.find(n=>n.sat);
+    if(!pick){const big=g.nums.filter(n=>n.dec>=3&&!n.al);const all=g.nums.filter(n=>n.dec>=3);if(all.length>=2)pick=all[1];else if(big.length===1&&all.length===1&&!g.nums.some(n=>n.al))pick=null;}
+    if(!pick)continue;
+    const ok=g.code==='XAU'?pick.v>100:(pick.v>1&&pick.v<1000);
+    if(ok)out[key]=pick.v;
+  }
+  return out;
+}
+async function ocrRun(file){
+  const tok={type:'ocr'};ui.sheet=tok;
+  openSheet('Fiyatlar okunuyor','<p class="small" id="ocr-st">Hazırlanıyor…</p><div class="prog"><i id="ocr-bar" style="width:4%"></i></div><p class="small">Okuma telefonunda yapılır, görsel hiçbir yere gönderilmez. İlk seferde okuma bileşeni internetten indirilir, bu yüzden biraz sürebilir.</p>');
+  const live=()=>ui.sheet===tok;
+  const st=t=>{const e=$('#ocr-st');if(live()&&e)e.textContent=t;};
+  const bar=p=>{const e=$('#ocr-bar');if(live()&&e)e.style.width=Math.max(4,Math.min(100,Math.round(p)))+'%';};
+  let found={},worker=null,failed=null;
+  try{
+    st('Okuma bileşeni yükleniyor…');
+    await loadOcrLib();
+    const im=await loadImg(file);
+    bar(10);
+    let base=10,span=45;
+    worker=await Tesseract.createWorker('eng',1,{langPath:OCR_LANG,logger:m=>{if(m.status==='recognizing text')bar(base+m.progress*span);}});
+    await worker.setParameters({tessedit_pageseg_mode:Tesseract.PSM.SPARSE_TEXT,user_defined_dpi:'300'});
+    const passes=['plain','btn'];let all=[],cw=0;
+    for(let i=0;i<passes.length;i++){
+      if(!live())break;
+      st(i===0?'Görseldeki yazılar okunuyor…':'Buton içindeki fiyatlar okunuyor…');
+      base=10+i*45;
+      const c=prepCanvas(im,passes[i]);
+      const r=await worker.recognize(c);
+      all=all.concat(ocrWords(r.data));cw=c.width;
+      bar(base+span);
+    }
+    found=ocrExtract(all,cw);
+  }catch(e){failed=e;}
+  try{if(worker)await worker.terminate();}catch(e){}
+  if(!live())return;
+  if(failed&&!Object.keys(found).length){
+    $('#sheet-title').textContent='Okunamadı';
+    $('#sheet-body').innerHTML='<div class="note warn">Görsel okunamadı. İnternet bağlantını kontrol edip tekrar dene. Fiyatları aşağıdaki alanlardan elle de girebilirsin.</div><div class="acts"><button class="btn" data-act="sheet-close">Kapat</button></div>';
+    return;
+  }
+  const keys=Object.keys(found);
+  if(!keys.length){
+    $('#sheet-title').textContent='Fiyat bulunamadı';
+    $('#sheet-body').innerHTML='<div class="note warn">Görselde USD, EUR veya XAU kartlarının “Sat” fiyatları bulunamadı. Görüntüde bu fiyatların net ve kırpılmamış göründüğünden emin olup tekrar dene. Fiyatları elle de girebilirsin.</div><div class="acts"><button class="btn" data-act="sheet-close">Kapat</button></div>';
+    return;
+  }
+  const order=INSTR.map(i=>i.k).filter(k=>found[k]!=null);
+  $('#sheet-title').textContent='Okunan fiyatlar';
+  $('#sheet-body').innerHTML='<p class="small">Görselden okunan satış fiyatları. Yanlış okunan varsa düzelt, sonra uygula.</p>'+
+    order.map(k=>{const old=priceOf(k);return `<div class="fld"><label for="o-${k}">${esc(IB[k].n)}${old?` · şu an ${fmt2(old)} ₺`:''}</label><input type="text" inputmode="decimal" id="o-${k}" data-ocr="${k}" value="${numStr(found[k])}" autocomplete="off"></div>`;}).join('')+
+    '<div class="formerr" id="o-err" role="alert"></div><div class="acts"><button class="btn pri" data-act="ocr-apply">Fiyatları uygula</button><button class="btn" data-act="sheet-close">Vazgeç</button></div>';
+}
+async function ocrApply(){
+  const inp=[...document.querySelectorAll('#sheet-body [data-ocr]')];
+  const vals=inp.map(el=>[el.dataset.ocr,parseNum(el.value)]);
+  if(!vals.length)return;
+  if(vals.some(x=>!(x[1]>0))){const e=$('#o-err');if(e)e.textContent='Geçersiz bir fiyat var. Düzeltip tekrar dene.';return;}
+  for(const x of vals)state.settings.prices[x[0]]=x[1];
+  state.settings.pricesAt=todayStr();ui.pricesOpen=true;closeSheet();
+  await saveSettings();toast(vals.length+' fiyat güncellendi.');
+}
+
 /* --- ayarlar --- */
 function openSettings(first){
   ui.sheet={type:'settings'};
@@ -918,6 +1064,8 @@ document.addEventListener('click',e=>{
     case 'settings':openSettings(false);break;
     case 'sheet-close':closeSheet();break;
     case 'share':openReport();break;
+    case 'img-pick':{const f=$('#img-up');if(f)f.click();break;}
+    case 'ocr-apply':ocrApply();break;
     case 'wa-send':waSend();break;
     case 'wa-copy':waCopy();break;
     case 'add-dep':openDeposit('add');break;
@@ -952,6 +1100,7 @@ function onSheetInput(e){
 }
 document.addEventListener('input',onSheetInput);
 document.addEventListener('change',e=>{
+  if(e.target.id==='img-up'){const f=e.target.files&&e.target.files[0];e.target.value='';if(f)ocrRun(f);return;}
   onSheetInput(e);
   const el=e.target;
   if(el.matches&&el.matches('[data-price]')){
