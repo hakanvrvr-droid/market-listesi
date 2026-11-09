@@ -13,7 +13,7 @@
   --bg:#EDF0F3; --surface:#FFFFFF; --surface2:#F4F6F8; --ink:#14212B; --muted:#586976; --line:#D8DFE5;
   --accent:#1D3A5F; --accent-ink:#FFFFFF; --accent-soft:#DDE7F2;
   --hero-bg:#1D3A5F; --hero-ink:#FFFFFF; --hero-muted:#B8C9DC;
-  --pa:#0F8B8D; --pb:#C2561F;
+  --pa:#0F8B8D; --pb:#C2561F; --pc:#6A4C93;
   --good:#1B7A4B; --good-soft:#DCF1E5; --warn:#8F5E00; --warn-soft:#FBEBC8; --bad:#B0352D; --bad-soft:#F9DFDC;
   --wa:#11803F;
   --scrim:rgba(10,20,28,.5);
@@ -24,7 +24,7 @@
   --bg:#0E161C; --surface:#16212A; --surface2:#1C2933; --ink:#E7EDF1; --muted:#94A4B0; --line:#263641;
   --accent:#8DBBE6; --accent-ink:#0B1A28; --accent-soft:#1B3344;
   --hero-bg:#1B3350; --hero-ink:#F2F6FA; --hero-muted:#A5BBD1;
-  --pa:#4FC3C5; --pb:#F0925A;
+  --pa:#4FC3C5; --pb:#F0925A; --pc:#B79CE8;
   --good:#5FD39A; --good-soft:#143328; --warn:#E8B25A; --warn-soft:#3A2C12; --bad:#F08A82; --bad-soft:#3D1D1B;
   --wa:#1E9E55;
   --scrim:rgba(0,0,0,.6); color-scheme:dark}}
@@ -32,7 +32,7 @@
   --bg:#0E161C; --surface:#16212A; --surface2:#1C2933; --ink:#E7EDF1; --muted:#94A4B0; --line:#263641;
   --accent:#8DBBE6; --accent-ink:#0B1A28; --accent-soft:#1B3344;
   --hero-bg:#1B3350; --hero-ink:#F2F6FA; --hero-muted:#A5BBD1;
-  --pa:#4FC3C5; --pb:#F0925A;
+  --pa:#4FC3C5; --pb:#F0925A; --pc:#B79CE8;
   --good:#5FD39A; --good-soft:#143328; --warn:#E8B25A; --warn-soft:#3A2C12; --bad:#F08A82; --bad-soft:#3D1D1B;
   --wa:#1E9E55;
   --scrim:rgba(0,0,0,.6); color-scheme:dark}
@@ -70,6 +70,9 @@ main{display:grid;gap:16px;padding-bottom:calc(96px + env(safe-area-inset-bottom
 .hero-n span{font-size:.55em;font-weight:600;margin-left:4px;color:var(--hero-muted)}
 .hero-s{font-size:13px;color:var(--hero-muted)}
 .people{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.people.three{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.people.three .pcard{padding:10px 10px}
+.people.three .pn{font-size:16px}
 .pcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0;display:grid;gap:2px}
 .pname{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;min-width:0}
 .pname span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -250,8 +253,8 @@ const addDays=(s,n)=>{const d=parseD(s);d.setDate(d.getDate()+n);return d.getFul
 const diffDays=(a,b)=>Math.round((parseD(b)-parseD(a))/864e5);
 
 /* ---------- durum ---------- */
-const DEF={names:{a:'Ben',b:'Eşim'},prices:{},pricesAt:null,namesSet:false};
-function mergeSettings(s){s=s||{};const n=s.names||{};return{names:{a:n.a||'Ben',b:n.b||'Eşim'},prices:Object.assign({},s.prices||{}),pricesAt:s.pricesAt||null,namesSet:!!s.namesSet};}
+const DEF={names:{a:'Ben',b:'Eşim',c:'Ev'},prices:{},pricesAt:null,namesSet:false};
+function mergeSettings(s){s=s||{};const n=s.names||{};return{names:{a:n.a||'Ben',b:n.b||'Eşim',c:n.c||'Ev'},prices:Object.assign({},s.prices||{}),pricesAt:s.pricesAt||null,namesSet:!!s.namesSet};}
 const state={settings:mergeSettings(null),deposits:[],assets:[],cash:[],mode:'local',ready:false,note:''};
 const ui={view:'ozet',depOwner:'all',asOwner:'all',cashOwner:'all',showArch:false,hist:new Set(),confirmClose:null,pricesOpen:null,sheet:null,namesPrompted:false};
 let db=null;
@@ -330,6 +333,8 @@ function summarize(owner){
 
 /* ---------- görünüm yardımcıları ---------- */
 const nm=o=>state.settings.names[o];
+const hasHome=()=>state.deposits.some(x=>x.owner==='c')||state.cash.some(x=>x.owner==='c')||state.assets.some(x=>x.owner==='c');
+const ownCols=()=>hasHome()?['a','b','c']:['a','b'];
 const who=o=>`<span class="who"><i class="dot" style="background:var(--p${o})"></i><span>${esc(nm(o))}</span></span>`;
 const chip=(c,t)=>`<span class="chip ${c}">${t}</span>`;
 const pctStr=n=>n.toFixed(2).replace('.',',');
@@ -410,45 +415,46 @@ const sendBar=()=>`<div class="sendbar"><button class="btn wa" data-act="share">
 
 /* ---------- ÖZET ---------- */
 function viewHome(){
-  const A=summarize('a'),B=summarize('b'),T=summarize('all');
+  const OW=ownCols(),S3={a:summarize('a'),b:summarize('b'),c:summarize('c')},A=S3.a,B=S3.b,T=summarize('all');
   let h='';
   if(state.note)h+=`<div class="note warn">${esc(state.note)}</div>`;
   const due=activeDeps().filter(isDue).sort(byEnd);
   if(due.length)h+=`<section class="stack">${due.map(dueCard).join('')}</section>`;
   const miss=[...T.missing];
   if(miss.length)h+=`<div class="note warn">${miss.join(', ')} kuru girilmediği için bu dövizdeki vadeli hesaplar ve nakit toplama dahil edilmedi. <a href="#altin">Fiyatları gir</a></div>`;
-  const sa=T.total>0?A.total/T.total*100:50;
+  const shr=OW.map(o=>T.total>0?S3[o].total/T.total*100:100/OW.length);
+  const pct=shr.map((x,i)=>i<OW.length-1?Math.round(x):100-shr.slice(0,-1).reduce((a,y)=>a+Math.round(y),0));
   h+=`<section class="hero"><p class="eyebrow">Toplam tasarruf · ₺ karşılığı</p>
     <p class="hero-n">${fmt0(T.total)}<span>₺</span></p>
     <p class="hero-s">${T.nDep} vadeli hesap · toplam kâr/zarar ${signed(T.totalPL)} ₺</p></section>
-    <section class="people">
-      <div class="pcard"><div class="pname"><i class="dot" style="background:var(--pa)"></i><span>${esc(nm('a'))}</span></div><div class="pn">${fmt0(A.total)} ₺</div><div class="psub">Toplamın %${Math.round(sa)}'i</div></div>
-      <div class="pcard"><div class="pname"><i class="dot" style="background:var(--pb)"></i><span>${esc(nm('b'))}</span></div><div class="pn">${fmt0(B.total)} ₺</div><div class="psub">Toplamın %${Math.round(100-sa)}'i</div></div>
+    <section class="people${OW.length>2?' three':''}">
+      ${OW.map((o,i)=>`<div class="pcard"><div class="pname"><i class="dot" style="background:var(--p${o})"></i><span>${esc(nm(o))}</span></div><div class="pn">${fmt0(S3[o].total)} ₺</div><div class="psub">Toplamın %${pct[i]}'${OW.length>2?'si':'i'}</div></div>`).join('')}
     </section>
-    <div class="share" aria-hidden="true"><i style="width:${sa}%;background:var(--pa)"></i><i style="flex:1;background:var(--pb)"></i></div>`;
+    <div class="share" aria-hidden="true">${OW.map((o,i)=>`<i style="${i<OW.length-1?'width:'+shr[i]+'%':'flex:1'};background:var(--p${o})"></i>`).join('')}</div>`;
   if(!state.deposits.length&&!state.assets.length&&!state.cash.length)
     h+=`<section class="card empty"><h2>Henüz kayıt yok</h2><p>Vadeli hesaplarını, nakdini ve altın ya da dövizini ekledikçe toplamlar burada oluşur.</p>
       <div class="acts"><button class="btn pri" data-act="add-dep">Vadeli hesap ekle</button><button class="btn" data-act="add-cash">Nakit ekle</button><button class="btn" data-act="add-asset">Altın / döviz ekle</button></div></section>`;
-  const r=(l,a,b,t)=>`<tr><td>${l}</td><td>${a}</td><td>${b}</td><td>${t}</td></tr>`;
+  const r=(l,f,t)=>`<tr><td>${l}</td>${OW.map(o=>`<td>${f(S3[o])}</td>`).join('')}<td>${t}</td></tr>`;
+  const hdr=`<tr><th></th>${OW.map(o=>`<th>${esc(nm(o))}</th>`).join('')}<th>Toplam</th></tr>`;
   const plc=n=>`<td class="${plCls(n)}">${signed(n)}</td>`;
   const plt=n=>`<td><span class="${plCls(n)}">${signed(n)}</span></td>`;
-  const fxc=[...new Set([].concat(Object.keys(A.fxBy),Object.keys(B.fxBy)))].sort((x,y)=>FXC.indexOf(x)-FXC.indexOf(y));
+  const fxc=[...new Set(OW.reduce((l,o)=>l.concat(Object.keys(S3[o].fxBy)),[]))].sort((x,y)=>FXC.indexOf(x)-FXC.indexOf(y));
   const fxCell=(s,c)=>{const f=s.fxBy[c];return f?fmt0(f.tl)+`<br><span class="small">${nfq.format(f.native)} ${SYM[c]}</span>`:'—';};
   h+=`<section class="card"><h2>Dağılım</h2><div class="scroll-x"><table class="tbl">
-    <thead><tr><th></th><th>${esc(nm('a'))}</th><th>${esc(nm('b'))}</th><th>Toplam</th></tr></thead><tbody>
-    ${r('Vadeli TL',fmt0(A.depTRY),fmt0(B.depTRY),fmt0(T.depTRY))}
-    ${r('Nakit',fmt0(A.cash),fmt0(B.cash),fmt0(T.cash))}
-    ${r('Altın',fmt0(A.gold),fmt0(B.gold),fmt0(T.gold))}
-    ${fxc.map(c=>r(IB[c]?IB[c].n:c,fxCell(A,c),fxCell(B,c),fxCell(T,c))).join('')}
-    <tr class="tot"><td>Toplam</td><td>${fmt0(A.total)}</td><td>${fmt0(B.total)}</td><td>${fmt0(T.total)}</td></tr>
+    <thead>${hdr}</thead><tbody>
+    ${r('Vadeli TL',x=>fmt0(x.depTRY),fmt0(T.depTRY))}
+    ${r('Nakit',x=>fmt0(x.cash),fmt0(T.cash))}
+    ${r('Altın',x=>fmt0(x.gold),fmt0(T.gold))}
+    ${fxc.map(c=>r(IB[c]?IB[c].n:c,x=>fxCell(x,c),fxCell(T,c))).join('')}
+    <tr class="tot"><td>Toplam</td>${OW.map(o=>`<td>${fmt0(S3[o].total)}</td>`).join('')}<td>${fmt0(T.total)}</td></tr>
     </tbody></table></div>
     <p class="small">Tutarlar ₺ cinsinden. Döviz satırları vadeli hesaptaki ve elde tutulan dövizi birlikte gösterir; altındaki küçük sayı döviz tutarıdır. Nakit satırı, Nakit sekmesindeki bakiyelerin ₺ karşılığıdır. Vadeli hesaplarda vade sonu değeri, altın ve dövizde girdiğin güncel fiyatlar esas alınır.</p></section>
     <section class="card"><h2>Kâr / zarar</h2><div class="scroll-x"><table class="tbl">
-    <thead><tr><th></th><th>${esc(nm('a'))}</th><th>${esc(nm('b'))}</th><th>Toplam</th></tr></thead><tbody>
-    <tr><td>Vadeli kazanç</td>${plc(A.depGain)}${plc(B.depGain)}${plc(T.depGain)}</tr>
-    <tr><td>Altın kâr/zarar</td>${plc(A.goldPL)}${plc(B.goldPL)}${plc(T.goldPL)}</tr>
-    <tr><td>Döviz kâr/zarar</td>${plc(A.fxPL)}${plc(B.fxPL)}${plc(T.fxPL)}</tr>
-    <tr class="tot"><td>Toplam kâr/zarar</td>${plt(A.totalPL)}${plt(B.totalPL)}${plt(T.totalPL)}</tr>
+    <thead>${hdr}</thead><tbody>
+    <tr><td>Vadeli kazanç</td>${OW.map(o=>plc(S3[o].depGain)).join('')}${plc(T.depGain)}</tr>
+    <tr><td>Altın kâr/zarar</td>${OW.map(o=>plc(S3[o].goldPL)).join('')}${plc(T.goldPL)}</tr>
+    <tr><td>Döviz kâr/zarar</td>${OW.map(o=>plc(S3[o].fxPL)).join('')}${plc(T.fxPL)}</tr>
+    <tr class="tot"><td>Toplam kâr/zarar</td>${OW.map(o=>plt(S3[o].totalPL)).join('')}${plt(T.totalPL)}</tr>
     </tbody></table></div>
     <p class="small">Tutarlar ₺ cinsinden. Vadeli kazanç, açık vadeli hesapların vade sonu değeri ile bağlanan tutar farkıdır. Altın ve döviz kâr/zararı güncel fiyat ile alış tutarı farkıdır.</p></section>`;
   const soon=activeDeps().filter(d=>!isDue(d)).sort(byEnd).slice(0,4);
@@ -464,7 +470,8 @@ function ownerSeg(key){
   return `<div class="seg" role="group" aria-label="Kişi filtresi">
     <button type="button" data-act="${key}" data-v="all" aria-pressed="${v==='all'}">Tümü</button>
     <button type="button" data-act="${key}" data-v="a" aria-pressed="${v==='a'}">${esc(nm('a'))}</button>
-    <button type="button" data-act="${key}" data-v="b" aria-pressed="${v==='b'}">${esc(nm('b'))}</button></div>`;
+    <button type="button" data-act="${key}" data-v="b" aria-pressed="${v==='b'}">${esc(nm('b'))}</button>
+    <button type="button" data-act="${key}" data-v="c" aria-pressed="${v==='c'}">${esc(nm('c'))}</button></div>`;
 }
 function viewDeposits(){
   const act=activeDeps().filter(d=>ui.depOwner==='all'||d.owner===ui.depOwner);
@@ -500,11 +507,12 @@ function viewCash(){
   const totTL=list.reduce((s,c)=>s+cashTL(c),0);
   h+=`<section class="card"><div class="kv"><div><span>Toplam nakit</span><b class="num">${sumsByCur(list,'amount')}</b></div><div><span>₺ karşılığı</span><b class="num">${money(totTL,'TRY',0)}</b></div></div>
     ${miss.length?`<p class="small">${miss.join(', ')} kuru girilmediği için ₺ karşılığına dahil değil. <a href="#altin">Fiyatları gir</a></p>`:(hasFX?'<p class="small">Döviz bakiyeleri, Altın/Döviz sekmesinde girdiğin güncel kurla çevrilir.</p>':'')}</section>`;
+  const OW=ownCols();
   const groups=groupByBank(list.slice().sort((a,b)=>b.amount*(rateOf(b.cur)||0)-a.amount*(rateOf(a.cur)||0)));
-  const rows=groups.map(g=>{const f=o=>g.list.filter(c=>c.owner===o).reduce((s,c)=>s+cashTL(c),0);return{name:g.name,a:f('a'),b:f('b'),t:g.list.reduce((s,c)=>s+cashTL(c),0)};}).sort((x,y)=>y.t-x.t);
-  h+=`<section class="card"><h2>Bankalara göre</h2><div class="scroll-x"><table class="tbl"><thead><tr><th>Banka</th><th>${esc(nm('a'))}</th><th>${esc(nm('b'))}</th><th>Toplam</th></tr></thead><tbody>
-    ${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${fmt0(r.a)}</td><td>${fmt0(r.b)}</td><td>${fmt0(r.t)}</td></tr>`).join('')}
-    <tr class="tot"><td>Toplam</td><td>${fmt0(rows.reduce((s,r)=>s+r.a,0))}</td><td>${fmt0(rows.reduce((s,r)=>s+r.b,0))}</td><td>${fmt0(totTL)}</td></tr></tbody></table></div>
+  const rows=groups.map(g=>{const f=o=>g.list.filter(c=>c.owner===o).reduce((s,c)=>s+cashTL(c),0);return{name:g.name,v:{a:f('a'),b:f('b'),c:f('c')},t:g.list.reduce((s,c)=>s+cashTL(c),0)};}).sort((x,y)=>y.t-x.t);
+  h+=`<section class="card"><h2>Bankalara göre</h2><div class="scroll-x"><table class="tbl"><thead><tr><th>Banka</th>${OW.map(o=>`<th>${esc(nm(o))}</th>`).join('')}<th>Toplam</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td>${esc(r.name)}</td>${OW.map(o=>`<td>${fmt0(r.v[o])}</td>`).join('')}<td>${fmt0(r.t)}</td></tr>`).join('')}
+    <tr class="tot"><td>Toplam</td>${OW.map(o=>`<td>${fmt0(rows.reduce((s,r)=>s+r.v[o],0))}</td>`).join('')}<td>${fmt0(totTL)}</td></tr></tbody></table></div>
     <p class="small">Tutarlar ₺ cinsinden.</p></section>`;
   for(const g of groups)
     h+=`<section class="bank"><div class="bank-h"><h3>${esc(g.name)}</h3><span class="small num">${sumsLine(g.list,'amount')}</span></div>${g.list.map(cashRow).join('')}</section>`;
@@ -537,10 +545,10 @@ function viewAssets(){
     h+=`<section class="card empty"><h2>Kayıt yok</h2><p>Aldığın altın ve dövizi alış tarihi, miktar ve tutarıyla ekle.</p><button class="btn pri" data-act="add-asset">Altın / döviz ekle</button></section>`;
     return h;
   }
-  const A=summarize('a'),B=summarize('b');
+  const OW=ownCols();
   const tr=(l,s)=>`<tr><td>${l}</td><td>${fmt0(s.cost)}</td><td>${fmt0(s.val)}</td><td class="${plCls(s.pl)}">${signed(s.pl)}</td></tr>`;
   h+=`<section class="card"><h2>Kâr / zarar</h2><div class="scroll-x"><table class="tbl"><thead><tr><th></th><th>Maliyet</th><th>Değer</th><th>K/Z</th></tr></thead><tbody>
-    ${tr(esc(nm('a')),A)}${tr(esc(nm('b')),B)}<tr class="tot"><td>Toplam</td><td>${fmt0(S.cost)}</td><td>${fmt0(S.val)}</td><td class="${plCls(S.pl)}">${signed(S.pl)}</td></tr></tbody></table></div><p class="small">Tutarlar ₺ cinsinden.</p></section>`;
+    ${OW.map(o=>tr(esc(nm(o)),summarize(o))).join('')}<tr class="tot"><td>Toplam</td><td>${fmt0(S.cost)}</td><td>${fmt0(S.val)}</td><td class="${plCls(S.pl)}">${signed(S.pl)}</td></tr></tbody></table></div><p class="small">Tutarlar ₺ cinsinden.</p></section>`;
   const pos=new Map();
   for(const a of list){const p=pos.get(a.k)||{k:a.k,qty:0,cost:0,val:0};p.qty+=a.qty;p.cost+=a.cost;p.val+=assetVal(a);pos.set(a.k,p);}
   h+=`<section class="card"><h2>Pozisyonlar</h2><div class="scroll-x"><table class="tbl"><thead><tr><th>Tür</th><th>Miktar</th><th>Ort. alış</th><th>K/Z</th></tr></thead><tbody>
@@ -581,7 +589,7 @@ function repMissing(S){
 function repHome(){
   const A=summarize('a'),B=summarize('b'),T=summarize('all');
   let t=repHead('Özet')+'\n*Toplam tasarruf:* '+TLs(T.total)+'\n';
-  t+='• '+nm('a')+': '+TLs(A.total)+'\n• '+nm('b')+': '+TLs(B.total)+'\n';
+  for(const o of ownCols())t+='• '+nm(o)+': '+TLs(summarize(o).total)+'\n';
   t+='\n*Dağılım*\n';
   const lines=[['Vadeli TL',T.depTRY],['Vadeli döviz (₺ karşılığı)',T.depFXtl],['Nakit',T.cash],['Altın',T.gold],['Elde döviz',T.fx]];
   for(const l of lines)if(Math.abs(l[1])>=0.5)t+='• '+l[0]+': '+TLs(l[1])+'\n';
@@ -681,7 +689,7 @@ function render(){
 /* ---------- pencere (form) ---------- */
 function openSheet(title,html){$('#sheet-title').textContent=title;$('#sheet-body').innerHTML=html;$('#sheet').hidden=false;$('.sheet-panel').scrollTop=0;}
 function closeSheet(){$('#sheet').hidden=true;$('#sheet-body').innerHTML='';ui.sheet=null;}
-function lastOwner(){try{return localStorage.getItem(LS+'-owner')==='b'?'b':'a';}catch(e){return 'a';}}
+function lastOwner(){try{const v=localStorage.getItem(LS+'-owner');return v==='b'||v==='c'?v:'a';}catch(e){return 'a';}}
 function rememberOwner(o){try{localStorage.setItem(LS+'-owner',o);}catch(e){}}
 function bankOptions(){
   const s=new Set();
@@ -692,7 +700,8 @@ function bankOptions(){
 }
 const ownerRadios=v=>`<div class="fld"><span class="lbl">Sahibi</span><div class="seg" role="radiogroup" aria-label="Sahibi">
   <label><input type="radio" name="owner" id="f-own-a" value="a"${v==='a'?' checked':''}><span>${esc(nm('a'))}</span></label>
-  <label><input type="radio" name="owner" id="f-own-b" value="b"${v==='b'?' checked':''}><span>${esc(nm('b'))}</span></label></div></div>`;
+  <label><input type="radio" name="owner" id="f-own-b" value="b"${v==='b'?' checked':''}><span>${esc(nm('b'))}</span></label>
+  <label><input type="radio" name="owner" id="f-own-c" value="c"${v==='c'?' checked':''}><span>${esc(nm('c'))}</span></label></div></div>`;
 const val=id=>{const e=$('#'+id);return e?e.value:'';};
 
 /* --- vadeli hesap formu --- */
@@ -889,15 +898,16 @@ function openSettings(first){
   ui.sheet={type:'settings'};
   const shared=state.mode==='shared';
   openSheet(first?'Hoş geldiniz':'Ayarlar',`
-    <p class="small">${first?'Kayıtlarda görünecek iki ismi yaz. İstersen sonra Ayarlar bölümünden değiştirebilirsin.':'Kayıtlarda görünen isimler.'}</p>
+    <p class="small">${first?'Kayıtlarda görünecek isimleri yaz. İstersen sonra Ayarlar bölümünden değiştirebilirsin.':'Kayıtlarda görünen isimler.'}</p>
     <div class="fld"><label for="s-a">1. kişi</label><input type="text" id="s-a" value="${esc(nm('a'))}" autocomplete="off"></div>
     <div class="fld"><label for="s-b">2. kişi</label><input type="text" id="s-b" value="${esc(nm('b'))}" autocomplete="off"></div>
+    <div class="fld"><label for="s-c">3. seçenek (ortak)</label><input type="text" id="s-c" value="${esc(nm('c'))}" autocomplete="off"></div>
     <div class="note">${shared?'Kayıtlar canlı olarak paylaşılıyor. Sayfaya erişimi olan herkes aynı kayıtları görür. Düzenleme için sayfada “Katkıda bulunan” veya daha yüksek yetki gerekir.':'Ortak kayıt kullanılamıyor. Kayıtlar yalnızca bu cihazdaki tarayıcıda tutuluyor ve eşinle paylaşılmıyor.'}</div>
     <div class="acts"><button class="btn pri" data-act="save-names">Kaydet</button><button class="btn" data-act="${first?'skip-names':'sheet-close'}">${first?'Sonra':'Vazgeç'}</button></div>`);
 }
 async function saveNames(){
-  const a=val('s-a').trim()||'Ben',b=val('s-b').trim()||'Eşim';
-  state.settings.names={a,b};state.settings.namesSet=true;closeSheet();await saveSettings();toast('Kaydedildi.');
+  const a=val('s-a').trim()||'Ben',b=val('s-b').trim()||'Eşim',c=val('s-c').trim()||'Ev';
+  state.settings.names={a,b,c};state.settings.namesSet=true;closeSheet();await saveSettings();toast('Kaydedildi.');
 }
 
 /* ---------- olaylar ---------- */
