@@ -665,6 +665,7 @@ function repAssets(){
 }
 function buildReport(v){return v==='vadeli'?repDeposits():v==='nakit'?repCash():v==='akis'?repFlow():v==='altin'?repAssets():repHome();}
 function openReport(){
+  if(ui.view==='akis'){openFlowReport();return;}
   const text=buildReport(ui.view);
   ui.sheet={type:'report',text};
   openSheet('Raporu gönder',`<p class="small">Bu sayfanın raporu aşağıda. WhatsApp açılınca göndereceğin kişileri veya grubu seçersin.</p>
@@ -707,7 +708,7 @@ function render(){
 
 /* ---------- pencere (form) ---------- */
 function openSheet(title,html){$('#sheet-title').textContent=title;$('#sheet-body').innerHTML=html;$('#sheet').hidden=false;$('.sheet-panel').scrollTop=0;}
-function closeSheet(){$('#sheet').hidden=true;$('#sheet-body').innerHTML='';ui.sheet=null;}
+function closeSheet(){if(ui.sheet&&ui.sheet.url){try{URL.revokeObjectURL(ui.sheet.url);}catch(e){}}$('#sheet').hidden=true;$('#sheet-body').innerHTML='';ui.sheet=null;}
 function lastOwner(){try{const v=localStorage.getItem(LS+'-owner');return v==='b'||v==='c'?v:'a';}catch(e){return 'a';}}
 function rememberOwner(o){try{localStorage.setItem(LS+'-owner',o);}catch(e){}}
 function bankOptions(){
@@ -985,7 +986,7 @@ function viewFlow(){
 const SH_M=ym=>MONTHS[+ym.slice(5,7)-1].slice(0,3)+' '+ym.slice(0,4);
 function repFlow(){
   const o=ui.flowOwner,c=flowCalc(o),ym=flowSel(c),u=flowUpTo(c,ym),today=todayStr();
-  const MAXW=34,blk=a=>'```\n'+a.join('\n')+'\n```\n';
+  const MAXW=37,blk=a=>'```\n'+a.join('\n')+'\n```\n';
   let t='📊 *NAKİT AKIŞ RAPORU*\n'+fmtD(today)+filtName(o)+'\n';
   t+='\n💰 *'+monthLbl(ym)+' sonu toplam tasarruf*\n*'+fmt0(c.base+u.add)+' ₺*\nMevcut bakiye '+fmt0(c.base)+' ₺ + girilen gelirler '+fmt0(u.add)+' ₺\n';
   const tk=FTYPES.filter(x=>u.t[x.k]);
@@ -995,21 +996,27 @@ function repFlow(){
     t+='\n🗂 *'+monthLbl(ym)+' sonuna kadar eklenen gelirler*\n'+blk(tk.map(x=>kv(x.n,fmt0(u.t[x.k]))).concat(['─'.repeat(w),kv('Toplam',fmt0(u.add))]));
   }
   if(c.rows.length){
+    const nf1=new Intl.NumberFormat('tr-TR',{minimumFractionDigits:1,maximumFractionDigits:1,useGrouping:'always'});
+    const kb=n=>{const v=n/1000;return Math.abs(v-Math.round(v))<0.05?nf0.format(Math.round(v)):nf1.format(v);};
+    const SY=ym=>MONTHS[+ym.slice(5,7)-1].slice(0,3)+' '+ym.slice(2,4);
     const all=c.rows.reduce((a,r)=>a+r.total,0);
     const tcols=FTYPES.filter(x=>c.rows.some(r=>r.t[x.k]));
-    const defs=tcols.map(x=>({h:x.s,v:r=>r.t[x.k]?fmt0(r.t[x.k]):'—',tot:fmt0(c.rows.reduce((a,r)=>a+(r.t[x.k]||0),0))}))
-      .concat([{h:'Toplam',v:r=>fmt0(r.total),tot:fmt0(all)},{h:'Ay sonu',v:r=>fmt0(r.bal),tot:fmt0(c.base+all)}]);
-    for(const d of defs)d.w=Math.max(d.h.length,d.tot.length,...c.rows.map(r=>d.v(r).length))+2;
-    const A=9,chunks=[];let cur=[],cw=A;
+    const defs=tcols.map(x=>({h:x.s,v:r=>r.t[x.k]?kb(r.t[x.k]):'—',tot:kb(c.rows.reduce((a,r)=>a+(r.t[x.k]||0),0))}))
+      .concat([{h:'Toplam',v:r=>kb(r.total),tot:kb(all)}]);
+    for(const d of defs)d.w=Math.max(d.h.length,d.tot.length,...c.rows.map(r=>d.v(r).length))+1;
+    const A=6,chunks=[];let cur=[],cw=A;
     for(const d of defs){if(cur.length&&cw+d.w>MAXW){chunks.push(cur);cur=[];cw=A;}cur.push(d);cw+=d.w;}
     if(cur.length)chunks.push(cur);
-    t+='\n📅 *Aylara ve türlere göre*\n';
+    t+='\n📅 *Aylara ve türlere göre (bin ₺)*\n';
     for(const ch of chunks){
       const hdr='Ay'.padEnd(A)+ch.map(d=>d.h.padStart(d.w)).join(''),ln='─'.repeat(hdr.length);
-      t+=blk([hdr,ln].concat(c.rows.map(r=>SH_M(r.ym).padEnd(A)+ch.map(d=>d.v(r).padStart(d.w)).join('')),[ln,'Toplam'.padEnd(A)+ch.map(d=>d.tot.padStart(d.w)).join('')]));
+      t+=blk([hdr,ln].concat(c.rows.map(r=>SY(r.ym).padEnd(A)+ch.map(d=>d.v(r).padStart(d.w)).join('')),[ln,'Toplam'.padEnd(A)+ch.map(d=>d.tot.padStart(d.w)).join('')]));
     }
     if(chunks.length>1)t+='_Tablo ekrana sığması için bölümlere ayrıldı, her bölümde ay sütunu tekrar eder._\n';
-    t+='_Tutarlar ₺ cinsindendir. Ay sonu: mevcut bakiye üzerine o aya kadarki gelirler eklenmiş toplamdır._\n';
+    t+='_Tutarlar bin ₺ cinsindendir (385 = 385.000 ₺)._\n';
+    const bw=Math.max(...c.rows.map(r=>fmt0(r.bal).length),fmt0(c.base).length,6)+2;
+    const bk=(a,b)=>a.padEnd(A)+b.padStart(bw);
+    t+='\n💼 *Ay sonu bakiye (₺)*\n'+blk([bk('Ay','Bakiye'),'─'.repeat(A+bw),bk('Bugün',fmt0(c.base))].concat(c.rows.map(r=>bk(SY(r.ym),fmt0(r.bal)))));
   }else t+='\nBugünden ileri tarihli gelir girilmemiş.\n';
   const lst=state.flows.filter(f=>o==='all'||f.owner===o).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
   if(lst.length){
@@ -1024,6 +1031,133 @@ function repFlow(){
   }
   return t.trim();
 }
+/* --- Nakit Akış: görsel rapor --- */
+async function renderFlowImage(){
+  const o=ui.flowOwner,c=flowCalc(o),ym=flowSel(c),u=flowUpTo(c,ym),today=todayStr(),rows=c.rows;
+  try{await Promise.all(['700 20px "Bricolage Grotesque"','600 15px Figtree','700 15px Figtree'].map(f=>document.fonts.load(f)));}catch(e){}
+  const FB='Figtree,"Segoe UI",system-ui,-apple-system,sans-serif',FD='"Bricolage Grotesque",Figtree,"Segoe UI",system-ui,sans-serif';
+  const font=(w,sz,f,st)=>(st?st+' ':'')+w+' '+sz+'px '+(f||FB);
+  const K={navy:'#1D3A5F',gold:'#B08D57',cream:'#F6EDDD',brown:'#7A5A2B',tan:'#F1E2C8',tanTx:'#8A5A1F',green:'#E5F5EB',greenTx:'#167A44',blue:'#E7EFF9',sel:'#FFF4D6',dark:'#1C1F26',line:'#E6DFD2',gray:'#6B7480',ink:'#14212B'};
+  const all=rows.reduce((a,r)=>a+r.total,0);
+  const tcols=FTYPES.filter(x=>rows.some(r=>r.t[x.k]));
+  const cols=[{h:'Ay',k:'ay'}].concat(tcols.map(x=>({h:x.s,k:x.k})),[{h:'Toplam',k:'tot'},{h:'Ay sonu',k:'bal'}]);
+  const cell=(r,col)=>col.k==='ay'?monthLbl(r.ym):col.k==='tot'?fmt0(r.total):col.k==='bal'?fmt0(r.bal):(r.t[col.k]?fmt0(r.t[col.k]):'—');
+  const totCell=col=>col.k==='ay'?'Toplam':col.k==='tot'?fmt0(all):col.k==='bal'?fmt0(c.base+all):fmt0(rows.reduce((a,r)=>a+(r.t[col.k]||0),0));
+  const m=document.createElement('canvas').getContext('2d');
+  const PAD=22,CP=14,RH=44;
+  let W=560;
+  if(rows.length){
+    for(const col of cols){
+      m.font=font(700,13);let w=m.measureText(col.h.toUpperCase()).width;
+      m.font=font(600,16);for(const r of rows)w=Math.max(w,m.measureText(cell(r,col)).width);
+      m.font=font(700,16);w=Math.max(w,m.measureText(totCell(col)).width);
+      if(col.k==='ay'){m.font=font(700,16);w=Math.max(w,m.measureText('Bugünkü değer').width);}
+      col.w=Math.ceil(w+CP*2);
+    }
+    W=Math.max(560,PAD*2+cols.reduce((a,d)=>a+d.w,0));
+    const extra=W-PAD*2-cols.reduce((a,d)=>a+d.w,0);
+    for(const col of cols)col.w+=extra/cols.length;
+  }
+  const tableH=rows.length?(40+RH+rows.length*RH+50):0;
+  const H=PAD+34+24+16+86+20+(rows.length?tableH+16:56)+34+PAD;
+  const DPR=2,cv=document.createElement('canvas');cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
+  const g=cv.getContext('2d');g.scale(DPR,DPR);g.textBaseline='middle';
+  const rr=(x,y,w,h,r)=>{g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();};
+  const txt=(t,x,y,f,col,al)=>{g.font=f;g.fillStyle=col;g.textAlign=al||'left';g.fillText(t,x,y);};
+  g.fillStyle='#FFFFFF';g.fillRect(0,0,W,H);
+  let y=PAD;
+  txt('Nakit Akış Raporu',PAD,y+17,font(700,26,FD),K.navy);
+  txt('Tasarruf Defteri',W-PAD,y+17,font(600,13),K.gold,'right');
+  y+=34;
+  txt(monthLbl(ym)+' sonu  ·  '+(o==='all'?'Tümü':nm(o))+'  ·  '+fmtD(today),PAD,y+12,font(500,14),K.gray);
+  y+=24;
+  g.fillStyle=K.gold;g.fillRect(PAD,y,W-PAD*2,3);
+  y+=16;
+  const gap=10,tw=(W-PAD*2-gap*2)/3,tiles=[
+    {l:'BUGÜNKÜ DEĞER',v:fmt0(c.base)+' ₺',bg:K.tan,lc:K.tanTx,vc:K.tanTx},
+    {l:'GİRİLEN GELİRLER',v:'+'+fmt0(u.add)+' ₺',bg:K.green,lc:K.greenTx,vc:K.greenTx},
+    {l:monthLbl(ym).toUpperCase()+' SONU',v:fmt0(c.base+u.add)+' ₺',bg:K.navy,lc:'#B8C9DC',vc:'#FFFFFF'}];
+  tiles.forEach((t,i)=>{
+    const x=PAD+i*(tw+gap);g.fillStyle=t.bg;rr(x,y,tw,86,14);g.fill();
+    txt(t.l,x+14,y+24,font(700,11.5),t.lc);
+    let fs=24;g.font=font(700,fs,FD);while(g.measureText(t.v).width>tw-28&&fs>14){fs--;g.font=font(700,fs,FD);}
+    txt(t.v,x+14,y+58,font(700,fs,FD),t.vc);
+  });
+  y+=86+20;
+  if(!rows.length){
+    txt('Bugünden ileri tarihli gelir girilmemiş.',PAD,y+18,font(600,15),K.gray);
+    y+=56;
+  }else{
+    const tx=PAD,tW=W-PAD*2;
+    g.save();rr(tx,y,tW,tableH,12);g.clip();
+    g.fillStyle=K.cream;g.fillRect(tx,y,tW,40);
+    let cx=tx;
+    const colX=[];
+    for(const col of cols){colX.push(cx);cx+=col.w;}
+    cols.forEach((col,i)=>{
+      const left=col.k==='ay';
+      txt(col.h.toUpperCase(),left?colX[i]+CP:colX[i]+col.w-CP,y+20,font(700,13),K.brown,left?'left':'right');
+    });
+    let ry=y+40;
+    g.fillStyle=K.tan;g.fillRect(tx,ry,tW,RH);
+    txt('Bugünkü değer',colX[0]+CP,ry+RH/2,font(700,16,FB,'italic'),K.tanTx);
+    const li=cols.length-1;
+    txt(fmt0(c.base),colX[li]+cols[li].w-CP,ry+RH/2,font(700,16,FB,'italic'),K.tanTx,'right');
+    ry+=RH;
+    rows.forEach(r=>{
+      const isSel=r.ym===ym;
+      cols.forEach((col,i)=>{
+        const bg=col.k==='tot'?(isSel?'#C9EBD7':K.green):col.k==='bal'?(isSel?'#CFE0F6':K.blue):(isSel?K.sel:'#FFFFFF');
+        g.fillStyle=bg;g.fillRect(colX[i],ry,col.w,RH);
+        const v=cell(r,col),left=col.k==='ay',dash=v==='—';
+        const color=col.k==='tot'?K.greenTx:col.k==='bal'?K.navy:(dash?'#A7AEB7':K.ink);
+        txt(v,left?colX[i]+CP:colX[i]+col.w-CP,ry+RH/2,font(left||col.k==='tot'||col.k==='bal'||isSel?700:600,16),color,left?'left':'right');
+      });
+      g.fillStyle=K.line;g.fillRect(tx,ry+RH-1,tW,1);
+      ry+=RH;
+    });
+    g.fillStyle=K.dark;g.fillRect(tx,ry,tW,50);
+    cols.forEach((col,i)=>{const left=col.k==='ay';txt(totCell(col),left?colX[i]+CP:colX[i]+col.w-CP,ry+25,font(700,16),'#FFFFFF',left?'left':'right');});
+    g.fillStyle=K.line;for(let i=1;i<cols.length;i++)g.fillRect(colX[i],y+40,1,tableH-40-50);
+    g.restore();
+    g.strokeStyle=K.line;g.lineWidth=1;rr(tx+.5,y+.5,tW-1,tableH-1,12);g.stroke();
+    y+=tableH+16;
+  }
+  txt('Tutarlar ₺ cinsindendir. Ay sonu: mevcut bakiye üzerine o aya kadarki gelirler eklenmiş toplamdır.',PAD,y+14,font(500,12),K.gray);
+  return await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error('blob')),'image/png'));
+}
+async function openFlowReport(){
+  const tok={type:'report',text:repFlow(),file:null,url:null};
+  ui.sheet=tok;
+  openSheet('Raporu gönder','<p class="small">Raporun görseli hazırlanıyor…</p><div class="prog"><i style="width:45%"></i></div>');
+  const acts='<div class="acts"><button class="btn" data-act="wa-send">Metin olarak gönder</button><button class="btn" data-act="wa-copy">Metni kopyala</button></div>';
+  try{
+    const blob=await renderFlowImage();
+    if(ui.sheet!==tok)return;
+    tok.file=new File([blob],'nakit-akis-'+todayStr()+'.png',{type:'image/png'});
+    tok.url=URL.createObjectURL(blob);
+    $('#sheet-body').innerHTML='<p class="small">Görsel hazır. “Görsel olarak gönder”e basınca paylaşım listesi açılır. Oradan WhatsApp’ı ve göndereceğin kişileri seç.</p>'+
+      '<img src="'+tok.url+'" alt="Nakit akış raporu görseli" style="width:100%;height:auto;border-radius:12px;border:1px solid var(--line);background:#fff">'+
+      '<div class="acts"><button class="btn wa" data-act="wa-img">'+WA_SVG+'Görsel olarak gönder</button><button class="btn" data-act="img-save">Görseli kaydet</button></div>'+acts;
+  }catch(e){
+    if(ui.sheet!==tok)return;
+    $('#sheet-body').innerHTML='<div class="note warn">Görsel hazırlanamadı. Raporu metin olarak gönderebilirsin.</div><div class="rep" id="rep-text">'+esc(tok.text)+'</div>'+
+      '<div class="acts"><button class="btn wa" data-act="wa-send">'+WA_SVG+'WhatsApp ile gönder</button><button class="btn" data-act="wa-copy">Kopyala</button></div>';
+  }
+}
+async function shareImg(){
+  const sh=ui.sheet;if(!sh||!sh.file)return;
+  try{
+    if(navigator.canShare&&navigator.canShare({files:[sh.file]})){await navigator.share({files:[sh.file],title:'Nakit Akış Raporu'});return;}
+  }catch(e){if(e&&e.name==='AbortError')return;}
+  saveImg();
+  toast('Bu tarayıcı görseli doğrudan paylaşamıyor. Görsel kaydedildi, WhatsApp’ta ek olarak seçebilirsin.');
+}
+function saveImg(){
+  const sh=ui.sheet;if(!sh||!sh.url)return;
+  const a=document.createElement('a');a.href=sh.url;a.download=sh.file.name;document.body.appendChild(a);a.click();a.remove();
+}
+
 function updFlow(){
   echo('e-famount','f-amount','TRY');
   const h=$('#f-hint');if(h)h.textContent=val('f-type')==='vade'?'Vadeli hesaplarının vade sonu değeri Özet’teki toplama zaten dahildir. Buraya yalnızca toplama dahil olmayan ek tutarı gir.':'';
@@ -1231,6 +1365,8 @@ document.addEventListener('click',e=>{
     case 'ocr-apply':ocrApply();break;
     case 'wa-send':waSend();break;
     case 'wa-copy':waCopy();break;
+    case 'wa-img':shareImg();break;
+    case 'img-save':saveImg();break;
     case 'add-dep':openDeposit('add');break;
     case 'edit-dep':openDeposit('edit',id);break;
     case 'renew':openDeposit('renew',id);break;
