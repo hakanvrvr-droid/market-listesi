@@ -985,26 +985,24 @@ function viewFlow(){
 const SH_M=ym=>MONTHS[+ym.slice(5,7)-1].slice(0,3)+' '+ym.slice(0,4);
 function repFlow(){
   const o=ui.flowOwner,c=flowCalc(o),ym=flowSel(c),u=flowUpTo(c,ym),rows=c.rows.filter(r=>r.ym<=ym);
-  const W=31,line='─'.repeat(W);
+  const W=30,line='─'.repeat(W);
   const kv=(a,b)=>a+' '.repeat(Math.max(1,W-a.length-b.length))+b;
-  const cols=(a,b,d)=>a.padEnd(9)+b.padStart(10)+d.padStart(12);
+  const cols=(a,b,d)=>(a.padEnd(9)+b.padStart(10)+d.padStart(11)).trimEnd();
   const blk=a=>'```\n'+a.join('\n')+'\n```\n';
   let t='📊 *NAKİT AKIŞ RAPORU*\n'+fmtD(todayStr())+filtName(o)+'\n';
-  t+='\n💰 *'+monthLbl(ym)+' sonu toplam tasarruf*\n'+blk([kv('Mevcut bakiye',fmt0(c.base)),kv('Girilen gelirler','+'+fmt0(u.add)),line,kv('TOPLAM',fmt0(c.base+u.add))]);
-  t+='_Tutarlar ₺ cinsindendir._\n';
-  const tk=FTYPES.filter(x=>u.t[x.k]);
-  if(tk.length)t+='\n🗂 *Türlere göre ('+monthLbl(ym)+' sonuna kadar)*\n'+blk(tk.map(x=>kv(x.n,fmt0(u.t[x.k]))).concat([line,kv('Toplam',fmt0(u.add))]));
-  if(rows.length){
-    const all=rows.reduce((a,r)=>a+r.total,0);
-    t+='\n📅 *Aylara göre*\n'+blk([cols('Ay','Gelir','Bakiye'),line].concat(rows.map(r=>cols(SH_M(r.ym),fmt0(r.total),fmt0(r.bal))),[line,cols('Toplam',fmt0(all),fmt0(rows[rows.length-1].bal))]));
-    const det=[];
-    rows.forEach((r,i)=>{
-      if(i)det.push('');
-      det.push(kv(monthLbl(r.ym).toUpperCase(),fmt0(r.total)));
-      for(const x of FTYPES)if(r.t[x.k])det.push(kv('  '+x.n,fmt0(r.t[x.k])));
-    });
-    t+='\n🧾 *Aylara ve türlere göre*\n'+blk(det);
-  }else t+='\nBugünden ileri tarihli gelir girilmemiş.\n';
+  t+='\n💰 *'+monthLbl(ym)+' sonu toplam tasarruf*\n'+blk([kv('Bugünkü değer',fmt0(c.base)),kv('Girilen gelirler','+'+fmt0(u.add)),line,kv('AY SONU DEĞERİ',fmt0(c.base+u.add))]);
+  if(!rows.length)return (t+'\nBugünden ileri tarihli gelir girilmemiş.').trim();
+  const L=[cols('Kalem','Tutar','Ay sonu'),line,cols('BUGÜN','',fmt0(c.base))];
+  for(const r of rows){
+    L.push(SH_M(r.ym));
+    for(const x of FTYPES)if(r.t[x.k])L.push(cols('  '+x.s,fmt0(r.t[x.k]),''));
+    L.push(cols('  Toplam',fmt0(r.total),fmt0(r.bal)));
+  }
+  L.push(line,'TÜRE GÖRE TOPLAM');
+  for(const x of FTYPES)if(u.t[x.k])L.push(cols('  '+x.s,fmt0(u.t[x.k]),''));
+  L.push(cols('  Toplam',fmt0(u.add),fmt0(c.base+u.add)));
+  t+='\n📅 *Bugün, türler ve ay sonu değerleri*\n'+blk(L);
+  t+='_Tutarlar ₺ cinsindendir. Vade = vade geliri, Emekli = emekli maaşı, Kira = kira geliri, Maaş = maaş tasarrufu._\n';
   return t.trim();
 }
 function updFlow(){
