@@ -664,15 +664,7 @@ function repAssets(){
   return t.trim();
 }
 function buildReport(v){return v==='vadeli'?repDeposits():v==='nakit'?repCash():v==='akis'?repFlow():v==='altin'?repAssets():repHome();}
-function openReport(){
-  if(ui.view==='akis'){openFlowReport();return;}
-  const text=buildReport(ui.view);
-  ui.sheet={type:'report',text};
-  openSheet('Raporu gönder',`<p class="small">Bu sayfanın raporu aşağıda. WhatsApp açılınca göndereceğin kişileri veya grubu seçersin.</p>
-    <div class="rep" id="rep-text">${esc(text)}</div>
-    ${text.length>3500?'<div class="note warn">Rapor uzun. WhatsApp açılırken kısalırsa “Kopyala” ile kopyalayıp sohbete yapıştırabilirsin.</div>':''}
-    <div class="acts"><button class="btn wa" data-act="wa-send">${WA_SVG}WhatsApp ile gönder</button><button class="btn" data-act="wa-copy">Kopyala</button></div>`);
-}
+function openReport(){openImgReport();}
 function waSend(){
   const sh=ui.sheet;if(!sh||sh.type!=='report')return;
   const url='https://wa.me/?text='+encodeURIComponent(sh.text);
@@ -1031,113 +1023,229 @@ function repFlow(){
   }
   return t.trim();
 }
-/* --- Nakit Akış: görsel rapor --- */
-async function renderFlowImage(){
-  const o=ui.flowOwner,c=flowCalc(o),ym=flowSel(c),u=flowUpTo(c,ym),today=todayStr(),rows=c.rows;
+/* --- Görsel rapor (tüm sayfalar) --- */
+const IMGT={
+  tan:{bg:'#F1E2C8',tx:'#8A5A1F',lb:'#8A5A1F'},
+  green:{bg:'#E5F5EB',tx:'#167A44',lb:'#167A44',sel:'#C9EBD7'},
+  red:{bg:'#FBE3E0',tx:'#B0352D',lb:'#B0352D',sel:'#F5CFCA'},
+  blue:{bg:'#E7EFF9',tx:'#1D3A5F',lb:'#1D3A5F',sel:'#CFE0F6'},
+  navy:{bg:'#1D3A5F',tx:'#FFFFFF',lb:'#B8C9DC'},
+  pa:{bg:'#DDF1F1',tx:'#0E6B6D',lb:'#0E6B6D'},
+  pb:{bg:'#FBE4D6',tx:'#A8440F',lb:'#A8440F'},
+  pc:{bg:'#E9E1F3',tx:'#5A3F85',lb:'#5A3F85'}
+};
+const mA=(n,c)=>fmtA(n)+' '+SYM[c];
+const sumsMulti=(list,f)=>sumsLine(list,f).split(' · ').join('\n');
+const cap=t=>t.charAt(0).toLocaleUpperCase('tr')+t.slice(1);
+const zf=n=>Math.abs(n)<0.5?'—':fmt0(n);
+const sgc=n=>({t:Math.abs(n)<0.5?'—':signed(n),c:n>0.5?'pos':n<-0.5?'neg':'mut'});
+async function renderReportImage(sp){
   try{await Promise.all(['700 20px "Bricolage Grotesque"','600 15px Figtree','700 15px Figtree'].map(f=>document.fonts.load(f)));}catch(e){}
   const FB='Figtree,"Segoe UI",system-ui,-apple-system,sans-serif',FD='"Bricolage Grotesque",Figtree,"Segoe UI",system-ui,sans-serif';
+  const K={navy:'#1D3A5F',gold:'#B08D57',cream:'#F6EDDD',brown:'#7A5A2B',sel:'#FFF4D6',dark:'#1C1F26',line:'#E6DFD2',gray:'#6B7480',ink:'#14212B'};
   const font=(w,sz,f,st)=>(st?st+' ':'')+w+' '+sz+'px '+(f||FB);
-  const K={navy:'#1D3A5F',gold:'#B08D57',cream:'#F6EDDD',brown:'#7A5A2B',tan:'#F1E2C8',tanTx:'#8A5A1F',green:'#E5F5EB',greenTx:'#167A44',blue:'#E7EFF9',sel:'#FFF4D6',dark:'#1C1F26',line:'#E6DFD2',gray:'#6B7480',ink:'#14212B'};
-  const all=rows.reduce((a,r)=>a+r.total,0);
-  const tcols=FTYPES.filter(x=>rows.some(r=>r.t[x.k]));
-  const cols=[{h:'Ay',k:'ay'}].concat(tcols.map(x=>({h:x.s,k:x.k})),[{h:'Toplam',k:'tot'},{h:'Ay sonu',k:'bal'}]);
-  const cell=(r,col)=>col.k==='ay'?monthLbl(r.ym):col.k==='tot'?fmt0(r.total):col.k==='bal'?fmt0(r.bal):(r.t[col.k]?fmt0(r.t[col.k]):'—');
-  const totCell=col=>col.k==='ay'?'Toplam':col.k==='tot'?fmt0(all):col.k==='bal'?fmt0(c.base+all):fmt0(rows.reduce((a,r)=>a+(r.t[col.k]||0),0));
   const m=document.createElement('canvas').getContext('2d');
-  const PAD=22,CP=14,RH=44;
+  const PAD=22,CP=14,RH=44,GH=40,HH=40,TH=50,GAP=18;
+  const cellT=c=>c==null?'':typeof c==='object'?String(c.t):String(c);
+  const wrap=(t,maxW,f)=>{m.font=f;const out=[];let line='';for(const w of String(t).split(' ')){const tt=line?line+' '+w:w;if(m.measureText(tt).width>maxW&&line){out.push(line);line=w;}else line=tt;}if(line)out.push(line);return out;};
+  const blocks=(sp.blocks||[]).filter(Boolean);
   let W=560;
-  if(rows.length){
-    for(const col of cols){
-      m.font=font(700,13);let w=m.measureText(col.h.toUpperCase()).width;
-      m.font=font(600,16);for(const r of rows)w=Math.max(w,m.measureText(cell(r,col)).width);
-      m.font=font(700,16);w=Math.max(w,m.measureText(totCell(col)).width);
-      if(col.k==='ay'){m.font=font(700,16);w=Math.max(w,m.measureText('Bugünkü değer').width);}
-      col.w=Math.ceil(w+CP*2);
-    }
-    W=Math.max(560,PAD*2+cols.reduce((a,d)=>a+d.w,0));
-    const extra=W-PAD*2-cols.reduce((a,d)=>a+d.w,0);
-    for(const col of cols)col.w+=extra/cols.length;
+  for(const b of blocks){
+    if(b.type!=='table')continue;
+    b.cols.forEach((col,i)=>{
+      m.font=font(700,13);let w=m.measureText(String(col.h).toUpperCase()).width;
+      m.font=font(700,16);
+      for(const r of b.rows){if(r.grp!=null)continue;w=Math.max(w,m.measureText(cellT(r.c[i])).width);}
+      if(b.total)for(const ln of cellT(b.total[i]).split('\n'))w=Math.max(w,m.measureText(ln).width);
+      col.w0=Math.ceil(w+CP*2);
+    });
+    b.nat=b.cols.reduce((a,c)=>a+c.w0,0);
+    W=Math.max(W,PAD*2+b.nat);
   }
-  const tableH=rows.length?(40+RH+rows.length*RH+50):0;
-  const H=PAD+34+24+16+86+20+(rows.length?tableH+16:56)+34+PAD;
+  for(const b of blocks){if(b.type!=='table')continue;const ex=(W-PAD*2-b.nat)/b.cols.length;b.cols.forEach(c=>{c.w=c.w0+ex;});}
+  const foot=[];for(const t of sp.foot||[])foot.push(...wrap(t,W-PAD*2,font(500,12)));
+  for(const b of blocks)if(b.type==='text')b.lines=wrap(b.t,W-PAD*2,font(600,15));
+  const totH=b=>TH+(Math.max(1,...b.total.map(c=>cellT(c).split('\n').length))-1)*22;
+  const tblH=b=>HH+b.rows.reduce((a,r)=>a+(r.grp!=null?GH:RH),0)+(b.total?totH(b):0);
+  const bh=b=>b.type==='table'?((b.title?36:0)+tblH(b)+(b.note?24:0)+GAP):(b.lines.length*22+GAP);
+  const H=PAD+34+24+16+(sp.tiles&&sp.tiles.length?86+20:0)+blocks.reduce((a,b)=>a+bh(b),0)+(foot.length?foot.length*18+8:0)+PAD;
   const DPR=2,cv=document.createElement('canvas');cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
   const g=cv.getContext('2d');g.scale(DPR,DPR);g.textBaseline='middle';
   const rr=(x,y,w,h,r)=>{g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();};
   const txt=(t,x,y,f,col,al)=>{g.font=f;g.fillStyle=col;g.textAlign=al||'left';g.fillText(t,x,y);};
   g.fillStyle='#FFFFFF';g.fillRect(0,0,W,H);
   let y=PAD;
-  txt('Nakit Akış Raporu',PAD,y+17,font(700,26,FD),K.navy);
+  txt(sp.title,PAD,y+17,font(700,26,FD),K.navy);
   txt('Tasarruf Defteri',W-PAD,y+17,font(600,13),K.gold,'right');
   y+=34;
-  txt(monthLbl(ym)+' sonu  ·  '+(o==='all'?'Tümü':nm(o))+'  ·  '+fmtD(today),PAD,y+12,font(500,14),K.gray);
+  txt(sp.sub||'',PAD,y+12,font(500,14),K.gray);
   y+=24;
   g.fillStyle=K.gold;g.fillRect(PAD,y,W-PAD*2,3);
   y+=16;
-  const gap=10,tw=(W-PAD*2-gap*2)/3,tiles=[
-    {l:'BUGÜNKÜ DEĞER',v:fmt0(c.base)+' ₺',bg:K.tan,lc:K.tanTx,vc:K.tanTx},
-    {l:'GİRİLEN GELİRLER',v:'+'+fmt0(u.add)+' ₺',bg:K.green,lc:K.greenTx,vc:K.greenTx},
-    {l:monthLbl(ym).toUpperCase()+' SONU',v:fmt0(c.base+u.add)+' ₺',bg:K.navy,lc:'#B8C9DC',vc:'#FFFFFF'}];
-  tiles.forEach((t,i)=>{
-    const x=PAD+i*(tw+gap);g.fillStyle=t.bg;rr(x,y,tw,86,14);g.fill();
-    txt(t.l,x+14,y+24,font(700,11.5),t.lc);
-    let fs=24;g.font=font(700,fs,FD);while(g.measureText(t.v).width>tw-28&&fs>14){fs--;g.font=font(700,fs,FD);}
-    txt(t.v,x+14,y+58,font(700,fs,FD),t.vc);
-  });
-  y+=86+20;
-  if(!rows.length){
-    txt('Bugünden ileri tarihli gelir girilmemiş.',PAD,y+18,font(600,15),K.gray);
-    y+=56;
-  }else{
-    const tx=PAD,tW=W-PAD*2;
-    g.save();rr(tx,y,tW,tableH,12);g.clip();
-    g.fillStyle=K.cream;g.fillRect(tx,y,tW,40);
-    let cx=tx;
-    const colX=[];
-    for(const col of cols){colX.push(cx);cx+=col.w;}
-    cols.forEach((col,i)=>{
-      const left=col.k==='ay';
-      txt(col.h.toUpperCase(),left?colX[i]+CP:colX[i]+col.w-CP,y+20,font(700,13),K.brown,left?'left':'right');
+  if(sp.tiles&&sp.tiles.length){
+    const n=sp.tiles.length,gap=10,tw=(W-PAD*2-gap*(n-1))/n;
+    sp.tiles.forEach((t,i)=>{
+      const tn=IMGT[t.tone]||IMGT.tan,x=PAD+i*(tw+gap);
+      g.fillStyle=tn.bg;rr(x,y,tw,86,14);g.fill();
+      let ls=11.5;g.font=font(700,ls);while(g.measureText(t.l).width>tw-28&&ls>8){ls-=.5;g.font=font(700,ls);}
+      txt(t.l,x+14,y+24,font(700,ls),tn.lb);
+      let fs=24;g.font=font(700,fs,FD);while(g.measureText(t.v).width>tw-28&&fs>12){fs--;g.font=font(700,fs,FD);}
+      txt(t.v,x+14,y+58,font(700,fs,FD),tn.tx);
     });
-    let ry=y+40;
-    g.fillStyle=K.tan;g.fillRect(tx,ry,tW,RH);
-    txt('Bugünkü değer',colX[0]+CP,ry+RH/2,font(700,16,FB,'italic'),K.tanTx);
-    const li=cols.length-1;
-    txt(fmt0(c.base),colX[li]+cols[li].w-CP,ry+RH/2,font(700,16,FB,'italic'),K.tanTx,'right');
-    ry+=RH;
-    rows.forEach(r=>{
-      const isSel=r.ym===ym;
-      cols.forEach((col,i)=>{
-        const bg=col.k==='tot'?(isSel?'#C9EBD7':K.green):col.k==='bal'?(isSel?'#CFE0F6':K.blue):(isSel?K.sel:'#FFFFFF');
-        g.fillStyle=bg;g.fillRect(colX[i],ry,col.w,RH);
-        const v=cell(r,col),left=col.k==='ay',dash=v==='—';
-        const color=col.k==='tot'?K.greenTx:col.k==='bal'?K.navy:(dash?'#A7AEB7':K.ink);
-        txt(v,left?colX[i]+CP:colX[i]+col.w-CP,ry+RH/2,font(left||col.k==='tot'||col.k==='bal'||isSel?700:600,16),color,left?'left':'right');
+    y+=86+20;
+  }
+  for(const b of blocks){
+    if(b.type==='text'){b.lines.forEach((l,i)=>txt(l,PAD,y+11+i*22,font(600,15),K.gray));y+=b.lines.length*22+GAP;continue;}
+    if(b.title){txt(b.title,PAD,y+14,font(700,19,FD),K.navy);g.fillStyle=K.gold;g.fillRect(PAD,y+28,36,3);y+=36;}
+    const tx=PAD,tW=W-PAD*2,th=tblH(b),colX=[];let cx=tx;
+    for(const c of b.cols){colX.push(cx);cx+=c.w;}
+    const al=i=>b.cols[i].a||(i===0?'left':'right');
+    const px=i=>al(i)==='left'?colX[i]+CP:colX[i]+b.cols[i].w-CP;
+    g.save();rr(tx,y,tW,th,12);g.clip();
+    g.fillStyle=K.cream;g.fillRect(tx,y,tW,HH);
+    b.cols.forEach((c,i)=>txt(String(c.h).toUpperCase(),px(i),y+HH/2,font(700,13),K.brown,al(i)));
+    let ry=y+HH;
+    for(const r of b.rows){
+      if(r.grp!=null){
+        g.fillStyle='#FBF5EA';g.fillRect(tx,ry,tW,GH);
+        txt(r.grp,tx+CP,ry+GH/2,font(700,15),K.brown);
+        if(r.right)txt(r.right,tx+tW-CP,ry+GH/2,font(700,14),K.brown,'right');
+        g.fillStyle=K.line;g.fillRect(tx,ry+GH-1,tW,1);
+        ry+=GH;continue;
+      }
+      const whole=r.k==='tan'?IMGT.tan.bg:r.k==='bad'?'#FDEDEB':null;
+      b.cols.forEach((c,i)=>{
+        const tn=c.tone&&IMGT[c.tone];
+        g.fillStyle=whole||(tn?(r.k==='sel'&&tn.sel?tn.sel:tn.bg):(r.k==='sel'?K.sel:'#FFFFFF'));
+        g.fillRect(colX[i],ry,c.w,RH);
+      });
+      b.cols.forEach((c,i)=>{
+        const raw=r.c[i],v=cellT(raw),o=(raw&&typeof raw==='object')?raw.c:null,tn=c.tone&&IMGT[c.tone];
+        if(v==='')return;
+        let color=K.ink;
+        if(r.k==='tan')color=IMGT.tan.tx;
+        else if(o==='pos')color=IMGT.green.tx;else if(o==='neg')color=IMGT.red.tx;
+        else if(o==='mut'||v==='—')color='#A7AEB7';
+        else if(tn)color=tn.tx;
+        const bold=i===0||!!tn||r.k==='sel'||r.k==='tan'||o==='pos'||o==='neg';
+        txt(v,px(i),ry+RH/2,font(bold?700:600,16,FB,r.k==='tan'?'italic':''),color,al(i));
       });
       g.fillStyle=K.line;g.fillRect(tx,ry+RH-1,tW,1);
+      if(!whole)for(let i=1;i<b.cols.length;i++)g.fillRect(colX[i],ry,1,RH);
       ry+=RH;
-    });
-    g.fillStyle=K.dark;g.fillRect(tx,ry,tW,50);
-    cols.forEach((col,i)=>{const left=col.k==='ay';txt(totCell(col),left?colX[i]+CP:colX[i]+col.w-CP,ry+25,font(700,16),'#FFFFFF',left?'left':'right');});
-    g.fillStyle=K.line;for(let i=1;i<cols.length;i++)g.fillRect(colX[i],y+40,1,tableH-40-50);
+    }
+    if(b.total){
+      const tH=totH(b);g.fillStyle=K.dark;g.fillRect(tx,ry,tW,tH);
+      b.cols.forEach((c,i)=>{const ls=cellT(b.total[i]).split('\n');if(ls.length===1&&ls[0]==='')return;ls.forEach((l,k)=>txt(l,px(i),ry+tH/2+(k-(ls.length-1)/2)*22,font(700,16),'#FFFFFF',al(i)));});
+    }
     g.restore();
-    g.strokeStyle=K.line;g.lineWidth=1;rr(tx+.5,y+.5,tW-1,tableH-1,12);g.stroke();
-    y+=tableH+16;
+    g.strokeStyle=K.line;g.lineWidth=1;rr(tx+.5,y+.5,tW-1,th-1,12);g.stroke();
+    y+=th;
+    if(b.note){txt(b.note,PAD,y+14,font(500,12),K.gray);y+=24;}
+    y+=GAP;
   }
-  txt('Tutarlar ₺ cinsindendir. Ay sonu: mevcut bakiye üzerine o aya kadarki gelirler eklenmiş toplamdır.',PAD,y+14,font(500,12),K.gray);
+  if(foot.length){y+=8-GAP+GAP;foot.forEach((l,i)=>txt(l,PAD,y+8+i*18,font(500,12),K.gray));}
   return await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error('blob')),'image/png'));
 }
-async function openFlowReport(){
-  const tok={type:'report',text:repFlow(),file:null,url:null};
+function specHome(){
+  const OW=ownCols(),S3={a:summarize('a'),b:summarize('b'),c:summarize('c')},T=summarize('all');
+  const sp={file:'ozet',title:'Özet Raporu',sub:fmtD(todayStr()),
+    tiles:[{l:'TOPLAM TASARRUF',v:fmt0(T.total)+' ₺',tone:'navy'}].concat(OW.map(o=>({l:nm(o).toUpperCase(),v:fmt0(S3[o].total)+' ₺',tone:'p'+o}))),blocks:[],foot:[]};
+  const fxc=[...new Set(OW.reduce((l,o)=>l.concat(Object.keys(S3[o].fxBy)),[]))].sort((x,y)=>FXC.indexOf(x)-FXC.indexOf(y));
+  const cols=[{h:'Kalem'}].concat(OW.map(o=>({h:nm(o)})),[{h:'Toplam',tone:'green'}]);
+  const row=(lab,f,tot)=>({c:[lab].concat(OW.map(o=>f(S3[o])),[tot])});
+  const rows=[row('Vadeli TL',x=>zf(x.depTRY),zf(T.depTRY)),row('Nakit',x=>zf(x.cash),zf(T.cash)),row('Altın',x=>zf(x.gold),zf(T.gold))]
+    .concat(fxc.map(cc=>row(IB[cc]?IB[cc].n:cc,x=>x.fxBy[cc]?zf(x.fxBy[cc].tl):'—',T.fxBy[cc]?zf(T.fxBy[cc].tl):'—')));
+  sp.blocks.push({type:'table',title:'Dağılım',cols,rows,total:['Toplam'].concat(OW.map(o=>fmt0(S3[o].total)),[fmt0(T.total)]),note:'Tutarlar ₺ cinsindendir. Döviz satırları ₺ karşılığıdır.'});
+  const kz=(lab,k)=>({c:[lab].concat(OW.map(o=>sgc(S3[o][k])),[sgc(T[k])])});
+  sp.blocks.push({type:'table',title:'Kâr / zarar',cols:[{h:'Kalem'}].concat(OW.map(o=>({h:nm(o)})),[{h:'Toplam'}]),
+    rows:[kz('Vadeli kazanç','depGain'),kz('Altın kâr/zarar','goldPL'),kz('Döviz kâr/zarar','fxPL')],
+    total:['Toplam kâr/zarar'].concat(OW.map(o=>signed(S3[o].totalPL)),[signed(T.totalPL)])});
+  const due=activeDeps().filter(isDue).sort(byEnd),soon=activeDeps().filter(d=>!isDue(d)).sort(byEnd).slice(0,4);
+  if(due.length||soon.length)sp.blocks.push({type:'table',title:'Vadeler',cols:[{h:'Banka'},{h:'Kişi',a:'left'},{h:'Vade'},{h:'Vade sonu değeri',tone:'green'},{h:'Durum',a:'left'}],
+    rows:due.concat(soon).map(d=>({k:isDue(d)?'bad':undefined,c:[d.bank,nm(d.owner),fmtD(d.endDate),mA(d.maturity,d.cur),{t:cap(dueText(d)),c:isDue(d)?'neg':'mut'}]}))});
+  if(T.missing.size)sp.foot.push('Not: '+[...T.missing].join(', ')+' kuru girilmediği için bu dövizdeki vadeli hesaplar ve nakit toplama dahil değil.');
+  return sp;
+}
+function specDeposits(){
+  const o=ui.depOwner,act=activeDeps().filter(d=>o==='all'||d.owner===o).sort(byEnd);
+  const sp={file:'vadeli',title:'Vadeli Hesaplar',sub:fmtD(todayStr())+(o==='all'?'':'  ·  '+nm(o)),
+    tiles:[{l:'BAĞLI TUTAR',v:sumsLine(act,'principal')||'—',tone:'tan'},{l:'VADE SONUNDA',v:sumsLine(act,'maturity')||'—',tone:'green'},{l:'HESAP SAYISI',v:act.length+' hesap',tone:'navy'}],
+    blocks:[],foot:['Tutarlar hesabın para birimindedir. Kapanan hesaplar rapora dahil değildir.']};
+  if(!act.length){sp.blocks.push({type:'text',t:'Vadeli hesap yok.'});return sp;}
+  const rows=[];
+  for(const g of groupByBank(act)){
+    rows.push({grp:g.name,right:sumsLine(g.list,'principal')});
+    for(const d of g.list)rows.push({k:isDue(d)?'bad':undefined,c:[nm(d.owner),mA(d.principal,d.cur),fmtD(d.startDate),fmtD(d.endDate),String(d.termDays),mA(d.maturity,d.cur),{t:cap(dueText(d)),c:isDue(d)?'neg':'mut'}]});
+  }
+  sp.blocks.push({type:'table',cols:[{h:'Kişi',a:'left'},{h:'Bağlı tutar'},{h:'Bağlama'},{h:'Vade sonu'},{h:'Gün'},{h:'Vade sonu değeri',tone:'green'},{h:'Durum',a:'left'}],rows,
+    total:['Toplam',sumsMulti(act,'principal'),'','','',sumsMulti(act,'maturity'),'']});
+  return sp;
+}
+function specCash(){
+  const o=ui.cashOwner,list=state.cash.filter(c=>o==='all'||c.owner===o),OW=o==='all'?ownCols():[o];
+  const totTL=list.reduce((a,c)=>a+cashTL(c),0);
+  const sp={file:'nakit',title:'Nakit Raporu',sub:fmtD(todayStr())+(o==='all'?'':'  ·  '+nm(o)),
+    tiles:[{l:'TOPLAM NAKİT',v:sumsLine(list,'amount')||'—',tone:'tan'},{l:'₺ KARŞILIĞI',v:fmt0(totTL)+' ₺',tone:'green'},{l:'HESAP SAYISI',v:list.length+' hesap',tone:'navy'}],blocks:[],foot:[]};
+  if(!list.length){sp.blocks.push({type:'text',t:'Nakit kaydı yok.'});return sp;}
+  const groups=groupByBank(list.slice().sort((a,b)=>cashTL(b)-cashTL(a)));
+  const rows=groups.map(g=>{const f=x=>g.list.filter(c=>c.owner===x).reduce((a,c)=>a+cashTL(c),0);return{name:g.name,v:OW.map(f),t:g.list.reduce((a,c)=>a+cashTL(c),0)};}).sort((x,y)=>y.t-x.t);
+  sp.blocks.push({type:'table',title:'Bankalara göre',cols:[{h:'Banka'}].concat(OW.map(x=>({h:nm(x)})),[{h:'Toplam',tone:'green'}]),
+    rows:rows.map(r=>({c:[r.name].concat(r.v.map(zf),[zf(r.t)])})),total:['Toplam'].concat(OW.map((x,i)=>fmt0(rows.reduce((a,r)=>a+r.v[i],0))),[fmt0(totTL)]),note:'Tutarlar ₺ cinsindendir.'});
+  const arows=[];
+  for(const g of groups){
+    arows.push({grp:g.name,right:sumsLine(g.list,'amount')});
+    for(const c of g.list)arows.push({c:[nm(c.owner),mA(c.amount,c.cur),rateOf(c.cur)?zf(cashTL(c)):'—',fmtD(c.updatedAt)]});
+  }
+  sp.blocks.push({type:'table',title:'Hesaplar',cols:[{h:'Kişi',a:'left'},{h:'Bakiye'},{h:'₺ karşılığı',tone:'green'},{h:'Güncelleme'}],rows:arows});
+  const miss=[...new Set(list.filter(c=>!rateOf(c.cur)).map(c=>c.cur))];
+  if(miss.length)sp.foot.push('Not: '+miss.join(', ')+' kuru girilmediği için ₺ karşılığına dahil değil.');
+  return sp;
+}
+function specAssets(){
+  const o=ui.asOwner,list=state.assets.filter(a=>o==='all'||a.owner===o),S=summarize(o),OW=o==='all'?ownCols():[o];
+  const sp={file:'altin-doviz',title:'Altın / Döviz Raporu',sub:fmtD(todayStr())+(o==='all'?'':'  ·  '+nm(o)),
+    tiles:[{l:'MALİYET',v:fmt0(S.cost)+' ₺',tone:'tan'},{l:'GÜNCEL DEĞER',v:fmt0(S.val)+' ₺',tone:'navy'},{l:'KÂR / ZARAR',v:signed(S.pl)+' ₺',tone:S.pl<-0.5?'red':'green'}],blocks:[],foot:[]};
+  if(!list.length){sp.blocks.push({type:'text',t:'Altın veya döviz kaydı yok.'});return sp;}
+  sp.blocks.push({type:'table',title:'Kâr / zarar',cols:[{h:'Kişi'},{h:'Maliyet'},{h:'Değer'},{h:'K/Z'}],
+    rows:OW.map(x=>{const s=summarize(x);return{c:[nm(x),zf(s.cost),zf(s.val),sgc(s.pl)]};}),total:['Toplam',fmt0(S.cost),fmt0(S.val),signed(S.pl)],note:'Tutarlar ₺ cinsindendir.'});
+  const pos=new Map();
+  for(const a of list){const p=pos.get(a.k)||{k:a.k,qty:0,cost:0,val:0};p.qty+=a.qty;p.cost+=a.cost;p.val+=assetVal(a);pos.set(a.k,p);}
+  sp.blocks.push({type:'table',title:'Pozisyonlar',cols:[{h:'Tür'},{h:'Miktar'},{h:'Ort. alış'},{h:'Değer'},{h:'K/Z'},{h:'K/Z %'}],
+    rows:[...pos.values()].map(p=>{const i=IB[p.k]||{n:p.k,u:''},pl=p.val-p.cost,pp=p.cost>0?pl/p.cost*100:0,cl=pl>0.5?'pos':pl<-0.5?'neg':'mut';
+      return{c:[i.n,nfq.format(p.qty)+' '+i.u,fmt2(p.qty>0?p.cost/p.qty:0),fmt0(p.val),sgc(pl),{t:(pl<-0.5?'−':pl>0.5?'+':'')+'%'+pctStr(Math.abs(pp)),c:cl}]};})});
+  const pr=INSTR.filter(i=>priceOf(i.k));
+  if(pr.length)sp.blocks.push({type:'table',title:'Kullanılan güncel fiyatlar',cols:[{h:'Tür'},{h:'Fiyat (₺)',tone:'green'}],rows:pr.map(i=>({c:[i.n,fmt2(priceOf(i.k))]})),
+    note:state.settings.pricesAt?'Son güncelleme: '+fmtD(state.settings.pricesAt.slice(0,10)):''});
+  if(S.nPrice.size)sp.foot.push('Not: '+[...S.nPrice].map(k=>IB[k]?IB[k].n:k).join(', ')+' için güncel fiyat girilmedi, alış tutarıyla hesaplandı.');
+  return sp;
+}
+function specFlow(){
+  const o=ui.flowOwner,c=flowCalc(o),ym=flowSel(c),u=flowUpTo(c,ym),rows=c.rows;
+  const tcols=FTYPES.filter(x=>rows.some(r=>r.t[x.k])),all=rows.reduce((a,r)=>a+r.total,0);
+  const sp={file:'nakit-akis',title:'Nakit Akış Raporu',sub:monthLbl(ym)+' sonu  ·  '+(o==='all'?'Tümü':nm(o))+'  ·  '+fmtD(todayStr()),
+    tiles:[{l:'BUGÜNKÜ DEĞER',v:fmt0(c.base)+' ₺',tone:'tan'},{l:'GİRİLEN GELİRLER',v:'+'+fmt0(u.add)+' ₺',tone:'green'},{l:monthLbl(ym).toUpperCase()+' SONU',v:fmt0(c.base+u.add)+' ₺',tone:'navy'}],
+    blocks:[],foot:['Tutarlar ₺ cinsindendir. Ay sonu: mevcut bakiye üzerine o aya kadarki gelirler eklenmiş toplamdır.']};
+  if(!rows.length){sp.blocks.push({type:'text',t:'Bugünden ileri tarihli gelir girilmemiş.'});return sp;}
+  const cols=[{h:'Ay'}].concat(tcols.map(x=>({h:x.s})),[{h:'Toplam',tone:'green'},{h:'Ay sonu',tone:'blue'}]);
+  const bugun=cols.map(()=>'');bugun[0]='Bugünkü değer';bugun[cols.length-1]=fmt0(c.base);
+  const body=[{k:'tan',c:bugun}].concat(rows.map(r=>({k:r.ym===ym?'sel':undefined,c:[monthLbl(r.ym)].concat(tcols.map(x=>r.t[x.k]?fmt0(r.t[x.k]):'—'),[fmt0(r.total),fmt0(r.bal)])})));
+  sp.blocks.push({type:'table',cols,rows:body,total:['Toplam'].concat(tcols.map(x=>fmt0(rows.reduce((a,r)=>a+(r.t[x.k]||0),0))),[fmt0(all),fmt0(c.base+all)])});
+  return sp;
+}
+function buildSpec(v){return v==='vadeli'?specDeposits():v==='nakit'?specCash():v==='akis'?specFlow():v==='altin'?specAssets():specHome();}
+async function openImgReport(){
+  const tok={type:'report',text:buildReport(ui.view),file:null,url:null};
   ui.sheet=tok;
   openSheet('Raporu gönder','<p class="small">Raporun görseli hazırlanıyor…</p><div class="prog"><i style="width:45%"></i></div>');
   const acts='<div class="acts"><button class="btn" data-act="wa-send">Metin olarak gönder</button><button class="btn" data-act="wa-copy">Metni kopyala</button></div>';
   try{
-    const blob=await renderFlowImage();
+    const sp=buildSpec(ui.view),blob=await renderReportImage(sp);
     if(ui.sheet!==tok)return;
-    tok.file=new File([blob],'nakit-akis-'+todayStr()+'.png',{type:'image/png'});
+    tok.file=new File([blob],sp.file+'-'+todayStr()+'.png',{type:'image/png'});
     tok.url=URL.createObjectURL(blob);
     $('#sheet-body').innerHTML='<p class="small">Görsel hazır. “Görsel olarak gönder”e basınca paylaşım listesi açılır. Oradan WhatsApp’ı ve göndereceğin kişileri seç.</p>'+
-      '<img src="'+tok.url+'" alt="Nakit akış raporu görseli" style="width:100%;height:auto;border-radius:12px;border:1px solid var(--line);background:#fff">'+
+      '<img src="'+tok.url+'" alt="Rapor görseli" style="width:100%;height:auto;border-radius:12px;border:1px solid var(--line);background:#fff">'+
       '<div class="acts"><button class="btn wa" data-act="wa-img">'+WA_SVG+'Görsel olarak gönder</button><button class="btn" data-act="img-save">Görseli kaydet</button></div>'+acts;
   }catch(e){
     if(ui.sheet!==tok)return;
