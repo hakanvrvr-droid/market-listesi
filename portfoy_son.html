@@ -984,25 +984,44 @@ function viewFlow(){
 }
 const SH_M=ym=>MONTHS[+ym.slice(5,7)-1].slice(0,3)+' '+ym.slice(0,4);
 function repFlow(){
-  const o=ui.flowOwner,c=flowCalc(o),ym=flowSel(c),u=flowUpTo(c,ym),rows=c.rows.filter(r=>r.ym<=ym);
-  const W=30,line='─'.repeat(W);
-  const kv=(a,b)=>a+' '.repeat(Math.max(1,W-a.length-b.length))+b;
-  const cols=(a,b,d)=>(a.padEnd(9)+b.padStart(10)+d.padStart(11)).trimEnd();
-  const blk=a=>'```\n'+a.join('\n')+'\n```\n';
-  let t='📊 *NAKİT AKIŞ RAPORU*\n'+fmtD(todayStr())+filtName(o)+'\n';
-  t+='\n💰 *'+monthLbl(ym)+' sonu toplam tasarruf*\n'+blk([kv('Bugünkü değer',fmt0(c.base)),kv('Girilen gelirler','+'+fmt0(u.add)),line,kv('AY SONU DEĞERİ',fmt0(c.base+u.add))]);
-  if(!rows.length)return (t+'\nBugünden ileri tarihli gelir girilmemiş.').trim();
-  const L=[cols('Kalem','Tutar','Ay sonu'),line,cols('BUGÜN','',fmt0(c.base))];
-  for(const r of rows){
-    L.push(SH_M(r.ym));
-    for(const x of FTYPES)if(r.t[x.k])L.push(cols('  '+x.s,fmt0(r.t[x.k]),''));
-    L.push(cols('  Toplam',fmt0(r.total),fmt0(r.bal)));
+  const o=ui.flowOwner,c=flowCalc(o),ym=flowSel(c),u=flowUpTo(c,ym),today=todayStr();
+  const MAXW=34,blk=a=>'```\n'+a.join('\n')+'\n```\n';
+  let t='📊 *NAKİT AKIŞ RAPORU*\n'+fmtD(today)+filtName(o)+'\n';
+  t+='\n💰 *'+monthLbl(ym)+' sonu toplam tasarruf*\n*'+fmt0(c.base+u.add)+' ₺*\nMevcut bakiye '+fmt0(c.base)+' ₺ + girilen gelirler '+fmt0(u.add)+' ₺\n';
+  const tk=FTYPES.filter(x=>u.t[x.k]);
+  if(tk.length){
+    const w=Math.max(...tk.map(x=>x.n.length))+1+Math.max(...tk.map(x=>fmt0(u.t[x.k]).length),fmt0(u.add).length)+1;
+    const kv=(a,b)=>a.padEnd(w-b.length)+b;
+    t+='\n🗂 *'+monthLbl(ym)+' sonuna kadar eklenen gelirler*\n'+blk(tk.map(x=>kv(x.n,fmt0(u.t[x.k]))).concat(['─'.repeat(w),kv('Toplam',fmt0(u.add))]));
   }
-  L.push(line,'TÜRE GÖRE TOPLAM');
-  for(const x of FTYPES)if(u.t[x.k])L.push(cols('  '+x.s,fmt0(u.t[x.k]),''));
-  L.push(cols('  Toplam',fmt0(u.add),fmt0(c.base+u.add)));
-  t+='\n📅 *Bugün, türler ve ay sonu değerleri*\n'+blk(L);
-  t+='_Tutarlar ₺ cinsindendir. Vade = vade geliri, Emekli = emekli maaşı, Kira = kira geliri, Maaş = maaş tasarrufu._\n';
+  if(c.rows.length){
+    const all=c.rows.reduce((a,r)=>a+r.total,0);
+    const tcols=FTYPES.filter(x=>c.rows.some(r=>r.t[x.k]));
+    const defs=tcols.map(x=>({h:x.s,v:r=>r.t[x.k]?fmt0(r.t[x.k]):'—',tot:fmt0(c.rows.reduce((a,r)=>a+(r.t[x.k]||0),0))}))
+      .concat([{h:'Toplam',v:r=>fmt0(r.total),tot:fmt0(all)},{h:'Ay sonu',v:r=>fmt0(r.bal),tot:fmt0(c.base+all)}]);
+    for(const d of defs)d.w=Math.max(d.h.length,d.tot.length,...c.rows.map(r=>d.v(r).length))+2;
+    const A=9,chunks=[];let cur=[],cw=A;
+    for(const d of defs){if(cur.length&&cw+d.w>MAXW){chunks.push(cur);cur=[];cw=A;}cur.push(d);cw+=d.w;}
+    if(cur.length)chunks.push(cur);
+    t+='\n📅 *Aylara ve türlere göre*\n';
+    for(const ch of chunks){
+      const hdr='Ay'.padEnd(A)+ch.map(d=>d.h.padStart(d.w)).join(''),ln='─'.repeat(hdr.length);
+      t+=blk([hdr,ln].concat(c.rows.map(r=>SH_M(r.ym).padEnd(A)+ch.map(d=>d.v(r).padStart(d.w)).join('')),[ln,'Toplam'.padEnd(A)+ch.map(d=>d.tot.padStart(d.w)).join('')]));
+    }
+    if(chunks.length>1)t+='_Tablo ekrana sığması için bölümlere ayrıldı, her bölümde ay sütunu tekrar eder._\n';
+    t+='_Tutarlar ₺ cinsindendir. Ay sonu: mevcut bakiye üzerine o aya kadarki gelirler eklenmiş toplamdır._\n';
+  }else t+='\nBugünden ileri tarihli gelir girilmemiş.\n';
+  const lst=state.flows.filter(f=>o==='all'||f.owner===o).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  if(lst.length){
+    const gm=new Map();for(const f of lst){const k=f.date.slice(0,7);if(!gm.has(k))gm.set(k,[]);gm.get(k).push(f);}
+    t+='\n🧾 *Girilen gelirler*\n';
+    t+=[...gm.entries()].map(([k,arr])=>{
+      const cnt=arr.filter(f=>f.date>=today),use=cnt.length?cnt:arr,sum=use.reduce((a,f)=>a+f.amount,0);
+      const bt={};for(const f of use)bt[f.type]=(bt[f.type]||0)+f.amount;
+      const sm=FTYPES.filter(x=>bt[x.k]).map(x=>x.s+' '+fmt0(bt[x.k])).join(' · ');
+      return '*'+monthLbl(k)+'* · *'+fmt0(sum)+' ₺*'+(cnt.length?'':' _(geçmiş)_')+'\n_'+sm+'_';
+    }).join('\n\n')+'\n';
+  }
   return t.trim();
 }
 function updFlow(){
