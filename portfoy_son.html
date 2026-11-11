@@ -167,10 +167,19 @@ input[type=text],input[type=number],input[type=date],select{font:inherit;font-si
 .tbl tr.sel td{background:var(--accent-soft)}
 .tbl tr[data-act]{cursor:pointer}
 .tbl tr.sel td:first-child{color:var(--ink);font-weight:700}
+.acc{border-top:1px solid var(--line)}
+.acc:first-child{border-top:0}
+.acc-h{display:flex;width:100%;justify-content:space-between;align-items:center;gap:12px;background:none;border:0;padding:12px 0;min-height:52px;cursor:pointer;text-align:left;color:var(--ink)}
+.acc-l{display:grid;gap:2px;min-width:0}
+.acc-l b{font-family:var(--f-display);font-size:16px}
+.acc-r{display:flex;align-items:center;gap:8px;flex:none}
+.chev{width:18px;height:18px;color:var(--muted);transition:transform .15s}
+.acc-h[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.acc-b{padding-bottom:6px}
 .vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
 .formerr{color:var(--bad);font-size:13px;font-weight:600;min-height:18px}
 .static{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:var(--surface2);border-radius:12px;padding:10px 12px}
-.rep{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.5;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;max-height:48vh;overflow:auto}
+.rep{white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,Menlo,Consolas,'Courier New',monospace;font-size:12px;line-height:1.5;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;max-height:48vh;overflow:auto}
 
 .sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheet-bg{position:absolute;inset:0;background:var(--scrim)}
@@ -262,7 +271,7 @@ const diffDays=(a,b)=>Math.round((parseD(b)-parseD(a))/864e5);
 const DEF={names:{a:'Ben',b:'Eşim',c:'Ev'},prices:{},pricesAt:null,namesSet:false};
 function mergeSettings(s){s=s||{};const n=s.names||{};return{names:{a:n.a||'Ben',b:n.b||'Eşim',c:n.c||'Ev'},prices:Object.assign({},s.prices||{}),pricesAt:s.pricesAt||null,namesSet:!!s.namesSet};}
 const state={settings:mergeSettings(null),deposits:[],assets:[],cash:[],flows:[],mode:'local',ready:false,note:''};
-const ui={view:'ozet',depOwner:'all',asOwner:'all',cashOwner:'all',flowOwner:'all',flowMonth:null,showArch:false,hist:new Set(),confirmClose:null,pricesOpen:null,sheet:null,namesPrompted:false};
+const ui={view:'ozet',depOwner:'all',asOwner:'all',cashOwner:'all',flowOwner:'all',flowMonth:null,flowOpen:new Set(),showArch:false,hist:new Set(),confirmClose:null,pricesOpen:null,sheet:null,namesPrompted:false};
 let db=null;
 const LS='tasarruf-defteri-v1';
 function lsLoad(){try{const r=localStorage.getItem(LS);if(r){const o=JSON.parse(r);state.deposits=o.deposits||[];state.assets=o.assets||[];state.cash=o.cash||[];state.flows=o.flows||[];state.settings=mergeSettings(o.settings);}}catch(e){}}
@@ -957,23 +966,44 @@ function viewFlow(){
   }
   const today=todayStr();
   const lst=state.flows.filter(f=>o==='all'||f.owner===o).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
-  if(lst.length)h+=`<section class="card"><h2>Girilen gelirler</h2><ul class="up">${lst.map(f=>`<li>
+  const entry=f=>`<li>
       <div class="l"><b>${esc((FT[f.type]||{n:f.type}).n)}</b><span class="small">${fmtD(f.date)} · ${who(f.owner)}${f.note?' · '+esc(f.note):''}</span></div>
-      <div class="r"><b class="num">${fmtA(f.amount)} ₺</b>${f.date<today?chip('','Geçmiş, toplama dahil değil'):''}<button class="btn ghost sm" data-act="edit-flow" data-id="${f.id}">Düzenle</button></div></li>`).join('')}</ul></section>`;
+      <div class="r"><b class="num">${fmtA(f.amount)} ₺</b>${f.date<today?chip('','Geçmiş, toplama dahil değil'):''}<button class="btn ghost sm" data-act="edit-flow" data-id="${f.id}">Düzenle</button></div></li>`;
+  if(lst.length){
+    const gm=new Map();
+    for(const f of lst){const k=f.date.slice(0,7);if(!gm.has(k))gm.set(k,[]);gm.get(k).push(f);}
+    h+=`<section class="card"><h2>Girilen gelirler</h2><p class="small">Bir aya dokunursan o ayın kayıtları açılır.</p><div>${[...gm.entries()].map(([k,arr])=>{
+      const cnt=arr.filter(f=>f.date>=today),use=cnt.length?cnt:arr,sum=use.reduce((a,f)=>a+f.amount,0);
+      const bt={};for(const f of use)bt[f.type]=(bt[f.type]||0)+f.amount;
+      const sm=FTYPES.filter(t=>bt[t.k]).map(t=>t.s+' '+fmt0(bt[t.k])).join(' · ');
+      const open=ui.flowOpen.has(k);
+      return `<div class="acc"><button type="button" class="acc-h" data-act="flow-toggle" data-v="${k}" aria-expanded="${open}"><span class="acc-l"><b>${monthLbl(k)}</b><span class="small">${sm}</span></span><span class="acc-r"><b class="num">${fmt0(sum)} ₺</b>${cnt.length?'':chip('','Geçmiş')}<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span></button>${open?`<ul class="up acc-b">${arr.map(entry).join('')}</ul>`:''}</div>`;
+    }).join('')}</div></section>`;
+  }
   return h;
 }
+const SH_M=ym=>MONTHS[+ym.slice(5,7)-1].slice(0,3)+' '+ym.slice(0,4);
 function repFlow(){
-  const o=ui.flowOwner,c=flowCalc(o),ym=flowSel(c),u=flowUpTo(c,ym);
-  let t=repHead('Nakit Akış'+filtName(o));
-  t+='\n*'+monthLbl(ym)+' sonu toplam tasarruf:* '+TLs(c.base+u.add)+'\n• Mevcut bakiye: '+TLs(c.base)+'\n• Girilen gelirler: +'+TLs(u.add)+'\n';
+  const o=ui.flowOwner,c=flowCalc(o),ym=flowSel(c),u=flowUpTo(c,ym),rows=c.rows.filter(r=>r.ym<=ym);
+  const W=31,line='─'.repeat(W);
+  const kv=(a,b)=>a+' '.repeat(Math.max(1,W-a.length-b.length))+b;
+  const cols=(a,b,d)=>a.padEnd(9)+b.padStart(10)+d.padStart(12);
+  const blk=a=>'```\n'+a.join('\n')+'\n```\n';
+  let t='📊 *NAKİT AKIŞ RAPORU*\n'+fmtD(todayStr())+filtName(o)+'\n';
+  t+='\n💰 *'+monthLbl(ym)+' sonu toplam tasarruf*\n'+blk([kv('Mevcut bakiye',fmt0(c.base)),kv('Girilen gelirler','+'+fmt0(u.add)),line,kv('TOPLAM',fmt0(c.base+u.add))]);
+  t+='_Tutarlar ₺ cinsindendir._\n';
   const tk=FTYPES.filter(x=>u.t[x.k]);
-  if(tk.length){t+='\n*'+monthLbl(ym)+' sonuna kadar türlere göre*\n';for(const x of tk)t+='• '+x.n+': '+TLs(u.t[x.k])+'\n';}
-  if(c.rows.length){
-    t+='\n*Aylara göre*\n';
-    for(const r of c.rows){
-      const parts=FTYPES.filter(x=>r.t[x.k]).map(x=>x.s+' '+fmt0(r.t[x.k])).join(', ');
-      t+='• '+monthLbl(r.ym)+': +'+TLs(r.total)+' ('+parts+') → bakiye '+TLs(r.bal)+'\n';
-    }
+  if(tk.length)t+='\n🗂 *Türlere göre ('+monthLbl(ym)+' sonuna kadar)*\n'+blk(tk.map(x=>kv(x.n,fmt0(u.t[x.k]))).concat([line,kv('Toplam',fmt0(u.add))]));
+  if(rows.length){
+    const all=rows.reduce((a,r)=>a+r.total,0);
+    t+='\n📅 *Aylara göre*\n'+blk([cols('Ay','Gelir','Bakiye'),line].concat(rows.map(r=>cols(SH_M(r.ym),fmt0(r.total),fmt0(r.bal))),[line,cols('Toplam',fmt0(all),fmt0(rows[rows.length-1].bal))]));
+    const det=[];
+    rows.forEach((r,i)=>{
+      if(i)det.push('');
+      det.push(kv(monthLbl(r.ym).toUpperCase(),fmt0(r.total)));
+      for(const x of FTYPES)if(r.t[x.k])det.push(kv('  '+x.n,fmt0(r.t[x.k])));
+    });
+    t+='\n🧾 *Aylara ve türlere göre*\n'+blk(det);
   }else t+='\nBugünden ileri tarihli gelir girilmemiş.\n';
   return t.trim();
 }
@@ -1193,6 +1223,7 @@ document.addEventListener('click',e=>{
     case 'edit-asset':openAsset('edit',id);break;
     case 'depOwner':case 'asOwner':case 'cashOwner':case 'flowOwner':ui[a]=b.dataset.v;render();break;
     case 'add-flow':openFlow('add');break;
+    case 'flow-toggle':{const m=b.dataset.v;if(ui.flowOpen.has(m))ui.flowOpen.delete(m);else ui.flowOpen.add(m);render();break;}
     case 'edit-flow':openFlow('edit',id);break;
     case 'save-flow':saveFlow();break;
     case 'flow-month':ui.flowMonth=b.dataset.v;render();window.scrollTo(0,0);break;
