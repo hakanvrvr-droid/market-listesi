@@ -3803,11 +3803,33 @@ function renderRaporAvans(donemler, yil) {
     </div>`;
   
   // Sahip ödemeleri: kim ödedi / ödemedi — SEÇİLİ (aktif) döneme göre
+  // Kısmi (eksik) ödeyen kişi "Ödeyen" sayılmaz; "Avans Ödemeyenler" altında gösterilir.
   const aktif = aktifAvansDonem();
   const aktifOdemeler = (aktif && aktif.odemeler) ? aktif.odemeler : {};
-  const odeyenler = sahipler.filter(s => aktifOdemeler[s.id] && aktifOdemeler[s.id].odendi);
-  const odemeyenler = sahipler.filter(s => !aktifOdemeler[s.id] || !aktifOdemeler[s.id].odendi);
   const aktifAd = aktif ? donemAd(aktif.donem) : '';
+
+  const daireNoSort = (a, b) => {
+    const sa = parseInt((a.daireNo || '').replace(/\D/g,'')) || 0;
+    const sb = parseInt((b.daireNo || '').replace(/\D/g,'')) || 0;
+    return sa - sb;
+  };
+
+  const tamOdeyenler = [];   // beklenen tutarı tam ödeyenler
+  const odemeyenler = [];    // hiç ödemeyen + eksik (kısmi) ödeyenler
+  sahipler.forEach(s => {
+    const o = aktifOdemeler[s.id];
+    const beklenen = avansSahipBeklenen(aktif, s.id);
+    if (o && o.odendi) {
+      const odenen = Number(o.tutar) || 0;
+      if (odenen + 0.005 >= beklenen) {
+        tamOdeyenler.push(s);                                   // tam ödedi
+      } else {
+        odemeyenler.push({ s, eksik: true, odenen, beklenen }); // kısmi ödedi
+      }
+    } else {
+      odemeyenler.push({ s, eksik: false, odenen: 0, beklenen }); // hiç ödemedi
+    }
+  });
 
   if (odemeyenler.length > 0) {
     html += `
@@ -3817,30 +3839,28 @@ function renderRaporAvans(donemler, yil) {
         </div>
         <div style="font-size:12px;color:#1f2027;line-height:1.8;">`;
     odemeyenler
-      .sort((a,b) => {
-        const sa = parseInt((a.daireNo || '').replace(/\D/g,'')) || 0;
-        const sb = parseInt((b.daireNo || '').replace(/\D/g,'')) || 0;
-        return sa - sb;
-      })
-      .forEach(s => {
-        html += `${s.daireNo || '-'} ${s.isim} - ${fmtTLKisa(avansSahipBeklenen(aktif, s.id))}<br>`;
+      .sort((a,b) => daireNoSort(a.s, b.s))
+      .forEach(x => {
+        const s = x.s;
+        if (x.eksik) {
+          const kalan = x.beklenen - x.odenen;
+          html += `${s.daireNo || '-'} ${s.isim} - ${fmtTLKisa(x.odenen)} / ${fmtTLKisa(x.beklenen)} <span style="color:#c43e3e;font-weight:600;">(eksik ${fmtTLKisa(kalan)})</span><br>`;
+        } else {
+          html += `${s.daireNo || '-'} ${s.isim} - ${fmtTLKisa(x.beklenen)}<br>`;
+        }
       });
     html += `</div></div>`;
   }
 
-  if (odeyenler.length > 0) {
+  if (tamOdeyenler.length > 0) {
     html += `
       <div style="margin-top:12px;padding:12px;background:#d6f0de;border-radius:8px;border-left:4px solid #1f8a4c;">
         <div style="font-size:13px;font-weight:700;color:#1f8a4c;margin-bottom:6px;">
-          ✓ ${aktifAd} — Ödeyen Sahipler (${odeyenler.length})
+          ✓ ${aktifAd} — Ödeyen Sahipler (${tamOdeyenler.length})
         </div>
         <div style="font-size:12px;color:#1f2027;line-height:1.8;">`;
-    odeyenler
-      .sort((a,b) => {
-        const sa = parseInt((a.daireNo || '').replace(/\D/g,'')) || 0;
-        const sb = parseInt((b.daireNo || '').replace(/\D/g,'')) || 0;
-        return sa - sb;
-      })
+    tamOdeyenler
+      .sort(daireNoSort)
       .forEach(s => {
         const o = aktifOdemeler[s.id];
         html += `${s.daireNo || '-'} ${s.isim} - ${fmtTLKisa(o.tutar)} · ${fmtTarih(o.tarih)}<br>`;
